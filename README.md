@@ -25,6 +25,8 @@ npm run dev
 ```
 # How to create a PR
 1. Update your fork on GitHub
+<img width="926" height="262" alt="image" src="https://github.com/user-attachments/assets/a5e95d68-d60b-482f-8fa1-7c8436b51935"/>
+
 2. Update your local clone
 ```bash
 git checkout master; git pull
