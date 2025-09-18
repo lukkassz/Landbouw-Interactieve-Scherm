@@ -11,7 +11,7 @@ React + Vite + TailwindCSS + PostCSS (?)
 
 # Setup
 ```bash
-git clone -b clean git@github.com:Museumproject-Placeholder/Landbouw-Interactieve-Scherm.git
+git clone git@github.com:Museumproject-Placeholder/Landbouw-Interactieve-Scherm.git
 cd Landbouw-Interactieve-Scherm
 cd frontend/
 npm install (Installs Tailwind etc)
