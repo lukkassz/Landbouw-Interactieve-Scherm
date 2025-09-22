@@ -55,5 +55,3 @@ git push --set-upstream origin remove-scrollbar
 6. Open the PR
 Go to the main repo https://github.com/Museumproject-Placeholder/Landbouw-Interactieve-Scherm/tree/main  you will notice that GitHub is smart enough to realize that you are about to open a PR and shows this nice box:
 <img width="1039" height="499" alt="image" src="https://github.com/user-attachments/assets/f5bb5535-4dbd-4411-9d43-cb7cf70a28c4" />
-
-Done I think : )
