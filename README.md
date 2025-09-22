@@ -13,7 +13,7 @@ React + Vite + TailwindCSS + PostCSS (?)
 1. Create a fork of this repository (Through github)
 2. Clone your fork to your local machine
 ```bash
-git clone git@github.com:{YOURNAME}/Landbouw-Interactieve-Scherm.git
+git clone git@github.com:YOURNAME/Landbouw-Interactieve-Scherm.git or with https https://github.com/YOURNAME/Landbouw-Interactieve-Scherm.git
 
 cd Landbouw-Interactieve-Scherm
 
