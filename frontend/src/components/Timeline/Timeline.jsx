@@ -1,308 +1,271 @@
-import React, { useState, useEffect, useRef } from "react"
+import React, { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import TimelineCard from "./TimelineCard"
-import { useTimeline } from "../../hooks/useTimeline"
+import TimelineModal from "./TimelineModal"
+
+// Import puzzle images
+import puzzleImg from "../../assets/images/puzzle/brown_cow_kids.jpg"
+// Import background image
+import backgroundTimelineImg from "../../assets/images/timeline/achtergrond3.png"
 
 const Timeline = () => {
-  // ===== STATE MANAGEMENT =====
-  const { timelineData, loading, error } = useTimeline()
   const [selectedPeriod, setSelectedPeriod] = useState(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedTimelineItem, setSelectedTimelineItem] = useState(null)
   const [isDragging, setIsDragging] = useState(false)
   const [startX, setStartX] = useState(0)
   const [scrollLeft, setScrollLeft] = useState(0)
+  const [showSwipeHint, setShowSwipeHint] = useState(true)
+  const [lastActivityTime, setLastActivityTime] = useState(Date.now())
+  const [logoKey, setLogoKey] = useState(0)
   const timelineRef = useRef(null)
+  const inactivityTimerRef = useRef(null)
 
-  // ===== TIMELINE DATA CONFIGURATION =====
-  // IMPORTANT: This static data should eventually be replaced with database content
-  // Currently using mock data for development - in production this should come from:
-  // - Database API call
-  // - CMS system
-  // - External data source
-  // The structure should remain the same but content will be dynamic
-  const extendedTimelineData = timelineData
-    ? [
-        // Merge existing data from hook with fallback mock data
-        ...timelineData,
+  // Preload background image for faster loading
+  useEffect(() => {
+    const img = new Image()
+    img.src = backgroundTimelineImg
+  }, [])
 
-        // Mock agricultural timeline data - REPLACE WITH DATABASE CONTENT
-        ...(timelineData.length < 12
-          ? [
-              {
-                id: "friese-paard", // Unique identifier for database reference
-                year: "10,000 BCE", // Display year - format as needed
-                title: "Early Agriculture", // Main title for the period
-                description:
-                  "The development of farming fundamentally changed human civilization. Early humans transitioned from hunting and gathering to cultivating crops and domesticating animals.", // Detailed description - should support rich text in production
-                gradient: "from-amber-400 to-orange-500", // CSS gradient classes for theming
-                icon: "🌾", // Visual icon - consider using SVG icons in production
-              },
-              {
-                id: "irrigation",
-                year: "6,000 BCE",
-                title: "Irrigation Systems",
-                description:
-                  "Advanced civilizations developed sophisticated irrigation networks, allowing agriculture to flourish in arid regions and supporting larger populations.",
-                gradient: "from-blue-400 to-cyan-500",
-                icon: "🌾",
-              },
-              {
-                id: "plowing",
-                year: "4,000 BCE",
-                title: "The Plow Revolution",
-                description:
-                  "The invention of the plow dramatically increased agricultural productivity, enabling farmers to cultivate larger areas more efficiently than ever before.",
-                gradient: "from-green-400 to-emerald-500",
-                icon: "🌾",
-              },
-              {
-                id: "crop-rotation",
-                year: "800 CE",
-                title: "Crop Rotation",
-                description:
-                  "Medieval farmers discovered that rotating different crops in fields improved soil fertility and increased yields, revolutionizing sustainable farming practices.",
-                gradient: "from-purple-400 to-violet-500",
-                icon: "🌾",
-              },
-              {
-                id: "new-world",
-                year: "1500 CE",
-                title: "New World Crops",
-                description:
-                  "The Columbian Exchange introduced revolutionary crops like potatoes, tomatoes, and corn to Europe, transforming diets and agricultural systems worldwide.",
-                gradient: "from-red-400 to-pink-500",
-                icon: "🌾",
-              },
-              {
-                id: "agricultural-revolution",
-                year: "1700 CE",
-                title: "Agricultural Revolution",
-                description:
-                  "New farming techniques, selective breeding, and improved tools sparked an agricultural revolution that supported population growth and urbanization.",
-                gradient: "from-indigo-400 to-blue-500",
-                icon: "🌾",
-              },
-              {
-                id: "mechanization",
-                year: "1850 CE",
-                title: "Mechanization Era",
-                description:
-                  "Steam-powered machinery and later tractors revolutionized farming, allowing farmers to work larger areas with significantly less manual labor.",
-                gradient: "from-gray-500 to-slate-600",
-                icon: "🌾",
-              },
-              {
-                id: "fertilizers",
-                year: "1900 CE",
-                title: "Chemical Fertilizers",
-                description:
-                  "The development of synthetic fertilizers dramatically increased crop yields, enabling agriculture to feed rapidly growing global populations.",
-                gradient: "from-lime-400 to-green-500",
-                icon: "🌾",
-              },
-              {
-                id: "green-revolution",
-                year: "1960 CE",
-                title: "Green Revolution",
-                description:
-                  "High-yield crop varieties, modern irrigation, and intensive farming techniques led to unprecedented increases in food production worldwide.",
-                gradient: "from-emerald-400 to-teal-500",
-                icon: "🌾",
-              },
-              {
-                id: "precision-agriculture",
-                year: "1990 CE",
-                title: "Precision Agriculture",
-                description:
-                  "GPS technology, sensors, and data analytics enabled farmers to optimize inputs and maximize efficiency through precision farming techniques.",
-                gradient: "from-cyan-400 to-blue-500",
-                icon: "🌾",
-              },
-              {
-                id: "sustainable-farming",
-                year: "2000 CE",
-                title: "Sustainable Farming",
-                description:
-                  "Modern agriculture focuses on environmentally sustainable practices, including organic farming, integrated pest management, and climate-smart techniques.",
-                gradient: "from-green-500 to-emerald-600",
-                icon: "🌾",
-              },
-              {
-                id: "vertical-farming",
-                year: "2020 CE",
-                title: "Vertical Farming",
-                description:
-                  "Indoor vertical farms use LED lighting and hydroponic systems to grow crops year-round in urban environments, maximizing space efficiency.",
-                gradient: "from-purple-500 to-indigo-600",
-                icon: "🌾",
-              },
-            ].slice(0, Math.max(0, 12 - timelineData.length)) // Limit to 12 total items
-          : []),
-      ]
-    : []
+  // Inactivity detection system for museum display
+  useEffect(() => {
+    const checkInactivity = () => {
+      const now = Date.now()
+      const timeSinceActivity = now - lastActivityTime
 
-  // ===== DRAG & SCROLL EVENT HANDLERS =====
+      // Show hint continuously after 8 seconds of inactivity
+      if (timeSinceActivity > 8000) {
+        setShowSwipeHint(true)
+      } else {
+        setShowSwipeHint(false)
+      }
+    }
 
-  /**
-   * Initiates drag scrolling when user starts touch/mouse interaction
-   * Records starting position and current scroll state
-   */
+    // Check every 1 second for more responsive behavior
+    inactivityTimerRef.current = setInterval(checkInactivity, 1000)
+
+    return () => {
+      if (inactivityTimerRef.current) {
+        clearInterval(inactivityTimerRef.current)
+      }
+    }
+  }, [lastActivityTime])
+
+  // Auto-restart Firda logo GIF every 15 seconds
+  useEffect(() => {
+    const logoInterval = setInterval(() => {
+      setLogoKey(prev => prev + 1)
+    }, 15000)
+
+    return () => clearInterval(logoInterval)
+  }, [])
+
+  // Reset activity timer on any interaction
+  const resetActivityTimer = () => {
+    setLastActivityTime(Date.now())
+    setShowSwipeHint(false)
+  }
+
+  // Fries Landbouwmuseum Timeline - Nederlandse teksten
+  const timelineData = [
+    // ETAP 1: Vroegmoderne landbouw (1600-1800)
+    {
+      id: "golden-age-start",
+      year: "1600",
+      title: "Gouden Eeuw Landbouw",
+      description:
+        "De Friese landbouw bloeit tijdens de Nederlandse Gouden Eeuw. Intensieve veeteelt begint en het beroemde Friese vee en paarden krijgen erkenning in heel Europa.",
+      gradient: "from-yellow-500 to-orange-500",
+      stage: 1,
+      hasPuzzle: true,
+      puzzleImage: puzzleImg,
+    },
+    {
+      id: "land-reclamation",
+      year: "1650",
+      title: "Landaanwinning Tijdperk",
+      description:
+        "Grootschalige drainageprojecten transformeren het Friese landschap. Geavanceerde dijkensystemen en polders creëren nieuw landbouwland en leggen de basis voor moderne landbouw.",
+      gradient: "from-blue-600 to-cyan-500",
+      stage: 1,
+    },
+    {
+      id: "dairy-development",
+      year: "1750",
+      title: "Zuivelindustrie Fundament",
+      description:
+        "Traditionele kaasmakerij en boterproductie worden de hoekstenen van de Friese economie. Boerenfamilies ontwikkelen gespecialiseerde zuiveltechnieken die generaties lang worden doorgegeven.",
+      gradient: "from-green-600 to-emerald-500",
+      stage: 1,
+      hasPuzzle: true,
+      puzzleImage: puzzleImg,
+    },
+
+    // ETAP 2: Industrialisatie (1800-1950)
+    {
+      id: "flax-boom",
+      year: "1880",
+      title: "Vlasproductie Hoogtepunt",
+      description:
+        "Friesland wordt de grootste vlasproducent van Nederland. Duizenden arbeiders verwerken vlas in 'braakhokken' tijdens de winter, wat cruciale werkgelegenheid biedt op het platteland.",
+      gradient: "from-indigo-500 to-blue-500",
+      stage: 2,
+      hasPuzzle: true,
+      puzzleImage: puzzleImg,
+    },
+    {
+      id: "mechanization-start",
+      year: "1900",
+      title: "Landbouwmechanisatie",
+      description:
+        "Lokale fabrikanten zoals Hermes in Leeuwarden en Miedema in Winsum beginnen met de productie van landbouwwerktuigen, melkmachines en boerenwagens voor de regio.",
+      gradient: "from-gray-600 to-slate-500",
+      stage: 2,
+    },
+    {
+      id: "cooperatives-birth",
+      year: "1920",
+      title: "Coöperatieve Beweging",
+      description:
+        "Boeren stichten de eerste zuivelcoöperaties en landbouwverenigingen. Collectieve koopkracht en gedeelde kennis transformeren traditionele landbouwpraktijken.",
+      gradient: "from-purple-600 to-indigo-500",
+      stage: 2,
+      hasPuzzle: true,
+      puzzleImage: puzzleImg,
+    },
+
+    // ETAP 3: Moderne landbouw (1950-heden)
+    {
+      id: "scientific-breeding",
+      year: "1960",
+      title: "Wetenschappelijke Veeteelt",
+      description:
+        "Kunstmatige inseminatie en wetenschappelijke fokprogramma's revolutioneren de rundverbetering. Het Nationaal Veeteelt Museum documenteert deze transformatie van de Friese landbouw.",
+      gradient: "from-red-500 to-pink-500",
+      stage: 3,
+    },
+    {
+      id: "friesian-renaissance",
+      year: "1990",
+      title: "Fries Paard Wereldsucces",
+      description:
+        "Het Friese paard beleeft wereldwijde populariteit. Het Koninklijk Friesch Paarden-Stamboek (KFPS) promoot het ras wereldwijd en maakt het tot een symbool van Nederlands erfgoed.",
+      gradient: "from-purple-600 to-pink-500",
+      stage: 3,
+      hasPuzzle: true,
+      puzzleImage: puzzleImg,
+    },
+    {
+      id: "sustainable-future",
+      year: "2020",
+      title: "Erfgoed & Duurzaamheid",
+      description:
+        "Moderne Friese boerderijen balanceren hightech precisie-landbouw met behoud van traditionele rassen en praktijken. Meer dan 100 zeldzame variëteiten worden behouden voor toekomstige generaties.",
+      gradient: "from-green-500 to-teal-600",
+      stage: 3,
+      hasPuzzle: true,
+      puzzleImage: puzzleImg,
+    },
+  ]
+
   const handleMouseDown = e => {
     setIsDragging(true)
     setStartX(e.pageX || e.touches[0].pageX)
     setScrollLeft(timelineRef.current.scrollLeft)
+    resetActivityTimer()
   }
 
-  /**
-   * Handles drag movement and updates scroll position
-   * Prevents default behavior and calculates scroll distance
-   */
   const handleMouseMove = e => {
     if (!isDragging) return
     e.preventDefault()
     const x = e.pageX || e.touches[0].pageX
-    const walk = (x - startX) * 2 // Multiply for faster scrolling
-    timelineRef.current.scrollLeft = scrollLeft - walk
+    const walk = (x - startX) * 2
+    const newScrollLeft = scrollLeft - walk
+    timelineRef.current.scrollLeft = newScrollLeft
+
   }
 
-  /**
-   * Ends drag scrolling interaction
-   */
   const handleMouseUp = () => {
     setIsDragging(false)
   }
 
-  /**
-   * Handles timeline card selection
-   * Only triggers if not currently dragging to avoid accidental selections
-   * @param {string} periodId - Unique identifier for the selected period
-   * @param {Event} e - Click event object
-   */
-  const handleCardClick = (periodId, e) => {
+  const handleCardClick = periodId => {
     if (!isDragging) {
+      const timelineItem = timelineData.find(item => item.id === periodId)
       setSelectedPeriod(periodId)
-      // TODO: Implement navigation logic here
-      // This should redirect to detailed view or open modal
-      console.log("Navigate to period:", periodId)
+      setSelectedTimelineItem(timelineItem)
+      setIsModalOpen(true)
+      resetActivityTimer()
+      console.log("Navigeer naar periode:", periodId)
     }
   }
 
-  // ===== LOADING & ERROR STATES =====
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 flex justify-center items-center">
-        {/* Animated dual-ring loading spinner */}
-        <div className="relative">
-          <div className="animate-spin rounded-full h-16 w-16 border-4 border-transparent border-t-blue-500 border-r-purple-500"></div>
-          <div className="absolute inset-0 animate-pulse rounded-full h-16 w-16 border-4 border-transparent border-b-cyan-500 border-l-pink-500"></div>
-        </div>
-      </div>
-    )
+  const closeModal = () => {
+    setIsModalOpen(false)
+    setSelectedTimelineItem(null)
+    setSelectedPeriod(null)
+    resetActivityTimer()
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 flex justify-center items-center">
-        {/* Glassmorphism error message container */}
-        <div className="text-center text-red-600 p-8 backdrop-blur-lg bg-white/60 rounded-3xl border border-white/40 shadow-xl">
-          <p className="text-xl">Error loading timeline data: {error}</p>
-        </div>
-      </div>
-    )
-  }
-
-  // ===== MAIN COMPONENT RENDER =====
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 relative">
-      {/* ===== ANIMATED BACKGROUND ELEMENTS ===== */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {/* Top-right floating orb */}
-        <motion.div
-          className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-cyan-400/20 to-blue-400/20 rounded-full blur-3xl"
-          animate={{
-            scale: [1, 1.2, 1],
-            rotate: [0, 180, 360],
-          }}
-          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-        />
+    <div
+      className="min-h-screen relative overflow-hidden pt-32"
+      onTouchStart={handleMouseDown}
+      onTouchMove={handleMouseMove}
+      onTouchEnd={handleMouseUp}
+      onMouseMove={resetActivityTimer}
+      onClick={resetActivityTimer}
+    >
+      {/* Background image - more visible */}
+      <div
+        className="absolute inset-0 bg-cover bg-no-repeat"
+        style={{
+          backgroundImage: `url(${backgroundTimelineImg})`,
+          backgroundPosition: 'center 50%'
+        }}
+      />
 
-        {/* Bottom-left floating orb */}
-        <motion.div
-          className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-purple-400/20 to-pink-400/20 rounded-full blur-3xl"
-          animate={{
-            scale: [1.2, 1, 1.2],
-            rotate: [360, 180, 0],
-          }}
-          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-        />
-      </div>
+      {/* Semi-transparent blue overlay to blend with image */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-900/80 via-blue-700/70 to-cyan-600/60" />
 
-      <div className="timeline-container py-12 px-4 relative">
-        {/* ===== HEADER SECTION ===== */}
-        <motion.div
-          className="text-center mb-16"
-          initial={{ opacity: 0, y: -50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, ease: "easeOut" }}
-        >
-          {/* Glassmorphism header container */}
-          <div className="backdrop-blur-lg bg-white/10 rounded-3xl p-8 mx-auto max-w-4xl border border-white/20 shadow-2xl">
-            {/* Main title with gradient text */}
-            <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 mb-4">
-              Agricultural History Timeline
-            </h1>
+      {/* Subtle pattern overlay for depth */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-blue-900/30" />
 
-            {/* Subtitle */}
-            <p className="text-xl text-gray-300 leading-relaxed">
-              Explore the evolution of farming through interactive periods
-            </p>
-          </div>
-        </motion.div>
 
-        {/* ===== TIMELINE CONTAINER ===== */}
+      <div className="timeline-container py-16 relative w-full h-full z-10">
+        {/* Timeline Container - geen header, geen indicatoren */}
         <div
           ref={timelineRef}
-          className="relative pb-8 cursor-grab active:cursor-grabbing overflow-hidden"
+          className="relative pb-32 cursor-grab active:cursor-grabbing overflow-hidden"
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
-          onTouchStart={handleMouseDown}
-          onTouchMove={handleMouseMove}
-          onTouchEnd={handleMouseUp}
           style={{
             scrollBehavior: isDragging ? "auto" : "smooth",
             userSelect: "none",
           }}
         >
-          {/* Scrollable container with hidden scrollbar */}
           <motion.div
             className="overflow-x-auto scrollbar-hide"
             style={{
-              scrollbarWidth: "none", // Firefox
-              msOverflowStyle: "none", // Internet Explorer 10+
+              scrollbarWidth: "none",
+              msOverflowStyle: "none",
             }}
           >
-            {/* Webkit scrollbar hiding */}
-            <style jsx>{`
-              .scrollbar-hide::-webkit-scrollbar {
-                display: none; /* Safari and Chrome */
-              }
-            `}</style>
+            {/* Timeline Lijn */}
+            <div className="absolute top-1/2 transform -translate-y-1/2 h-2 bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 w-full min-w-max shadow-lg shadow-blue-400/50 rounded-full">
+              <div className="absolute inset-0 bg-gradient-to-r from-cyan-300 via-blue-300 to-purple-300 blur-sm opacity-70 rounded-full"></div>
+            </div>
 
-            {/* Main timeline line - connects all cards horizontally */}
-            <div className="absolute top-1/2 transform -translate-y-1/2 h-1 bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 w-full min-w-max shadow-lg shadow-blue-400/50"></div>
-
-            {/* ===== TIMELINE ITEMS CONTAINER ===== */}
+            {/* Timeline Items */}
             <motion.div
-              className="flex items-center space-x-32 min-w-max px-16 pt-20"
+              className="flex items-center space-x-16 md:space-x-32 min-w-max px-16 md:px-32 pt-16 md:pt-24 pb-16"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 1, ease: "easeOut" }}
             >
-              {/* Render each timeline period */}
-              {extendedTimelineData.map((period, index) => (
+              {timelineData.map((period, index) => (
                 <motion.div
                   key={period.id}
                   className="relative flex-shrink-0 z-10"
@@ -310,32 +273,28 @@ const Timeline = () => {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   transition={{
                     duration: 0.8,
-                    delay: index * 0.2, // Staggered animation
+                    delay: index * 0.2,
                     ease: "easeOut",
                   }}
                 >
-                  {/* ===== TIMELINE CARD ===== */}
                   <div
-                    className={`${index % 2 === 0 ? "mb-40" : "mt-40"} w-80`}
+                    className={`${index % 2 === 0 ? "mb-48" : "mt-48"} w-80`}
                   >
-                    {/* Card wrapper with hover animations */}
                     <motion.div
                       className="cursor-pointer"
-                      onClick={e => handleCardClick(period.id, e)}
+                      onClick={() => handleCardClick(period.id)}
                       whileHover={{
                         scale: 1.05,
                         y: -8,
-                        rotateY: 5, // 3D tilt effect
+                        rotateY: 5,
                       }}
                       whileTap={{ scale: 0.98 }}
                       transition={{ duration: 0.3 }}
                     >
-                      {/* Year display above card */}
+                      {/* Jaar */}
                       <div className="text-center mb-6">
                         <motion.div
-                          className={`text-5xl font-bold bg-gradient-to-r ${
-                            period.gradient || "from-cyan-400 to-blue-400"
-                          } bg-clip-text text-transparent filter drop-shadow-lg`}
+                          className={`text-5xl font-bold bg-gradient-to-r ${period.gradient} bg-clip-text text-transparent filter drop-shadow-lg`}
                           initial={{ scale: 0, rotate: -180 }}
                           animate={{ scale: 1, rotate: 0 }}
                           transition={{ duration: 0.6, delay: index * 0.1 }}
@@ -345,62 +304,56 @@ const Timeline = () => {
                         </motion.div>
                       </div>
 
-                      {/* Main card with glassmorphism effect */}
+                      {/* Kaart */}
                       <motion.div
-                        className="relative backdrop-blur-xl bg-white/10 p-8 rounded-3xl border border-white/20 shadow-2xl overflow-hidden"
+                        className="relative backdrop-blur-lg bg-white/20 p-8 rounded-3xl border border-white/30 overflow-hidden mb-8 shadow-xl"
+                        style={{
+                          filter: "drop-shadow(0 20px 40px rgba(0,0,0,0.4))",
+                          background: "linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.1) 100%)"
+                        }}
                         animate={{
-                          boxShadow:
+                          filter:
                             selectedPeriod === period.id
-                              ? "0 25px 50px rgba(244, 63, 94, 0.25), 0 0 0 2px rgba(244, 63, 94, 0.5)" // Selected state shadow
-                              : "0 15px 35px rgba(0,0,0,0.2)", // Default shadow
+                              ? "drop-shadow(0 25px 50px rgba(244, 63, 94, 0.4))"
+                              : "drop-shadow(0 15px 35px rgba(0,0,0,0.3))",
                           backgroundColor:
                             selectedPeriod === period.id
-                              ? "rgba(244, 63, 94, 0.1)" // Selected state background
-                              : "rgba(255, 255, 255, 0.1)", // Default background
+                              ? "rgba(244, 63, 94, 0.1)"
+                              : "rgba(255, 255, 255, 0.1)",
                         }}
                         transition={{ duration: 0.3 }}
                       >
-                        {/* Animated background gradient overlay */}
                         <div
-                          className={`absolute inset-0 bg-gradient-to-br ${
-                            period.gradient || "from-cyan-400/10 to-blue-400/10"
-                          } opacity-20`}
+                          className={`absolute inset-0 bg-gradient-to-br ${period.gradient} opacity-20`}
                         />
 
-                        {/* Icon container */}
                         <div className="relative flex justify-center mb-6">
                           <motion.div
                             className="w-20 h-20 flex items-center justify-center text-4xl backdrop-blur-sm bg-white/20 rounded-2xl border border-white/30 shadow-lg"
                             whileHover={{
-                              rotate: [0, -10, 10, -10, 0], // Wiggle animation
+                              rotate: [0, -10, 10, -10, 0],
                               scale: 1.1,
                             }}
                             transition={{ duration: 0.5 }}
                           >
-                            {period.icon || "🌾"}{" "}
-                            {/* Default to wheat emoji if no icon */}
+                            🌾
                           </motion.div>
                         </div>
 
-                        {/* Period title with gradient text */}
                         <div className="text-center mb-4 relative">
                           <h3
-                            className={`text-2xl font-bold bg-gradient-to-r ${
-                              period.gradient || "from-cyan-300 to-blue-300"
-                            } bg-clip-text text-transparent leading-tight`}
+                            className={`text-2xl font-bold bg-gradient-to-r ${period.gradient} bg-clip-text text-transparent leading-tight`}
                           >
                             {period.title}
                           </h3>
                         </div>
 
-                        {/* Period description */}
                         <div className="text-center relative">
                           <p className="text-gray-200 leading-relaxed">
                             {period.description}
                           </p>
                         </div>
 
-                        {/* Selection indicator - appears when card is selected */}
                         <AnimatePresence>
                           {selectedPeriod === period.id && (
                             <motion.div
@@ -424,39 +377,92 @@ const Timeline = () => {
             </motion.div>
           </motion.div>
         </div>
+      </div>
 
-        {/* ===== BOTTOM INTERACTION INDICATOR ===== */}
-        <motion.div
-          className="flex justify-center mt-8"
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 1.5 }}
-        >
-          {/* Glassmorphism indicator container */}
-          <div className="backdrop-blur-sm bg-white/10 px-6 py-3 rounded-full border border-white/20 shadow-xl">
-            <div className="flex items-center text-gray-300">
-              {/* Animated arrow indicator */}
+      {/* Firda Logo - Bottom Left Corner */}
+      <motion.div
+        className="fixed bottom-2 left-2 z-50"
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.8, delay: 1 }}
+        whileHover={{
+          scale: 1.1,
+          rotate: [0, -5, 5, -5, 0],
+          transition: { duration: 0.5 },
+        }}
+      >
+        <img
+          src="./images/firda-logo.gif"
+          alt="Firda Logo"
+          className="opacity-80 hover:opacity-100 transition-all duration-300 hover:drop-shadow-lg"
+          style={{ width: '26rem', height: 'auto' }}
+          key={logoKey}
+        />
+      </motion.div>
+
+      {/* Swipe Hint Animation */}
+      <AnimatePresence>
+        {showSwipeHint && (
+          <motion.div
+            className="fixed bottom-20 right-8 z-50 flex items-center space-x-3"
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 50 }}
+            transition={{ duration: 0.8 }}
+          >
+            {/* Animated finger icon */}
+            <motion.div
+              className="relative"
+              animate={{
+                x: [0, -30, 0],
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+            >
+              <div className="text-6xl">👆</div>
+              {/* Swipe trail effect */}
               <motion.div
-                animate={{ x: [0, 10, 0] }}
+                className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-2 bg-gradient-to-r from-cyan-400 to-transparent rounded-full opacity-70"
+                animate={{
+                  x: [30, -50, 30],
+                  opacity: [0, 1, 0],
+                }}
                 transition={{
                   duration: 2,
                   repeat: Infinity,
                   ease: "easeInOut",
                 }}
-                className="text-cyan-400 mr-3"
-              >
-                ← →
-              </motion.div>
+              />
+            </motion.div>
 
-              {/* Responsive instruction text */}
-              <span className="hidden sm:inline text-sm">
-                Swipe to explore timeline
-              </span>
-              <span className="sm:hidden text-sm">Swipe to explore</span>
-            </div>
-          </div>
-        </motion.div>
-      </div>
+            {/* Text hint */}
+            <motion.div
+              className="bg-white/90 backdrop-blur-sm px-4 py-2 rounded-xl shadow-lg border border-white/30"
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.5 }}
+            >
+              <p className="text-gray-800 font-medium text-lg">
+                Veeg met je vinger →
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Timeline Modal */}
+      <AnimatePresence>
+        {isModalOpen && (
+          <TimelineModal
+            isOpen={isModalOpen}
+            onClose={closeModal}
+            timelineItem={selectedTimelineItem}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }
