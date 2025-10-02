@@ -14,12 +14,50 @@
  * - Auto-shuffle when opened
  */
 
-import React, { useState, useCallback, useEffect } from "react"
+import React, { useState, useCallback, useEffect, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { X, Lightbulb, LightbulbOff } from "lucide-react"
+import { X, Lightbulb, LightbulbOff, Grid3X3, ChevronDown } from "lucide-react"
 import { splitImageIntoPieces, createImagePreview } from "../../utils/imageSplitter"
 
 const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage = "/images/puzzle-image.jpg" }) => {
+  // Puzzle levels configuration
+  const puzzleLevels = [
+    {
+      id: 1,
+      name: "Bruine Koe",
+      image: "./images/brown_cow_kids.jpg",
+      gridSize: 3,
+      difficulty: "3x3"
+    },
+    {
+      id: 2,
+      name: "Koe",
+      image: "./images/cow_kids.jpg",
+      gridSize: 3,
+      difficulty: "3x3"
+    },
+    {
+      id: 3,
+      name: "Friese Paard",
+      image: "./images/fries_pard_kids.jpg",
+      gridSize: 3,
+      difficulty: "3x3"
+    },
+    {
+      id: 4,
+      name: "Rode Boerderij",
+      image: "./images/red_dutch_barn.jpg",
+      gridSize: 3,
+      difficulty: "3x3"
+    },
+    {
+      id: 5,
+      name: "Tractor",
+      image: "./images/tractor_kids.jpg",
+      gridSize: 3,
+      difficulty: "3x3"
+    }
+  ]
   // Constants for puzzle configuration
   const GRID_SIZE = 3
   const TILE_COUNT = GRID_SIZE * GRID_SIZE - 1 // 8 image pieces + 1 empty space
@@ -132,6 +170,50 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage = "/images/puzzle-image
   const [draggedTile, setDraggedTile] = useState(null)
   const [hoveredTile, setHoveredTile] = useState(null)
   const [hintsEnabled, setHintsEnabled] = useState(false)
+  const [correctPieces, setCorrectPieces] = useState(new Set())
+  const [justPlacedCorrect, setJustPlacedCorrect] = useState(null)
+  const [currentLevel, setCurrentLevel] = useState(null)
+  const [showLevelSelector, setShowLevelSelector] = useState(false)
+  const [gameMode, setGameMode] = useState('menu') // 'menu' or 'game'
+
+  /**
+   * Plays audio feedback
+   * @param {string} type - Type of sound ('correct' or 'complete')
+   */
+  const playSound = (type) => {
+    try {
+      let audio
+      if (type === 'correct') {
+        audio = new Audio('./sounds/correct_sound.wav')
+      } else if (type === 'complete') {
+        audio = new Audio('./sounds/correct_sound.wav') // Same sound for now
+      }
+
+      if (audio) {
+        audio.volume = 0.3 // Moderate volume
+        audio.play().catch(e => console.log('Audio play failed:', e))
+      }
+    } catch (error) {
+      console.log('Audio error:', error)
+    }
+  }
+
+  /**
+   * Calculates puzzle completion percentage
+   * @returns {number} Percentage of correctly placed pieces (0-100)
+   */
+  const getProgress = useMemo(() => {
+    const correctOrder = createInitialState()
+    let correctCount = 0
+
+    tiles.forEach((tile, index) => {
+      if (tile === correctOrder[index] && tile !== null) {
+        correctCount++
+      }
+    })
+
+    return Math.round((correctCount / TILE_COUNT) * 100)
+  }, [tiles])
 
   /**
    * Checks if the puzzle is in the winning state
@@ -148,14 +230,12 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage = "/images/puzzle-image
    * Only allows movement if tile is adjacent to empty space
    * @param {number} clickedIndex - Index of clicked tile
    */
-  const moveTile = clickedIndex => {
+  const moveTile = useCallback(clickedIndex => {
     const emptyIndex = tiles.indexOf(null)
     const neighbors = getNeighbors(emptyIndex, GRID_SIZE)
 
-    // Check if clicked tile is adjacent to empty space
     if (neighbors.includes(clickedIndex)) {
       const newTiles = [...tiles]
-      // Swap clicked tile with empty space
       ;[newTiles[emptyIndex], newTiles[clickedIndex]] = [
         newTiles[clickedIndex],
         newTiles[emptyIndex],
@@ -164,12 +244,22 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage = "/images/puzzle-image
       setTiles(newTiles)
       setMoves(prev => prev + 1)
 
-      // Check for win condition
+      const correctOrder = createInitialState()
+      const movedPiece = newTiles[emptyIndex]
+      const isCorrect = movedPiece === correctOrder[emptyIndex] && movedPiece !== null
+
+      if (isCorrect) {
+        playSound('correct')
+        setJustPlacedCorrect(emptyIndex)
+        setTimeout(() => setJustPlacedCorrect(null), 1000)
+      }
+
       if (checkWin(newTiles)) {
         setIsWon(true)
+        playSound('complete')
       }
     }
-  }
+  }, [tiles, checkWin])
 
   /**
    * Resets the game to a new shuffled state
@@ -178,96 +268,105 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage = "/images/puzzle-image
     setTiles(shuffleTiles(createInitialState()))
     setIsWon(false)
     setMoves(0)
+    setJustPlacedCorrect(null)
   }
 
   /**
-   * Enhanced drag and drop handlers with touch support
+   * Changes the puzzle level and resets the game
    */
-  const handleDragStart = (e, index) => {
+  const changeLevel = (level) => {
+    setCurrentLevel(level)
+    setIsLoading(true)
+    setTiles(shuffleTiles(createInitialState()))
+    setIsWon(false)
+    setMoves(0)
+    setJustPlacedCorrect(null)
+    setShowLevelSelector(false)
+  }
+
+  /**
+   * Starts the game with selected level
+   */
+  const startGame = (level) => {
+    setCurrentLevel(level)
+    setGameMode('game')
+    setIsLoading(true)
+    setTiles(shuffleTiles(createInitialState()))
+    setIsWon(false)
+    setMoves(0)
+    setJustPlacedCorrect(null)
+  }
+
+  /**
+   * Returns to puzzle selection menu
+   */
+  const backToMenu = () => {
+    setGameMode('menu')
+    setCurrentLevel(null)
+    setIsWon(false)
+    setMoves(0)
+  }
+
+  /**
+   * Enhanced drag and drop handlers - optimized
+   */
+  const handleDragStart = useCallback((e, index) => {
     e.dataTransfer.setData("text/plain", index.toString())
     setDraggedTile(index)
-    // Make drag image semi-transparent
-    setTimeout(() => {
-      e.target.style.opacity = '0.5'
-    }, 0)
-  }
+  }, [])
 
-  const handleDragEnd = (e, index) => {
-    e.target.style.opacity = '1'
+  const handleDragEnd = useCallback(() => {
     setDraggedTile(null)
     setHoveredTile(null)
-  }
+  }, [])
 
-  const handleDragOver = e => {
+  const handleDragOver = useCallback(e => {
     e.preventDefault()
-  }
+  }, [])
 
-  const handleDragEnter = (e, index) => {
+  const handleDragEnter = useCallback((e, index) => {
     e.preventDefault()
     if (tiles[index] === null) {
       setHoveredTile(index)
     }
-  }
+  }, [tiles])
 
-  const handleDragLeave = (e, index) => {
+  const handleDragLeave = useCallback(() => {
     setHoveredTile(null)
-  }
+  }, [])
 
-  const handleDrop = (e, dropIndex) => {
+  const handleDrop = useCallback((e, dropIndex) => {
     e.preventDefault()
     const dragIndex = parseInt(e.dataTransfer.getData("text/plain"))
 
     setDraggedTile(null)
     setHoveredTile(null)
 
-    // Only allow drop on empty space
     if (tiles[dropIndex] === null) {
       moveTile(dragIndex)
     }
-  }
+  }, [tiles, moveTile])
 
-  // Touch events for mobile/touchscreen support
-  const handleTouchStart = (e, index) => {
+  // Touch events for mobile/touchscreen support - optimized
+  const handleTouchStart = useCallback((e, index) => {
     if (tiles[index] === null) return
-
     setDraggedTile(index)
-    e.target.style.opacity = '0.7'
-    e.target.style.transform = 'scale(1.1)'
-
-    // Store the touch start position
     const touch = e.touches[0]
     e.target.touchStartX = touch.clientX
     e.target.touchStartY = touch.clientY
-  }
+  }, [tiles])
 
-  const handleTouchMove = (e, index) => {
+  const handleTouchMove = useCallback((e, index) => {
     if (draggedTile !== index) return
     e.preventDefault()
+  }, [draggedTile])
 
-    const touch = e.touches[0]
-    const element = e.target
-
-    // Move the element with the finger
-    const deltaX = touch.clientX - element.touchStartX
-    const deltaY = touch.clientY - element.touchStartY
-
-    element.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(1.1)`
-    element.style.zIndex = '1000'
-  }
-
-  const handleTouchEnd = (e, index) => {
+  const handleTouchEnd = useCallback((e, index) => {
     if (draggedTile !== index) return
 
-    const element = e.target
-    element.style.opacity = '1'
-    element.style.transform = ''
-    element.style.zIndex = ''
-
-    // Find what element we're over
     const touch = e.changedTouches[0]
     const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY)
 
-    // Find the closest puzzle tile
     let targetTile = elementBelow
     while (targetTile && !targetTile.dataset.tileIndex) {
       targetTile = targetTile.parentElement
@@ -282,23 +381,23 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage = "/images/puzzle-image
 
     setDraggedTile(null)
     setHoveredTile(null)
-  }
+  }, [draggedTile, tiles, moveTile])
 
   /**
    * Load and split image when modal opens or image changes
    */
   useEffect(() => {
-    if (isOpen && puzzleImage) {
+    if (isOpen && gameMode === 'game' && currentLevel?.image) {
       const loadImage = async () => {
         try {
           setIsLoading(true)
 
           // Split image into pieces
-          const pieces = await splitImageIntoPieces(puzzleImage, GRID_SIZE)
+          const pieces = await splitImageIntoPieces(currentLevel.image, currentLevel.gridSize)
           setImagePieces(pieces)
 
           // Create preview
-          const preview = await createImagePreview(puzzleImage)
+          const preview = await createImagePreview(currentLevel.image)
           setImagePreview(preview)
 
           // Reset game with new image
@@ -314,18 +413,74 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage = "/images/puzzle-image
 
       loadImage()
     }
-  }, [isOpen, puzzleImage])
+  }, [isOpen, gameMode, currentLevel])
+
+  /**
+   * Reset to menu mode when modal opens
+   */
+  useEffect(() => {
+    if (isOpen) {
+      setGameMode('menu')
+      setCurrentLevel(null)
+    }
+  }, [isOpen])
 
   /**
    * Reset game state when modal opens to ensure fresh start
    */
   useEffect(() => {
-    if (isOpen && !isLoading) {
+    if (isOpen && !isLoading && gameMode === 'game') {
       restartGame()
     }
-  }, [isOpen, isLoading])
+  }, [isOpen, isLoading, gameMode])
 
   if (!isOpen) return null
+
+  // PUZZLE SELECTION MENU COMPONENT
+  const PuzzleSelectionMenu = () => (
+    <div className="text-center">
+      <motion.h1
+        className="text-4xl font-bold mb-8 text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-300"
+        initial={{ y: -20 }}
+        animate={{ y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        Kies je Puzzle
+      </motion.h1>
+
+      {/* Puzzle Selection Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 max-w-6xl mx-auto">
+        {puzzleLevels.map((level, index) => (
+          <motion.div
+            key={level.id}
+            className="bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 overflow-hidden hover:bg-white/20 transition-all duration-300 cursor-pointer"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 + index * 0.1 }}
+            whileHover={{ scale: 1.05, y: -5 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => startGame(level)}
+          >
+            {/* Preview Image */}
+            <div className="h-48 bg-gray-700 relative overflow-hidden">
+              <img
+                src={level.image}
+                alt={level.name}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+            </div>
+
+            {/* Puzzle Info */}
+            <div className="p-4">
+              <h3 className="text-xl font-bold text-white mb-2">{level.name}</h3>
+              <p className="text-cyan-300 font-medium">{level.difficulty}</p>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  )
 
   return (
     <AnimatePresence>
@@ -355,31 +510,69 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage = "/images/puzzle-image
             <X size={24} />
           </motion.button>
 
-          {/* Hints Toggle Button - Top left */}
-          <motion.button
-            className={`absolute top-6 left-6 z-10 w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg transition-colors ${
-              hintsEnabled
-                ? 'bg-yellow-500/90 hover:bg-yellow-600'
-                : 'bg-gray-500/90 hover:bg-gray-600'
-            }`}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => setHintsEnabled(!hintsEnabled)}
-          >
-            {hintsEnabled ? <Lightbulb size={20} /> : <LightbulbOff size={20} />}
-          </motion.button>
+          {/* Conditional rendering based on game mode */}
+          {gameMode === 'menu' ? (
+            <PuzzleSelectionMenu />
+          ) : (
+            <>
+              {/* Back to Menu Button - Top left when in game mode */}
+              <motion.button
+                className="absolute top-6 left-6 z-10 w-12 h-12 bg-gray-500/90 hover:bg-gray-600 rounded-full flex items-center justify-center text-white shadow-lg"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={backToMenu}
+              >
+                <ChevronDown size={20} className="rotate-90" />
+              </motion.button>
 
-          {/* Game Content Container */}
-          <div className="text-center">
+              {/* Hints Toggle Button - Top left */}
+              <motion.button
+                className={`absolute top-6 left-20 z-10 w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg transition-colors ${
+                  hintsEnabled
+                    ? 'bg-yellow-500/90 hover:bg-yellow-600'
+                    : 'bg-gray-500/90 hover:bg-gray-600'
+                }`}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setHintsEnabled(!hintsEnabled)}
+              >
+                {hintsEnabled ? <Lightbulb size={20} /> : <LightbulbOff size={20} />}
+              </motion.button>
+
+              {/* Level Selector Button */}
+              <motion.button
+                className="absolute top-6 left-32 z-10 w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg transition-colors bg-purple-500/90 hover:bg-purple-600"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setShowLevelSelector(!showLevelSelector)}
+              >
+                <Grid3X3 size={20} />
+              </motion.button>
+
+              {/* Game Content Container */}
+              <div className="text-center">
             {/* Game Title */}
             <motion.h1
-              className="text-3xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-300"
+              className="text-3xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-300"
               initial={{ y: -20 }}
               animate={{ y: 0 }}
               transition={{ delay: 0.2 }}
             >
               Foto Schuifpuzzel
             </motion.h1>
+
+            {/* Current Level Display */}
+            <div className="mb-4">
+              <motion.div
+                className="inline-flex items-center space-x-2 px-4 py-2 bg-purple-500/20 rounded-xl border border-purple-400/30 backdrop-blur-sm"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.3 }}
+              >
+                <span className="text-purple-300 font-medium">{currentLevel.name}</span>
+                <span className="text-purple-400 text-sm">({currentLevel.difficulty})</span>
+              </motion.div>
+            </div>
 
             {/* Move Counter Display */}
             <div className="mb-4">
@@ -428,7 +621,7 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage = "/images/puzzle-image
                     <img
                       src={imagePreview}
                       alt="Puzzle preview"
-                      className="w-48 h-48 object-contain"
+                      className="w-64 h-64 object-contain"
                     />
                   </div>
                   <p className="text-sm text-white/80 mt-2 font-medium">Origineel</p>
@@ -436,62 +629,60 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage = "/images/puzzle-image
               )}
 
               {/* Puzzle Grid - Center */}
-              <div className="grid grid-cols-3 gap-1 w-96 h-96 bg-black/50 p-2 rounded-lg backdrop-blur-sm border border-white/20">
+              <div className="grid grid-cols-3 gap-2 w-[32rem] h-[32rem] bg-black/50 p-3 rounded-lg backdrop-blur-sm border border-white/20">
               {/* Individual Puzzle Tiles */}
-              {tiles.map((tile, index) => (
+              {tiles.map((tile, index) => {
+                const isEmptySpace = tile === null
+                const isHovered = hoveredTile === index
+                const isJustPlaced = justPlacedCorrect === index
+                const isDragged = draggedTile === index
+                const isHintTarget = hintsEnabled && isCorrectPieceBeingDragged(index)
+
+                let tileClassName = "w-full h-full rounded-md overflow-hidden transition-all duration-200 select-none relative "
+
+                if (isEmptySpace) {
+                  if (isHovered) {
+                    tileClassName += "bg-gradient-to-br from-green-500/30 to-blue-500/30 border-2 border-dashed border-green-400/60"
+                  } else if (isHintTarget) {
+                    tileClassName += "border-2 border-dashed border-yellow-400/80 animate-pulse"
+                  } else {
+                    tileClassName += "bg-black/30 border-2 border-dashed border-white/40"
+                  }
+                } else {
+                  if (isJustPlaced) {
+                    tileClassName += "border-2 border-green-400 bg-green-400/20"
+                  } else if (isDragged) {
+                    tileClassName += "border-2 border-cyan-400/80"
+                  } else {
+                    tileClassName += "border border-white/30 hover:border-cyan-400/60 cursor-grab active:cursor-grabbing"
+                  }
+                }
+
+                return (
                 <motion.div
                   key={index}
                   data-tile-index={index}
-                  className={`
-                    w-full h-full rounded-md overflow-hidden
-                    transition-all duration-300 select-none relative
-                    ${
-                      tile === null
-                        ? hoveredTile === index
-                          ? "bg-gradient-to-br from-green-500/30 to-blue-500/30 border-2 border-dashed border-green-400/60 shadow-lg shadow-green-400/30" // Highlighted drop zone
-                          : hintsEnabled && isCorrectPieceBeingDragged(index)
-                          ? "border-2 border-dashed border-yellow-400/80 shadow-lg shadow-yellow-400/50 animate-pulse" // Pulsing target when correct piece is dragged
-                          : "bg-black/30 border-2 border-dashed border-white/40" // Empty space styling
-                        : draggedTile === index
-                        ? "shadow-2xl border-2 border-cyan-400/80 transform scale-105" // Currently dragged piece
-                        : "shadow-lg hover:shadow-xl border border-white/30 hover:border-cyan-400/60 cursor-grab active:cursor-grabbing" // Normal image piece styling
-                    }
-                  `}
+                  className={tileClassName}
                   style={{ touchAction: 'none' }} // Prevent scrolling on touch
                   draggable={tile !== null} // Only image pieces are draggable
                   onDragStart={e => handleDragStart(e, index)}
-                  onDragEnd={e => handleDragEnd(e, index)}
+                  onDragEnd={handleDragEnd}
                   onDragOver={handleDragOver}
                   onDragEnter={e => handleDragEnter(e, index)}
-                  onDragLeave={e => handleDragLeave(e, index)}
+                  onDragLeave={handleDragLeave}
                   onDrop={e => handleDrop(e, index)}
-                  // Touch events for touchscreen support
                   onTouchStart={e => handleTouchStart(e, index)}
                   onTouchMove={e => handleTouchMove(e, index)}
                   onTouchEnd={e => handleTouchEnd(e, index)}
-                  whileHover={
-                    tile !== null && draggedTile !== index
-                      ? {
-                          scale: 1.02,
-                          boxShadow: "0 25px 50px rgba(0, 255, 255, 0.2)"
-                        }
-                      : {}
-                  }
-                  layout // Smooth layout transitions when tiles move
+                  whileHover={tile !== null && draggedTile !== index ? { scale: 1.02 } : undefined}
                   animate={
-                    draggedTile === index
-                      ? {
-                          scale: 1.05,
-                          rotate: [0, -1, 1, -1, 0],
-                          boxShadow: "0 25px 50px rgba(34, 211, 238, 0.4)"
-                        }
-                      : {}
+                    justPlacedCorrect === index
+                      ? { scale: [1, 1.1, 1] }
+                      : draggedTile === index
+                      ? { scale: 1.05 }
+                      : undefined
                   }
-                  transition={{
-                    type: "spring",
-                    stiffness: 300,
-                    damping: 30
-                  }}
+                  transition={{ duration: 0.2 }}
                 >
                   {tile !== null ? (
                     <div className="w-full h-full relative">
@@ -557,12 +748,13 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage = "/images/puzzle-image
                     )
                   )}
                 </motion.div>
-              ))}
+                )
+              })}
               </div>
 
               {/* Leaderboard - Right Side */}
               <motion.div
-                className="flex flex-col w-56"
+                className="flex flex-col w-72"
                 initial={{ opacity: 0, x: 50 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.6, delay: 0.2 }}
@@ -615,7 +807,25 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage = "/images/puzzle-image
                     </div>
                   </div>
 
+                  {/* Progress Bar */}
                   <div className="mt-4 pt-3 border-t border-white/20">
+                    <div className="mb-3">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-white/80 text-sm">Voortgang:</span>
+                        <span className="text-cyan-400 font-bold text-sm">{getProgress}%</span>
+                      </div>
+                      <div className="w-full bg-white/20 rounded-full h-3 overflow-hidden">
+                        <motion.div
+                          className="h-full bg-gradient-to-r from-green-400 to-cyan-400 rounded-full shadow-lg"
+                          style={{ width: `${getProgress}%` }}
+                          initial={{ scaleX: 0 }}
+                          animate={{ scaleX: 1 }}
+                          transition={{ duration: 0.5, ease: "easeOut" }}
+                          transformOrigin="left"
+                        />
+                      </div>
+                    </div>
+
                     <div className="flex justify-between items-center">
                       <span className="text-white/80 text-sm">Jouw score:</span>
                       <span className="text-cyan-400 font-bold">{moves} zetten</span>
@@ -624,6 +834,48 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage = "/images/puzzle-image
                 </div>
               </motion.div>
             </div>
+
+            {/* Level Selector Dropdown */}
+            <AnimatePresence>
+              {showLevelSelector && (
+                <motion.div
+                  className="mb-6 relative"
+                  initial={{ opacity: 0, y: -20, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -20, scale: 0.9 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="bg-black/50 backdrop-blur-xl rounded-2xl border border-white/20 p-4 max-w-md mx-auto">
+                    <h3 className="text-lg font-bold text-white mb-3 text-center">Kies Niveau</h3>
+                    <div className="space-y-2">
+                      {puzzleLevels.map((level) => (
+                        <motion.button
+                          key={level.id}
+                          className={`w-full p-3 rounded-xl text-left transition-colors ${
+                            currentLevel.id === level.id
+                              ? 'bg-purple-500/30 border border-purple-400/50 text-purple-200'
+                              : 'bg-white/10 border border-white/20 text-white/80 hover:bg-white/20'
+                          }`}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => changeLevel(level)}
+                        >
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <div className="font-medium">{level.name}</div>
+                              <div className="text-sm opacity-70">{level.difficulty} • {level.gridSize}x{level.gridSize}</div>
+                            </div>
+                            {currentLevel.id === level.id && (
+                              <div className="text-purple-400">✓</div>
+                            )}
+                          </div>
+                        </motion.button>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Game Controls */}
             <div className="text-center">
@@ -638,7 +890,9 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage = "/images/puzzle-image
                 🔄 Nieuw Spel
               </motion.button>
             </div>
-          </div>
+              </div>
+            </>
+          )}
         </motion.div>
       </motion.div>
     </AnimatePresence>

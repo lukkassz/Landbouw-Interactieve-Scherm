@@ -1,9 +1,11 @@
-import React, { useState, useRef } from "react"
+import React, { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import TimelineModal from "./TimelineModal"
 
 // Import puzzle images
-import puzzleImg from "../../assets/images/puzzles/puzzle.jpg"
+import puzzleImg from "../../assets/images/puzzle/brown_cow_kids.jpg"
+// Import background image
+import backgroundTimelineImg from "../../assets/images/timeline/achtergrond3.png"
 
 const Timeline = () => {
   const [selectedPeriod, setSelectedPeriod] = useState(null)
@@ -12,7 +14,56 @@ const Timeline = () => {
   const [isDragging, setIsDragging] = useState(false)
   const [startX, setStartX] = useState(0)
   const [scrollLeft, setScrollLeft] = useState(0)
+  const [showSwipeHint, setShowSwipeHint] = useState(true)
+  const [lastActivityTime, setLastActivityTime] = useState(Date.now())
+  const [logoKey, setLogoKey] = useState(0)
   const timelineRef = useRef(null)
+  const inactivityTimerRef = useRef(null)
+
+  // Preload background image for faster loading
+  useEffect(() => {
+    const img = new Image()
+    img.src = backgroundTimelineImg
+  }, [])
+
+  // Inactivity detection system for museum display
+  useEffect(() => {
+    const checkInactivity = () => {
+      const now = Date.now()
+      const timeSinceActivity = now - lastActivityTime
+
+      // Show hint continuously after 8 seconds of inactivity
+      if (timeSinceActivity > 8000) {
+        setShowSwipeHint(true)
+      } else {
+        setShowSwipeHint(false)
+      }
+    }
+
+    // Check every 1 second for more responsive behavior
+    inactivityTimerRef.current = setInterval(checkInactivity, 1000)
+
+    return () => {
+      if (inactivityTimerRef.current) {
+        clearInterval(inactivityTimerRef.current)
+      }
+    }
+  }, [lastActivityTime])
+
+  // Auto-restart Firda logo GIF every 15 seconds
+  useEffect(() => {
+    const logoInterval = setInterval(() => {
+      setLogoKey(prev => prev + 1)
+    }, 15000)
+
+    return () => clearInterval(logoInterval)
+  }, [])
+
+  // Reset activity timer on any interaction
+  const resetActivityTimer = () => {
+    setLastActivityTime(Date.now())
+    setShowSwipeHint(false)
+  }
 
   // Fries Landbouwmuseum Timeline - Nederlandse teksten
   const timelineData = [
@@ -120,6 +171,7 @@ const Timeline = () => {
     setIsDragging(true)
     setStartX(e.pageX || e.touches[0].pageX)
     setScrollLeft(timelineRef.current.scrollLeft)
+    resetActivityTimer()
   }
 
   const handleMouseMove = e => {
@@ -142,6 +194,7 @@ const Timeline = () => {
       setSelectedPeriod(periodId)
       setSelectedTimelineItem(timelineItem)
       setIsModalOpen(true)
+      resetActivityTimer()
       console.log("Navigeer naar periode:", periodId)
     }
   }
@@ -150,13 +203,34 @@ const Timeline = () => {
     setIsModalOpen(false)
     setSelectedTimelineItem(null)
     setSelectedPeriod(null)
+    resetActivityTimer()
   }
 
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      {/* Overlay for better text readability */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/20 to-blue-900/30" />
+    <div
+      className="min-h-screen relative overflow-hidden pt-32"
+      onTouchStart={handleMouseDown}
+      onTouchMove={handleMouseMove}
+      onTouchEnd={handleMouseUp}
+      onMouseMove={resetActivityTimer}
+      onClick={resetActivityTimer}
+    >
+      {/* Background image - more visible */}
+      <div
+        className="absolute inset-0 bg-cover bg-no-repeat"
+        style={{
+          backgroundImage: `url(${backgroundTimelineImg})`,
+          backgroundPosition: 'center 50%'
+        }}
+      />
+
+      {/* Semi-transparent blue overlay to blend with image */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-900/80 via-blue-700/70 to-cyan-600/60" />
+
+      {/* Subtle pattern overlay for depth */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-blue-900/30" />
+
 
       <div className="timeline-container py-16 relative w-full h-full z-10">
         {/* Timeline Container - geen header, geen indicatoren */}
@@ -167,9 +241,6 @@ const Timeline = () => {
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
-          onTouchStart={handleMouseDown}
-          onTouchMove={handleMouseMove}
-          onTouchEnd={handleMouseUp}
           style={{
             scrollBehavior: isDragging ? "auto" : "smooth",
             userSelect: "none",
@@ -183,11 +254,13 @@ const Timeline = () => {
             }}
           >
             {/* Timeline Lijn */}
-            <div className="absolute top-1/2 transform -translate-y-1/2 h-1 bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 w-full min-w-max shadow-lg shadow-blue-400/50"></div>
+            <div className="absolute top-1/2 transform -translate-y-1/2 h-2 bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 w-full min-w-max shadow-lg shadow-blue-400/50 rounded-full">
+              <div className="absolute inset-0 bg-gradient-to-r from-cyan-300 via-blue-300 to-purple-300 blur-sm opacity-70 rounded-full"></div>
+            </div>
 
             {/* Timeline Items */}
             <motion.div
-              className="flex items-center space-x-32 min-w-max px-32 pt-24 pb-16"
+              className="flex items-center space-x-16 md:space-x-32 min-w-max px-16 md:px-32 pt-16 md:pt-24 pb-16"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 1, ease: "easeOut" }}
@@ -233,9 +306,10 @@ const Timeline = () => {
 
                       {/* Kaart */}
                       <motion.div
-                        className="relative backdrop-blur-xl bg-white/10 p-8 rounded-3xl border border-white/20 overflow-hidden mb-8"
+                        className="relative backdrop-blur-lg bg-white/20 p-8 rounded-3xl border border-white/30 overflow-hidden mb-8 shadow-xl"
                         style={{
-                          filter: "drop-shadow(0 15px 35px rgba(0,0,0,0.3))",
+                          filter: "drop-shadow(0 20px 40px rgba(0,0,0,0.4))",
+                          background: "linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.1) 100%)"
                         }}
                         animate={{
                           filter:
@@ -322,15 +396,62 @@ const Timeline = () => {
           alt="Firda Logo"
           className="opacity-80 hover:opacity-100 transition-all duration-300 hover:drop-shadow-lg"
           style={{ width: '26rem', height: 'auto' }}
-          key={Date.now()}
-          onLoad={e => {
-            // Restart GIF animation every 15 seconds
-            setInterval(() => {
-              e.target.src = e.target.src.split("?")[0] + "?" + Date.now()
-            }, 15000)
-          }}
+          key={logoKey}
         />
       </motion.div>
+
+      {/* Swipe Hint Animation */}
+      <AnimatePresence>
+        {showSwipeHint && (
+          <motion.div
+            className="fixed bottom-20 right-8 z-50 flex items-center space-x-3"
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 50 }}
+            transition={{ duration: 0.8 }}
+          >
+            {/* Animated finger icon */}
+            <motion.div
+              className="relative"
+              animate={{
+                x: [0, -30, 0],
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+            >
+              <div className="text-6xl">👆</div>
+              {/* Swipe trail effect */}
+              <motion.div
+                className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-2 bg-gradient-to-r from-cyan-400 to-transparent rounded-full opacity-70"
+                animate={{
+                  x: [30, -50, 30],
+                  opacity: [0, 1, 0],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+              />
+            </motion.div>
+
+            {/* Text hint */}
+            <motion.div
+              className="bg-white/90 backdrop-blur-sm px-4 py-2 rounded-xl shadow-lg border border-white/30"
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.5 }}
+            >
+              <p className="text-gray-800 font-medium text-lg">
+                Veeg met je vinger →
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Timeline Modal */}
       <AnimatePresence>

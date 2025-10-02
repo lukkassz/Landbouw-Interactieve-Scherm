@@ -29,7 +29,7 @@ const Header = () => {
   }
   return (
     <motion.header
-      className="backdrop-blur-xl bg-white/10 border-b border-white/20 fixed top-0 left-0 right-0 z-50 shadow-2xl"
+      className="backdrop-blur-xl bg-gradient-to-r from-blue-600/90 to-blue-800/90 border-b border-blue-400/30 fixed top-0 left-0 right-0 z-50 shadow-2xl"
       initial={{ y: -100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
