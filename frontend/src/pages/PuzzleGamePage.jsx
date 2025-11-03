@@ -1,11 +1,21 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
-import SlidePuzzle from '../components/PuzzleGame/SlidePuzzle';
+import ImagePuzzleModal from '../components/PuzzleGame/ImagePuzzleModal';
 
 const PuzzleGamePage = () => {
+  const [isPuzzleModalOpen, setIsPuzzleModalOpen] = useState(true);
+
   const handleBackToTimeline = () => {
     window.location.href = '/#/';
+  };
+
+  const handleClosePuzzleModal = () => {
+    setIsPuzzleModalOpen(false);
+    // Navigate back to timeline after closing puzzle modal
+    setTimeout(() => {
+      window.location.href = '/#/';
+    }, 300);
   };
 
   return (
@@ -24,8 +34,11 @@ const PuzzleGamePage = () => {
         <span className="font-medium">Terug naar Timeline</span>
       </motion.button>
 
-      {/* Puzzle Game Component */}
-      <SlidePuzzle />
+      {/* Image Puzzle Modal */}
+      <ImagePuzzleModal
+        isOpen={isPuzzleModalOpen}
+        onClose={handleClosePuzzleModal}
+      />
     </div>
   );
 };

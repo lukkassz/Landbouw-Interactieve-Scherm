@@ -18,8 +18,11 @@ import React, { useState, useCallback, useEffect, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { X, Lightbulb, LightbulbOff, Grid3X3, ChevronDown } from "lucide-react"
 import { splitImageIntoPieces, createImagePreview } from "../../utils/imageSplitter"
+import { getTheme } from "../../config/themes"
 
 const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage = "/images/puzzle-image.jpg" }) => {
+  const theme = getTheme()
+
   // Puzzle levels configuration
   const puzzleLevels = [
     {
@@ -426,6 +429,18 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage = "/images/puzzle-image
   }, [isOpen])
 
   /**
+   * Preload puzzle images for faster loading
+   */
+  useEffect(() => {
+    if (isOpen) {
+      puzzleLevels.forEach(level => {
+        const img = new Image()
+        img.src = level.image
+      })
+    }
+  }, [isOpen])
+
+  /**
    * Reset game state when modal opens to ensure fresh start
    */
   useEffect(() => {
@@ -436,65 +451,150 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage = "/images/puzzle-image
 
   if (!isOpen) return null
 
-  // PUZZLE SELECTION MENU COMPONENT
-  const PuzzleSelectionMenu = () => (
-    <div className="text-center">
-      <motion.h1
-        className="text-4xl font-bold mb-8 text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-300"
-        initial={{ y: -20 }}
-        animate={{ y: 0 }}
-        transition={{ delay: 0.2 }}
-      >
-        Kies je Puzzle
-      </motion.h1>
+  // PUZZLE SELECTION MENU COMPONENT - Native Scroll Carousel
+  const PuzzleSelectionMenu = () => {
+    const [touchStart, setTouchStart] = React.useState({ x: 0, y: 0, time: 0 })
+    const [isDragging, setIsDragging] = React.useState(false)
 
-      {/* Puzzle Selection Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 max-w-6xl mx-auto">
-        {puzzleLevels.map((level, index) => (
-          <motion.div
-            key={level.id}
-            className="bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 overflow-hidden hover:bg-white/20 transition-all duration-300 cursor-pointer"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 + index * 0.1 }}
-            whileHover={{ scale: 1.05, y: -5 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => startGame(level)}
-          >
-            {/* Preview Image */}
-            <div className="h-48 bg-gray-700 relative overflow-hidden">
-              <img
-                src={level.image}
-                alt={level.name}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-            </div>
+    const handleCardTouchStart = (e) => {
+      const touch = e.touches[0]
+      setTouchStart({
+        x: touch.clientX,
+        y: touch.clientY,
+        time: Date.now()
+      })
+      setIsDragging(false)
+    }
 
-            {/* Puzzle Info */}
-            <div className="p-4">
-              <h3 className="text-xl font-bold text-white mb-2">{level.name}</h3>
-              <p className="text-cyan-300 font-medium">{level.difficulty}</p>
-            </div>
-          </motion.div>
-        ))}
+    const handleCardTouchMove = (e) => {
+      if (!touchStart.x) return
+      const touch = e.touches[0]
+      const deltaX = Math.abs(touch.clientX - touchStart.x)
+      const deltaY = Math.abs(touch.clientY - touchStart.y)
+
+      // If moved more than 10px, it's a drag
+      if (deltaX > 10 || deltaY > 10) {
+        setIsDragging(true)
+      }
+    }
+
+    const handleCardClick = (level, e) => {
+      // If it was a drag/scroll, don't trigger click
+      if (isDragging) {
+        e.preventDefault()
+        e.stopPropagation()
+        return
+      }
+
+      // For regular clicks (mouse), always start game
+      if (e.type === 'click') {
+        startGame(level)
+        return
+      }
+
+      // For touch events, check if it was a tap (< 300ms)
+      const touchDuration = Date.now() - touchStart.time
+      if (touchDuration < 300 || touchDuration === 0) {
+        startGame(level)
+      }
+    }
+
+    return (
+      <div className="text-center">
+        <motion.h1
+          className={`text-5xl font-bold mb-12 text-transparent bg-clip-text bg-gradient-to-r ${theme.text.gradient} drop-shadow-[0_6px_24px_rgba(56,189,248,0.25)]`}
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.2, duration: 0.6 }}
+        >
+          Kies je Puzzle
+        </motion.h1>
+
+        {/* Native Scroll Carousel with Snap Points */}
+        <div
+          className="overflow-x-auto snap-x snap-mandatory scrollbar-hide puzzle-carousel"
+          style={{
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+            WebkitOverflowScrolling: 'touch',
+            touchAction: 'pan-x',
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+            MozUserSelect: 'none',
+            msUserSelect: 'none',
+            overscrollBehavior: 'contain'
+          }}
+          onContextMenu={(e) => e.preventDefault()}
+        >
+          <div className="flex space-x-8 px-12 py-8 min-w-max">
+            {puzzleLevels.map((level, index) => (
+              <motion.div
+                key={level.id}
+                className="flex-shrink-0 w-80 snap-center backdrop-blur-lg bg-white/20 rounded-3xl border border-white/30 overflow-hidden hover:bg-white/25 transition-all duration-300 cursor-pointer shadow-2xl"
+                initial={{ opacity: 0, scale: 0.8, y: 50 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ delay: 0.3 + index * 0.15, duration: 0.6, ease: "easeOut" }}
+                onClick={(e) => handleCardClick(level, e)}
+                onTouchStart={handleCardTouchStart}
+                onTouchMove={handleCardTouchMove}
+                onTouchEnd={(e) => handleCardClick(level, e)}
+              >
+                {/* Large Preview Image */}
+                <div className="h-72 bg-gradient-to-br from-blue-900/50 to-purple-900/50 relative overflow-hidden pointer-events-none">
+                  <img
+                    src={level.image}
+                    alt={level.name}
+                    className="w-full h-full object-cover select-none"
+                    loading="eager"
+                    draggable="false"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+
+                  {/* Difficulty Badge */}
+                  <div className="absolute top-4 right-4 bg-cyan-500/90 backdrop-blur-sm px-4 py-2 rounded-full border border-white/30">
+                    <span className="text-white font-bold text-sm">{level.difficulty}</span>
+                  </div>
+                </div>
+
+                {/* Puzzle Info */}
+                <div className="p-6 relative pointer-events-none">
+                  <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-purple-500/10" />
+                  <div className="relative">
+                    <h3 className="text-2xl font-bold text-white mb-2">{level.name}</h3>
+                    <p className="text-cyan-300 font-medium">Klik om te spelen →</p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+
+        {/* Scroll Hint */}
+        <motion.p
+          className="text-white/60 text-sm mt-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.5 }}
+        >
+          ← Veeg om meer puzzels te zien →
+        </motion.p>
       </div>
-    </div>
-  )
+    )
+  }
 
   return (
     <AnimatePresence>
-      {/* Modal Overlay - Dark background with blur effect */}
+      {/* Modal Overlay - Transparent background to show timeline */}
       <motion.div
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        onClick={onClose} // Close modal when clicking outside
+        style={{ touchAction: 'none' }}
       >
         {/* Main Modal Container */}
         <motion.div
-          className="relative w-full max-w-7xl backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl shadow-2xl p-8"
+          className={`relative w-full max-w-7xl backdrop-blur-xl ${theme.background.card} border ${theme.border} rounded-3xl shadow-2xl p-8`}
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.8, opacity: 0 }}

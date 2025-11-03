@@ -27,6 +27,9 @@
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
     user-select: none;
+    /* Prevent pull-to-refresh and overscroll */
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
   }
 
   body::-webkit-scrollbar {
@@ -43,7 +46,7 @@
 
   /* Touch-optimized buttons for kiosk interface */
   .btn-primary {
-    @apply px-10 py-5 bg-gradient-to-r from-cyan-400 to-blue-400 text-white rounded-3xl font-bold text-lg hover:from-cyan-500 hover:to-blue-500 active:scale-95 transition-all duration-200 transform focus:ring-4 focus:ring-cyan-400/50 focus:ring-offset-2 focus:ring-offset-slate-900 shadow-xl shadow-cyan-400/30 min-h-[60px] min-w-[160px] cursor-pointer select-none;
+    @apply px-10 py-5 bg-theme-primary text-white rounded-3xl font-bold text-lg hover:bg-brand-amber active:scale-95 transition-all duration-200 transform focus:ring-4 focus:ring-brand-gold/50 focus:ring-offset-2 focus:ring-offset-brand-linen shadow-xl min-h-[60px] min-w-[160px] cursor-pointer select-none;
   }
 
   .btn-secondary {
@@ -217,5 +220,106 @@
     font-size: 2.5rem;
     line-height: 1.2;
     font-weight: 800;
+  }
+
+  /* Puzzle carousel touch optimization */
+  .puzzle-carousel {
+    touch-action: pan-x;
+    overscroll-behavior-x: contain;
+    overscroll-behavior-y: none;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .puzzle-carousel::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Prevent pull-to-refresh on touch devices */
+  .no-pull-refresh {
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Leaflet Map Custom Styles */
+  .custom-marker {
+    background: transparent;
+    border: none;
+  }
+
+  .leaflet-popup-content-wrapper {
+    border-radius: 12px;
+    padding: 0;
+  }
+
+  .leaflet-popup-content {
+    margin: 0;
+  }
+
+  .leaflet-container {
+    touch-action: none !important;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+  }
+
+  .leaflet-container * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .leaflet-control-attribution {
+    display: none !important;
+  }
+
+  .leaflet-touch .leaflet-control-layers,
+  .leaflet-touch .leaflet-bar {
+    border: 1px solid rgba(148, 163, 184, 0.3) !important;
+  }
+
+  .leaflet-control-zoom a {
+    width: 40px !important;
+    height: 40px !important;
+    line-height: 40px !important;
+    font-size: 20px !important;
+    border-radius: 8px !important;
+    background: rgba(30, 41, 59, 0.9) !important;
+    color: white !important;
+    border: 1px solid rgba(148, 163, 184, 0.3) !important;
+  }
+
+  .leaflet-control-zoom a:hover {
+    background: rgba(51, 65, 85, 0.9) !important;
+  }
+
+  .leaflet-control-attribution {
+    font-size: 10px !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    color: white !important;
+    border-radius: 4px !important;
+    padding: 2px 6px !important;
+  }
+
+  .leaflet-control-attribution a {
+    color: #93c5fd !important;
+  }
+
+  /* Enable touch dragging on map */
+  .leaflet-grab {
+    cursor: grab !important;
+  }
+
+  .leaflet-dragging .leaflet-grab {
+    cursor: grabbing !important;
+  }
+
+  /* Prevent issues with touch events */
+  .leaflet-tile-container {
+    pointer-events: none;
+  }
+
+  .leaflet-marker-icon,
+  .leaflet-popup {
+    pointer-events: auto;
   }
 }
