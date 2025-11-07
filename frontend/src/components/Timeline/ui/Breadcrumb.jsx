@@ -1,8 +1,11 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 import PropTypes from 'prop-types'
+import { getTheme } from '../../../config/themes'
 
 const Breadcrumb = ({ items, onNavigate }) => {
+  const theme = getTheme()
+
   return (
     <motion.nav
       className="mb-4"
@@ -21,13 +24,13 @@ const Breadcrumb = ({ items, onNavigate }) => {
               {isClickable ? (
                 <button
                   onClick={() => item.onClick && item.onClick()}
-                  className="text-slate-400 hover:text-white transition-colors hover:underline cursor-pointer flex items-center gap-1"
+                  className={`${theme.text.darkSecondary || 'text-slate-400'} ${theme.text.dark ? 'hover:text-amber-700' : 'hover:text-white'} transition-colors hover:underline cursor-pointer flex items-center gap-1`}
                 >
                   {item.icon && <span>{item.icon}</span>}
                   <span>{item.label}</span>
                 </button>
               ) : (
-                <span className={`flex items-center gap-1 ${isLast ? 'text-white font-medium' : 'text-slate-500'}`}>
+                <span className={`flex items-center gap-1 ${isLast ? `${theme.text.dark || 'text-white'} font-medium` : `${theme.text.darkSecondary || 'text-slate-500'}`}`}>
                   {item.icon && <span>{item.icon}</span>}
                   <span>{item.label}</span>
                 </span>
@@ -35,7 +38,7 @@ const Breadcrumb = ({ items, onNavigate }) => {
 
               {/* Separator */}
               {!isLast && (
-                <span className="text-slate-600 select-none">/</span>
+                <span className={`${theme.text.darkSecondary || 'text-slate-600'} select-none opacity-40`}>/</span>
               )}
             </li>
           )

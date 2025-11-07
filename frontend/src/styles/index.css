@@ -7,10 +7,25 @@
 
 @layer base {
   html {
-    font-family: 'Inter', sans-serif;
+    font-family: 'Montserrat', sans-serif;
     scroll-behavior: smooth;
     scrollbar-width: none;
     -ms-overflow-style: none;
+  }
+
+  /* Museum fonts - headings use Josefin Sans */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: 'Josefin Sans', sans-serif;
+  }
+
+  /* Buttons use Josefin Sans */
+  button {
+    font-family: 'Josefin Sans', sans-serif;
   }
 
   html::-webkit-scrollbar {
@@ -22,7 +37,7 @@
     overflow-x: hidden;
     scrollbar-width: none;
     -ms-overflow-style: none;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
     /* Optimize for touch interfaces */
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
@@ -46,11 +61,11 @@
 
   /* Touch-optimized buttons for kiosk interface */
   .btn-primary {
-    @apply px-10 py-5 bg-theme-primary text-white rounded-3xl font-bold text-lg hover:bg-brand-amber active:scale-95 transition-all duration-200 transform focus:ring-4 focus:ring-brand-gold/50 focus:ring-offset-2 focus:ring-offset-brand-linen shadow-xl min-h-[60px] min-w-[160px] cursor-pointer select-none;
+    @apply px-10 py-5 bg-theme-primary text-white rounded-3xl font-bold text-lg font-heading hover:bg-brand-amber active:scale-95 transition-all duration-200 transform focus:ring-4 focus:ring-brand-gold/50 focus:ring-offset-2 focus:ring-offset-brand-linen shadow-xl min-h-[60px] min-w-[160px] cursor-pointer select-none;
   }
 
   .btn-secondary {
-    @apply px-10 py-5 backdrop-blur-xl bg-white/10 text-white border-2 border-white/20 rounded-3xl font-bold text-lg hover:bg-white/20 hover:text-white active:scale-95 transition-all duration-200 transform focus:ring-4 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-slate-900 shadow-xl min-h-[60px] min-w-[160px] cursor-pointer select-none;
+    @apply px-10 py-5 backdrop-blur-xl bg-white/10 text-white border-2 border-white/20 rounded-3xl font-bold text-lg font-heading hover:bg-white/20 hover:text-white active:scale-95 transition-all duration-200 transform focus:ring-4 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-slate-900 shadow-xl min-h-[60px] min-w-[160px] cursor-pointer select-none;
   }
 
   .timeline-card {

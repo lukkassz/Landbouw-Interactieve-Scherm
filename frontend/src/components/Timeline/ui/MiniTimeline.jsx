@@ -1,25 +1,32 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import PropTypes from 'prop-types'
+import { getTheme } from '../../../config/themes'
 
 const MiniTimeline = ({ events, activeYear }) => {
   const [hoveredEvent, setHoveredEvent] = useState(null)
+  const theme = getTheme()
 
   return (
     <div className="w-full py-8">
       {/* Title */}
-      <h3 className="text-xl font-bold text-white mb-8 flex items-center gap-2">
+      <h3 className={`text-xl font-bold ${theme.text.dark || 'text-white'} mb-8 flex items-center gap-2`}>
         <span>⏱</span>
         <span>Belangrijke momenten</span>
       </h3>
 
       {/* Timeline Container */}
       <div className="relative px-4">
-        {/* Connecting Line */}
-        <div className="absolute top-6 left-0 right-0 h-0.5 bg-slate-500" style={{
-          backgroundImage: 'repeating-linear-gradient(to right, rgb(100 116 139) 0, rgb(100 116 139) 8px, transparent 8px, transparent 16px)',
-          height: '2px'
-        }} />
+        {/* Connecting Line - gradient from gray through terracotta back to gray */}
+        <div
+          className="absolute top-6 left-0 right-0 h-0.5"
+          style={{
+            background: theme.name === 'museum'
+              ? 'linear-gradient(to right, #a7b8b4 0%, #a7b8b4 30%, #ae5514 50%, #a7b8b4 70%, #a7b8b4 100%)'
+              : 'repeating-linear-gradient(to right, rgb(100 116 139) 0, rgb(100 116 139) 8px, transparent 8px, transparent 16px)',
+            height: '2px'
+          }}
+        />
 
         {/* Events */}
         <div className="relative flex justify-between items-start">
@@ -29,7 +36,7 @@ const MiniTimeline = ({ events, activeYear }) => {
 
             return (
               <motion.div
-                key={event.year}
+                key={`${event.year}-${index}`}
                 className="flex flex-col items-center relative"
                 style={{ flex: 1 }}
                 initial={{ opacity: 0, y: 20 }}
@@ -44,8 +51,12 @@ const MiniTimeline = ({ events, activeYear }) => {
                   {/* Pulsing Ring for Active */}
                   {isActive && (
                     <motion.div
-                      className="absolute inset-0 rounded-full bg-orange-500"
-                      style={{ scale: 1.5, opacity: 0.3 }}
+                      className="absolute inset-0 rounded-full"
+                      style={{
+                        scale: 1.5,
+                        opacity: 0.3,
+                        backgroundColor: theme.name === 'museum' ? '#ae5514' : '#f97316'
+                      }}
                       animate={{ scale: [1.5, 2, 1.5], opacity: [0.3, 0.1, 0.3] }}
                       transition={{ repeat: Infinity, duration: 2 }}
                     />
@@ -53,11 +64,25 @@ const MiniTimeline = ({ events, activeYear }) => {
 
                   {/* Main Dot */}
                   <motion.div
-                    className={`relative z-10 rounded-full border-4 cursor-pointer transition-all ${
+                    className="relative z-10 rounded-full border-4 cursor-pointer transition-all"
+                    style={
                       isActive
-                        ? 'w-6 h-6 bg-orange-500 border-orange-400 shadow-lg shadow-orange-500/50'
-                        : 'w-4 h-4 bg-slate-600 border-slate-500'
-                    }`}
+                        ? {
+                            width: '24px',
+                            height: '24px',
+                            backgroundColor: theme.name === 'museum' ? '#ae5514' : '#f97316',
+                            borderColor: theme.name === 'museum' ? '#c9a300' : '#fb923c',
+                            boxShadow: theme.name === 'museum'
+                              ? '0 10px 15px -3px rgba(174, 85, 20, 0.5)'
+                              : '0 10px 15px -3px rgba(249, 115, 22, 0.5)'
+                          }
+                        : {
+                            width: '16px',
+                            height: '16px',
+                            backgroundColor: theme.name === 'museum' ? '#657575' : '#475569',
+                            borderColor: theme.name === 'museum' ? '#a7b8b4' : '#64748b'
+                          }
+                    }
                     whileHover={{ scale: 1.2 }}
                     whileTap={{ scale: 0.95 }}
                   />
@@ -65,7 +90,8 @@ const MiniTimeline = ({ events, activeYear }) => {
                   {/* Star for Active */}
                   {isActive && (
                     <motion.div
-                      className="absolute -top-1 -right-1 text-yellow-400 text-xl"
+                      className="absolute -top-1 -right-1 text-xl"
+                      style={{ color: theme.name === 'museum' ? '#c9a300' : '#facc15' }}
                       initial={{ rotate: -45, scale: 0 }}
                       animate={{ rotate: 0, scale: 1 }}
                       transition={{ delay: index * 0.2 + 0.3, type: 'spring' }}
@@ -77,14 +103,33 @@ const MiniTimeline = ({ events, activeYear }) => {
 
                 {/* Event Info */}
                 <div className="text-center max-w-[120px]">
-                  <div className={`text-sm mb-1 ${isActive ? 'font-bold text-orange-400' : 'text-slate-300'}`}>
+                  <div
+                    className="text-sm mb-1"
+                    style={{
+                      fontWeight: isActive ? 'bold' : 'normal',
+                      color: isActive
+                        ? theme.name === 'museum' ? '#ae5514' : '#fb923c'
+                        : theme.name === 'museum' ? '#657575' : '#cbd5e1'
+                    }}
+                  >
                     {event.year}
                   </div>
-                  <div className={`text-xs mb-2 ${isActive ? 'font-semibold text-white' : 'text-slate-400'}`}>
+                  <div
+                    className="text-xs mb-2"
+                    style={{
+                      fontWeight: isActive ? '600' : 'normal',
+                      color: isActive
+                        ? theme.name === 'museum' ? '#440f0f' : '#ffffff'
+                        : theme.name === 'museum' ? '#a7b8b4' : '#94a3b8'
+                    }}
+                  >
                     {event.title}
                   </div>
                   {event.shortDescription && (
-                    <div className="text-xs text-slate-500 leading-tight">
+                    <div
+                      className="text-xs leading-tight"
+                      style={{ color: theme.name === 'museum' ? '#a7b8b4' : '#64748b' }}
+                    >
                       {event.shortDescription}
                     </div>
                   )}
@@ -93,7 +138,8 @@ const MiniTimeline = ({ events, activeYear }) => {
                 {/* "You are here" indicator */}
                 {isActive && (
                   <motion.div
-                    className="mt-2 text-xs text-orange-400 font-medium flex items-center gap-1"
+                    className="mt-2 text-xs font-medium flex items-center gap-1"
+                    style={{ color: theme.name === 'museum' ? '#ae5514' : '#fb923c' }}
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.2 + 0.5 }}
@@ -106,15 +152,30 @@ const MiniTimeline = ({ events, activeYear }) => {
                 {/* Tooltip on Hover */}
                 {isHovered && event.fullDescription && (
                   <motion.div
-                    className="absolute top-full mt-8 bg-slate-800 text-white p-3 rounded-lg shadow-xl border border-slate-700 max-w-[200px] z-20"
+                    className="absolute top-full mt-8 p-3 rounded-lg shadow-xl border max-w-[200px] z-20"
+                    style={{
+                      backgroundColor: theme.name === 'museum' ? '#f3f2e9' : '#1e293b',
+                      color: theme.name === 'museum' ? '#440f0f' : '#ffffff',
+                      borderColor: theme.name === 'museum' ? '#a7b8b4' : '#334155'
+                    }}
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                   >
                     <div className="text-xs font-semibold mb-1">{event.title}</div>
-                    <div className="text-xs text-slate-300">{event.fullDescription}</div>
+                    <div
+                      className="text-xs"
+                      style={{ color: theme.name === 'museum' ? '#657575' : '#cbd5e1' }}
+                    >
+                      {event.fullDescription}
+                    </div>
                     {/* Arrow pointer */}
-                    <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-slate-800" />
+                    <div
+                      className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent"
+                      style={{
+                        borderBottomColor: theme.name === 'museum' ? '#f3f2e9' : '#1e293b'
+                      }}
+                    />
                   </motion.div>
                 )}
               </motion.div>

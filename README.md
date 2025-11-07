@@ -1,10 +1,10 @@
-# Landbouw Interactieve Scherm
+# Fries Landbouwmuseum - Interactive Timeline App
 
-Interactieve tijdlijn applicatie voor het Fries Landbouwmuseum - 100 jaar geschiedenis (1925-2025).
+Interactieve tijdlijn applicatie voor het Fries Landbouwmuseum in Leeuwarden (Nederland) ter gelegenheid van het 100-jarig jubileum (1925-2025). De applicatie draait op een touchscreen kiosk in het museum en laat bezoekers de geschiedenis van het museum op een interactieve manier verkennen.
 
 ## 📱 Over het Project
 
-Een interactief touchscreen applicatie die bezoekers door 100 jaar geschiedenis van het Fries Landbouwmuseum leidt. Met tijdlijn visualisatie, puzzelspellen, en rijke historische content.
+Een interactief touchscreen applicatie die bezoekers door 100 jaar geschiedenis van het Fries Landbouwmuseum leidt. De applicatie is speciaal ontworpen voor gebruik op touchscreen kiosk (1920x1080 resolutie) en bevat rijke historische content, interactieve elementen, en educatieve features.
 
 ## 🚀 Features
 
@@ -30,30 +30,48 @@ Landbouw-Interactieve-Scherm/
 │   │   └── styles/             # Global CSS
 │   ├── public/                 # Statische bestanden
 │   └── dist/                   # Build output (niet in git)
-├── DATABASE_USER_STORY.md      # Database setup instructies
-├── ADMIN_PANEL_USER_STORY.md   # Admin panel design instructies
-└── README.md                   # Dit bestand
+├── backend/                     # PHP REST API + Admin Panel
+│   ├── api/                    # REST API endpoints
+│   │   ├── config/             # Database configuratie
+│   │   ├── endpoints/          # API endpoints
+│   │   └── index.php           # API router
+│   ├── adminpanel/             # Admin panel (PHP/HTML/JS)
+│   │   ├── includes/           # PHP includes
+│   │   ├── assets/             # CSS, uploads
+│   │   └── *.php               # Admin panel pagina's
+│   └── .htaccess               # Apache configuratie
+├── docs/                        # Project documentatie
+└── README.md                    # Dit bestand
 ```
 
 ## 🛠️ Technologie Stack
 
 **Frontend:**
-- React 18
-- Vite
-- Framer Motion (animaties)
-- Tailwind CSS
-- React Router
-- Lucide React (icons)
-- Yet Another React Lightbox
 
-**Planned Backend:**
-- Node.js + Express / PHP
-- MySQL Database
-- REST API
+- React.js 18
+- Vite (build tool)
+- Framer Motion (animaties)
+- Tailwind CSS (styling)
+- React Router (routing)
+- Lucide React (icons)
+- Yet Another React Lightbox (gallery)
+
+**Backend:**
+
+- MySQL Database (timeline_events tabel)
+- PHP REST API
+- Admin Panel voor content beheer (PHP/HTML/JS)
+
+**Deployment:**
+
+- Touchscreen kiosk (1920x1080 resolutie)
+- Production build via Vite
+- Static file hosting
 
 ## 📦 Installatie & Setup
 
 ### Prerequisites
+
 - Node.js (v22.19.0) met npm
 - VSCode (aanbevolen extensions: ES7+ React/Redux snippets, Tailwind CSS IntelliSense)
 - Git of GitHub Desktop
@@ -89,11 +107,13 @@ Output staat in `frontend/dist/`
 Het project heeft twee thema's:
 
 **Modern Theme (default):**
+
 - Kleuren: Blauw, Cyaan, Paars
 - Modern UI design
 - Gradient effecten
 
 **Museum Theme:**
+
 - Kleuren: Roest, Amber, Olijf, Maroon
 - Warme, aarde tinten
 - Klassiek museum gevoel
@@ -152,8 +172,8 @@ git push --set-upstream origin feature/jouw-feature-naam
 
 ## 🔮 Roadmap
 
-- [ ] REST API backend
-- [ ] Admin panel voor content beheer
+- [x] REST API backend
+- [x] Admin panel voor content beheer
 - [ ] Audio guide integratie
 - [ ] Video content support
 - [ ] Multi-language support (NL/EN/FY)
@@ -161,17 +181,28 @@ git push --set-upstream origin feature/jouw-feature-naam
 
 ## 📝 Documentatie
 
-Additionele documentatie in `/frontend`:
+Alle documentatie is georganiseerd in de `/docs` directory:
 
-- `THEME_SYSTEM_DOCUMENTATION.md` - Thema systeem uitleg
-- `ANIMATION_GUIDE.md` - Animatie implementatie
-- `GALLERY_SYSTEM_GUIDE.md` - Gallery systeem
-- `VIRTUAL_GUIDE_DOCUMENTATION.md` - Virtual guide mascot
-- `TIMELINE_IMPROVEMENTS.md` - Timeline verbeteringen
+- **Frontend documentatie**: `/docs/frontend/`
+
+  - `THEME_SYSTEM_DOCUMENTATION.md` - Thema systeem uitleg
+  - `ANIMATION_GUIDE.md` - Animatie implementatie
+  - `GALLERY_SYSTEM_GUIDE.md` - Gallery systeem
+  - `VIRTUAL_GUIDE_DOCUMENTATION.md` - Virtual guide mascot
+  - `TIMELINE_IMPROVEMENTS.md` - Timeline verbeteringen
+  - `TIMELINE_COMPONENT_README.md` - Timeline component structuur
+  - `MUSEUM_COLORS_MAP.md` - Museum kleuren referentie
+  - `QUICK_THEME_TEST.md` - Quick reference voor thema testing
+
+- **Project documentatie**: `/docs/`
+  - `ADMIN_PANEL_USER_STORY.md` - Admin panel specificaties
+  - `DATABASE_USER_STORY.md` - Database setup guide
+
+Zie [docs/README.md](docs/README.md) voor volledige documentatie index.
 
 ## 👥 Team
 
-- **Frontend Development:** Lukasz & Marco
+- **Frontend Development:** Lukasz
 - **Database Design:** Database Developer
 - **Admin Panel Design:** Junior Lee
 - **Content:** Fries Landbouwmuseum
@@ -181,5 +212,3 @@ Additionele documentatie in `/frontend`:
 Proprietary - Fries Landbouwmuseum © 2025
 
 ---
-
-**Gebouwd met ❤️ voor het Fries Landbouwmuseum**

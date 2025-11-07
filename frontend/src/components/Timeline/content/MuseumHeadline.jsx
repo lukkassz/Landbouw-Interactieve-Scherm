@@ -27,12 +27,12 @@ const MuseumHeadline = ({
           transition: { duration: 0.25 },
         }}
         className={[
-          "text-center font-extrabold leading-tight tracking-tight select-none",
-          "text-4xl sm:text-5xl md:text-6xl lg:text-7xl",
+          "text-center font-extrabold leading-tight tracking-tight select-none font-heading",
           `bg-gradient-to-r ${theme.text.gradient} bg-clip-text text-transparent`,
           "drop-shadow-[0_6px_24px_rgba(56,189,248,0.25)]",
           "pb-1",
         ].join(" ")}
+        style={{ fontSize: "7.5rem" }}
       >
         {text}
       </motion.h1>
@@ -42,7 +42,7 @@ const MuseumHeadline = ({
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4, duration: 0.6, ease: "easeOut" }}
-          className={`mt-4 text-center text-sm sm:text-base font-medium ${theme.text.secondary}`}
+          className={`mt-4 text-center text-sm sm:text-base font-medium font-body ${theme.text.secondary}`}
         >
           {subtext}
         </motion.p>
@@ -52,4 +52,3 @@ const MuseumHeadline = ({
 }
 
 export default MuseumHeadline
-

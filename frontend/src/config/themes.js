@@ -11,129 +11,142 @@
  */
 
 // ⚠️ CHANGE THIS TO SWITCH THEMES ⚠️
-export const ACTIVE_THEME = 'modern' // 'modern' or 'museum'
+export const ACTIVE_THEME = "modern" // 'modern' or 'museum'
 
-// Museum's official color palette
+// Museum's official color palette - Exact colors from museum brand
 const MUSEUM_COLORS = {
-  sage: '#a7b8b4',      // Sage green
-  lightBlue: '#b5cbd1',  // Light blue-gray
-  olive: '#929d7c',      // Olive green
-  gold: '#c9a300',       // Gold/mustard
-  bronze: '#b48a0f',     // Bronze
-  darkBrown: '#440f0f',  // Dark brown
-  rust: '#89350a',       // Rust orange
-  gray: '#657575',       // Medium gray
-  cream: '#f3f2e9',      // Cream/off-white
-  copper: '#ae5514'      // Copper/burnt orange
+  // Primary colors
+  linen: "#f3f2e9", // Cream/off-white - główne tło
+  slate: "#657575", // Gray - tekst główny, nieaktywne elementy
+  mist: "#a7b8b4", // Muted blue-green - nieaktywne elementy, tła
+  sky: "#b5cbd1", // Light blue-gray - akcenty, tła
+  olive: "#929d7c", // Olive green - akcenty, tła
+
+  // Accent colors (warm tones)
+  gold: "#c9a300", // Bright gold - główny akcent, interaktywne elementy
+  amber: "#b48a0f", // Bronze gold - hover states, gradienty
+  terracotta: "#ae5514", // Copper/burnt orange - główny akcent, interaktywne
+  rust: "#89350a", // Rust orange - hover states, gradienty
+
+  // Dark colors
+  maroon: "#440f0f", // Dark red/burgundy - headery, tekst na jasnym tle
 }
 
 // Modern theme (YOUR beautiful design)
 const MODERN_THEME = {
-  name: 'modern',
+  name: "modern",
 
   // Backgrounds
   background: {
-    primary: 'from-blue-900/80 via-blue-700/70 to-cyan-600/60',
-    overlay: 'from-black/40 via-transparent to-blue-900/30',
-    card: 'bg-white/20',
-    modal: 'bg-gradient-to-br from-blue-900/95 via-blue-700/90 to-cyan-600/85'
+    primary: "from-blue-900/80 via-blue-700/70 to-cyan-600/60",
+    overlay: "from-black/40 via-transparent to-blue-900/30",
+    card: "bg-white/20",
+    modal: "bg-gradient-to-br from-blue-900/95 via-blue-700/90 to-cyan-600/85",
+    modalLight: "bg-slate-900/95",
   },
 
   // Text colors
   text: {
-    primary: 'text-white',
-    secondary: 'text-white/80',
-    accent: 'text-cyan-300',
-    gradient: 'from-cyan-300 via-blue-200 to-purple-300'
+    primary: "text-white",
+    secondary: "text-white/80",
+    accent: "text-cyan-300",
+    gradient: "from-cyan-300 via-blue-200 to-purple-300",
   },
 
   // Buttons & Interactive
   button: {
-    primary: 'from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600',
-    secondary: 'bg-gray-500/90 hover:bg-gray-600'
+    primary: "from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600",
+    secondary: "bg-gray-500/90 hover:bg-gray-600",
   },
 
   // Timeline cards
   timeline: {
-    cardBg: 'bg-white/20',
-    cardBorder: 'border-white/30',
-    cardHover: 'hover:border-cyan-400/60',
-    line: 'from-cyan-400 via-blue-400 to-purple-400'
+    cardBg: "bg-white/20",
+    cardBorder: "border-white/30",
+    cardHover: "hover:border-cyan-400/60",
+    line: "from-cyan-400 via-blue-400 to-purple-400",
   },
 
   // Virtual Guide
   guide: {
-    avatarGradient: 'from-cyan-400 via-blue-500 to-purple-500',
-    bubbleBg: 'bg-white/95',
-    bubbleBorder: 'border-cyan-300',
-    bubbleText: 'text-gray-800'
+    avatarGradient: "from-cyan-400 via-blue-500 to-purple-500",
+    bubbleBg: "bg-white/95",
+    bubbleBorder: "border-cyan-300",
+    bubbleText: "text-gray-800",
   },
 
   // Borders & Accents
-  border: 'border-white/30',
-  accent: 'cyan-400',
+  border: "border-white/30",
+  accent: "cyan-400",
 
   // Raw colors for special cases
   colors: {
-    primary: '#06b6d4',    // cyan-500
-    secondary: '#3b82f6',  // blue-500
-    tertiary: '#a855f7'    // purple-500
-  }
+    primary: "#06b6d4", // cyan-500
+    secondary: "#3b82f6", // blue-500
+    tertiary: "#a855f7", // purple-500
+  },
 }
 
-// Museum theme (THEIR style from website)
-// Clean, classic design matching frieslandbouwmuseum.nl
+// Museum theme - Using exact museum brand colors
 const MUSEUM_THEME = {
-  name: 'museum',
+  name: "museum",
 
-  // Backgrounds
+  // Backgrounds - museum palette
   background: {
-    primary: 'from-brand-mist/80 via-brand-olive/70 to-brand-sky/60',
-    overlay: 'from-brand-maroon/40 via-transparent to-brand-olive/30',
-    card: 'bg-white',  // WHITE CARDS like their website!
-    modal: 'bg-gradient-to-br from-brand-mist/95 via-brand-olive/90 to-brand-sky/85'
+    primary: "from-[#440f0f]/30 via-[#89350a]/25 to-[#ae5514]/20", // Maroon → Rust → Terracotta (reduced opacity)
+    overlay: "from-[#440f0f]/15 via-transparent to-[#657575]/10", // Maroon → Slate (reduced opacity)
+    card: "bg-[#f3f2e9]", // Linen (cream)
+    modal:
+      "bg-gradient-to-br from-[#440f0f]/98 via-[#89350a]/95 to-[#ae5514]/98", // Deep maroon → rust → terracotta
+    modalLight: "bg-[#f3f2e9]", // Linen for left panel
   },
 
   // Text colors
   text: {
-    primary: 'text-brand-maroon',  // Dark text on white cards
-    secondary: 'text-brand-slate',  // Gray for secondary text
-    accent: 'text-brand-gold',
-    gradient: 'from-brand-gold via-brand-amber to-brand-terracotta'
+    primary: "text-white", // For dark backgrounds
+    secondary: "text-white/85", // Secondary text on dark
+    accent: "text-[#c9a300]", // Gold accent
+    gradient: "from-[#c9a300] via-[#b48a0f] to-[#ae5514]", // Gold → Amber → Terracotta
+    dark: "text-[#440f0f]", // Maroon for headers on light background
+    darkSecondary: "text-[#657575]", // Slate for secondary text on light
   },
 
   // Buttons & Interactive
   button: {
-    primary: 'from-brand-gold to-brand-amber hover:from-brand-amber hover:to-brand-terracotta',
-    secondary: 'bg-brand-slate/90 hover:bg-brand-slate'
+    primary:
+      "from-[#c9a300] to-[#ae5514] hover:from-[#b48a0f] hover:to-[#89350a]", // Gold → Terracotta, hover: Amber → Rust
+    secondary: "bg-[#657575]/90 hover:bg-[#440f0f]", // Slate → Maroon
   },
 
-  // Timeline cards - WHITE, no glow!
+  // Timeline cards
   timeline: {
-    cardBg: 'bg-white',  // Solid white, not transparent
-    cardBorder: 'border-brand-slate/20',  // Subtle border
-    cardHover: 'hover:border-brand-gold',  // Gold on hover
-    line: 'from-brand-gold via-brand-amber to-brand-terracotta'
+    cardBg: "bg-[#f3f2e9]/95", // Linen with slight transparency
+    cardBorder: "border-[#a7b8b4]/60", // Mist border
+    cardHover: "hover:border-[#c9a300] hover:shadow-[#c9a300]/20", // Gold border and shadow
+    line: "from-[#c9a300] via-[#b48a0f] to-[#ae5514]", // Gold → Amber → Terracotta
   },
 
   // Virtual Guide
   guide: {
-    avatarGradient: 'from-brand-gold via-brand-amber to-brand-terracotta',
-    bubbleBg: 'bg-white',  // White bubble like website
-    bubbleBorder: 'border-brand-gold',
-    bubbleText: 'text-brand-maroon'
+    avatarGradient: "from-[#c9a300] via-[#ae5514] to-[#89350a]", // Gold → Terracotta → Rust
+    bubbleBg: "bg-[#f3f2e9]", // Linen
+    bubbleBorder: "border-[#c9a300]", // Gold
+    bubbleText: "text-[#440f0f]", // Maroon for readability
   },
 
   // Borders & Accents
-  border: 'border-brand-slate/20',  // Light gray borders
-  accent: 'brand-gold',
+  border: "border-[#a7b8b4]/50", // Mist border
+  accent: "[#c9a300]", // Gold
 
   // Raw colors for special cases
   colors: {
-    primary: MUSEUM_COLORS.gold,
-    secondary: MUSEUM_COLORS.bronze,
-    tertiary: MUSEUM_COLORS.copper
-  }
+    primary: MUSEUM_COLORS.gold, // #c9a300
+    secondary: MUSEUM_COLORS.terracotta, // #ae5514
+    tertiary: MUSEUM_COLORS.rust, // #89350a
+    background: MUSEUM_COLORS.linen, // #f3f2e9
+    text: MUSEUM_COLORS.maroon, // #440f0f
+    muted: MUSEUM_COLORS.slate, // #657575
+  },
 }
 
 /**
@@ -141,16 +154,16 @@ const MUSEUM_THEME = {
  */
 export const getTheme = () => {
   // Check URL parameter first
-  if (typeof window !== 'undefined') {
+  if (typeof window !== "undefined") {
     const params = new URLSearchParams(window.location.search)
-    const urlTheme = params.get('theme')
+    const urlTheme = params.get("theme")
 
-    if (urlTheme === 'museum') return MUSEUM_THEME
-    if (urlTheme === 'modern') return MODERN_THEME
+    if (urlTheme === "museum") return MUSEUM_THEME
+    if (urlTheme === "modern") return MODERN_THEME
   }
 
   // Fall back to ACTIVE_THEME constant
-  return ACTIVE_THEME === 'museum' ? MUSEUM_THEME : MODERN_THEME
+  return ACTIVE_THEME === "museum" ? MUSEUM_THEME : MODERN_THEME
 }
 
 /**
@@ -165,13 +178,13 @@ export const getCurrentThemeName = () => {
  */
 export const toggleTheme = () => {
   const currentTheme = getCurrentThemeName()
-  const newTheme = currentTheme === 'modern' ? 'museum' : 'modern'
+  const newTheme = currentTheme === "modern" ? "museum" : "modern"
 
   // Update URL parameter
-  if (typeof window !== 'undefined') {
+  if (typeof window !== "undefined") {
     const url = new URL(window.location)
-    url.searchParams.set('theme', newTheme)
-    window.history.pushState({}, '', url)
+    url.searchParams.set("theme", newTheme)
+    window.history.pushState({}, "", url)
     window.location.reload() // Reload to apply new theme
   }
 }
@@ -179,7 +192,7 @@ export const toggleTheme = () => {
 // Export themes for direct access if needed
 export const themes = {
   modern: MODERN_THEME,
-  museum: MUSEUM_THEME
+  museum: MUSEUM_THEME,
 }
 
 // Export museum colors for reference

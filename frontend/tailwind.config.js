@@ -4,9 +4,10 @@ export default {
   safelist: [
     // Museum theme colors - ensure these classes are always generated
     {
-      pattern: /^(bg|text|border|from|via|to)-brand-(mist|sky|olive|gold|amber|maroon|rust|slate|linen|terracotta)/,
-      variants: ['hover', 'active']
-    }
+      pattern:
+        /^(bg|text|border|from|via|to)-brand-(mist|sky|olive|gold|amber|maroon|rust|slate|linen|terracotta)/,
+      variants: ["hover", "active"],
+    },
   ],
   theme: {
     extend: {
@@ -55,8 +56,10 @@ export default {
         },
       },
       fontFamily: {
-        display: ["Georgia", "serif"],
-        body: ["Inter", "sans-serif"],
+        // Museum fonts
+        heading: ["Josefin Sans", "sans-serif"], // For headings and buttons
+        body: ["Montserrat", "sans-serif"], // For text content
+        display: ["Josefin Sans", "sans-serif"], // Alias for headings
       },
       animation: {
         "fade-in": "fadeIn 0.5s ease-in-out",
