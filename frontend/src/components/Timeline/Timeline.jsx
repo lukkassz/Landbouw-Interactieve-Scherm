@@ -19,17 +19,27 @@ import puzzleImg from "../../assets/images/puzzle/brown_cow_kids.jpg"
 // Import background video
 import backgroundTimelineVideo from "../../assets/video/5197931-uhd_3840_2160_30fps.mp4"
 
-// Hardcoded gradient map for each event year
+// Helper function to get border color based on category
+const getCategoryBorderColor = (category) => {
+  const categoryColors = {
+    museum: "#a35514",
+    landbouw: "#22c55e", // green-500
+    maatschappelijk: "#c9a300",
+  }
+  return categoryColors[category] || categoryColors.museum // Default to museum color
+}
+
+// Hardcoded gradient map for each event year (single years only)
 const GRADIENT_MAP = {
   1925: {
     gradient: "from-amber-600 to-orange-500",
     museumGradient: "from-brand-rust to-brand-terracotta",
   },
-  "1930-1956": {
+  1930: {
     gradient: "from-blue-600 to-cyan-500",
     museumGradient: "from-brand-sky to-brand-mist",
   },
-  "1945-1987": {
+  1945: {
     gradient: "from-slate-600 to-gray-500",
     museumGradient: "from-brand-slate to-brand-maroon",
   },
@@ -49,7 +59,7 @@ const GRADIENT_MAP = {
     gradient: "from-teal-600 to-cyan-500",
     museumGradient: "from-brand-mist to-brand-sky",
   },
-  "2023-2025": {
+  2023: {
     gradient: "from-yellow-500 to-amber-600",
     museumGradient: "from-brand-gold to-brand-amber",
   },
@@ -108,8 +118,10 @@ const extractYear = yearString => {
 
 // Helper function to get gradient for an event
 const getGradientForEvent = event => {
-  const year = event.year || ""
-  const gradientData = GRADIENT_MAP[year]
+  // Extract numeric year from year string (handles both "1925" and legacy "1930-1956" formats)
+  const yearString = event.year || ""
+  const numericYear = extractYear(yearString)
+  const gradientData = numericYear ? GRADIENT_MAP[numericYear] : null
 
   // If year is in hardcoded map, use it (or database value if exists)
   if (gradientData) {
@@ -129,7 +141,6 @@ const getGradientForEvent = event => {
   }
 
   // For new events: assign gradient based on year (rotates through palette)
-  const numericYear = extractYear(year)
   if (numericYear) {
     // Use modulo to cycle through available gradients
     const paletteIndex = (numericYear - 1900) % GRADIENT_PALETTE.length
@@ -233,6 +244,7 @@ const Timeline = () => {
           event.has_key_moments === 1 ||
           event.has_key_moments === "1" ||
           Boolean(event.has_key_moments),
+        category: event.category || "museum", // Default to museum if not set
       }
     })
   }, [apiData])
@@ -643,9 +655,11 @@ const Timeline = () => {
 
                       {/* Kaart */}
                       <motion.div
-                        className={`relative ${theme.timeline.cardBg} p-8 rounded-3xl border ${theme.timeline.cardBorder} overflow-hidden mb-8 shadow-xl`}
+                        className={`relative ${theme.timeline.cardBg} p-8 rounded-3xl border overflow-hidden mb-8 shadow-xl`}
                         style={{
                           filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.1))",
+                          borderColor: getCategoryBorderColor(period.category),
+                          borderWidth: "3px",
                         }}
                         animate={{
                           filter:

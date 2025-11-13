@@ -37,7 +37,12 @@ if ($isEdit) {
     if ($result && mysqli_num_rows($result) > 0) {
         $event = mysqli_fetch_assoc($result);
         // Map database columns to form fields
-        $event['jaar'] = $event['year'];
+        // Extract first year from range if exists (for backwards compatibility)
+        $yearValue = $event['year'];
+        if (preg_match('/^(\d{4})/', $yearValue, $matches)) {
+            $yearValue = $matches[1]; // Take first 4-digit year
+        }
+        $event['jaar'] = $yearValue;
         $event['titel'] = $event['title'];
         $event['text'] = $event['description'];
         $event['puzzle'] = $event['has_puzzle'];
@@ -105,8 +110,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $puzzle_image = $fileName;
     }
 
+    // Validate year format (must be 4 digits, between 1820-2025)
+    $jaar = trim($jaar);
+    if (!preg_match('/^\d{4}$/', $jaar) || intval($jaar) < 1820 || intval($jaar) > 2025) {
+        $error = "Jaar moet een 4-cijferig getal zijn tussen 1820 en 2025 (bijv. 1950)";
+    }
+
     // Validate required fields
-    if ($jaar && $titel && $text && $volgorde) {
+    if (empty($error) && $jaar && $titel && $text && $volgorde) {
         if ($isEdit) {
             // Update existing event (table: timeline_events)
             $query = "UPDATE timeline_events SET 
@@ -471,7 +482,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="form-section">
                     <h3>📘 Basis Info</h3>
                     <label>Jaar*</label>
-                    <input type="text" name="jaar" value="<?= htmlspecialchars($event['jaar']) ?>" required>
+                    <input type="number" name="jaar" value="<?= htmlspecialchars($event['jaar']) ?>" min="1820" max="2025" step="1" placeholder="np. 1950" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
+                    <small style="color: #666; display: block; margin-top: 5px;">Voer een enkel jaar in (bijv. 1950), geen bereik</small>
 
                     <label>Titel*</label>
                     <input type="text" name="titel" value="<?= htmlspecialchars($event['titel']) ?>" required>
