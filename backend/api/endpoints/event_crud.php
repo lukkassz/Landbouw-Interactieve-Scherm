@@ -139,6 +139,17 @@ function handleCreateEvent($db) {
         return;
     }
 
+    // Validate year format (must be 4 digits, between 1820-2025)
+    $year = trim($data->year);
+    if (!preg_match('/^\d{4}$/', $year) || intval($year) < 1820 || intval($year) > 2025) {
+        http_response_code(400);
+        echo json_encode([
+            "success" => false,
+            "message" => "Year must be a 4-digit number between 1820 and 2025 (e.g., 1950)"
+        ]);
+        return;
+    }
+
     $query = "INSERT INTO timeline_events SET
                 year = :year,
                 title = :title,
@@ -211,6 +222,19 @@ function handleUpdateEvent($db) {
             "message" => "Event ID is required"
         ]);
         return;
+    }
+
+    // Validate year format if provided (must be 4 digits, between 1820-2025)
+    if (!empty($data->year)) {
+        $year = trim($data->year);
+        if (!preg_match('/^\d{4}$/', $year) || intval($year) < 1820 || intval($year) > 2025) {
+            http_response_code(400);
+            echo json_encode([
+                "success" => false,
+                "message" => "Year must be a 4-digit number between 1820 and 2025 (e.g., 1950)"
+            ]);
+            return;
+        }
     }
 
     $query = "UPDATE timeline_events SET

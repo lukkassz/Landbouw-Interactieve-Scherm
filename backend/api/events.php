@@ -1,10 +1,9 @@
 <?php
 
 /**
- * GET Timeline Events Endpoint
- *
- * Returns all timeline events from the database.
- * Used by the React frontend to display events on the timeline.
+ * Direct endpoint for GET /api/events
+ * This file can be accessed directly: /backend/api/events.php
+ * Works even if .htaccess routing doesn't work
  */
 
 // Set headers for JSON response and CORS
@@ -14,7 +13,7 @@ header("Access-Control-Allow-Methods: GET");
 header("Access-Control-Max-Age: 3600");
 
 // Include database configuration
-include_once __DIR__ . '/../config/database.php';
+include_once __DIR__ . '/config/database.php';
 
 // Create database connection
 $database = new Database();
@@ -44,6 +43,7 @@ try {
                 use_detailed_modal,
                 historical_context,
                 has_key_moments,
+                category,
                 sort_order,
                 created_at,
                 updated_at,
@@ -83,10 +83,23 @@ try {
         "data" => $events
     ]);
 } catch (PDOException $e) {
-    // Return error response
+    // Return error response with detailed error info
     http_response_code(500);
     echo json_encode([
         "success" => false,
-        "message" => "Error fetching events: " . $e->getMessage()
-    ]);
+        "message" => "Error fetching events",
+        "error" => $e->getMessage(),
+        "file" => $e->getFile(),
+        "line" => $e->getLine()
+    ], JSON_PRETTY_PRINT);
+} catch (Exception $e) {
+    // Catch any other errors
+    http_response_code(500);
+    echo json_encode([
+        "success" => false,
+        "message" => "Unexpected error",
+        "error" => $e->getMessage(),
+        "file" => $e->getFile(),
+        "line" => $e->getLine()
+    ], JSON_PRETTY_PRINT);
 }
