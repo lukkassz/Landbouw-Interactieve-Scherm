@@ -124,12 +124,6 @@ const AnimatedAnimals = () => {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 pointer-events-none z-[15] overflow-visible" style={{ height: "200px", position: "fixed" }}>
-      {/* Debug: Show active animals count */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="absolute top-0 left-0 bg-black/50 text-white p-2 text-xs z-50">
-          Animals: {activeAnimals.length}
-        </div>
-      )}
       {activeAnimals.map(({ id, config, yOffset }) => (
         <motion.div
           key={id}
