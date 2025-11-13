@@ -12,7 +12,7 @@ import { useTimeline } from "../../hooks/useTimeline"
 import { useSound } from "../../hooks/useSound"
 import { useIdleTimer } from "../../hooks/useIdleTimer"
 import LoadingSkeleton from "./ui/LoadingSkeleton"
-import AnimatedYear from "./ui/AnimatedYear"
+import { extractYear, generateYearMarkers, groupEventsByMarkers } from "../../utils/timelineCalculations"
 
 // Import puzzle images
 import puzzleImg from "../../assets/images/puzzle/brown_cow_kids.jpg"
@@ -108,13 +108,6 @@ const GRADIENT_PALETTE = [
     museumGradient: "from-brand-amber to-brand-rust",
   },
 ]
-
-// Helper function to extract numeric year from year string (e.g. "1925", "1930-1956" -> 1925, 1930)
-const extractYear = yearString => {
-  if (!yearString) return null
-  const match = yearString.match(/\d{4}/)
-  return match ? parseInt(match[0], 10) : null
-}
 
 // Helper function to get gradient for an event
 const getGradientForEvent = event => {
@@ -248,6 +241,19 @@ const Timeline = () => {
       }
     })
   }, [apiData])
+
+  // Generate year markers (1925, 1930, 1935... 2025) and group events by markers
+  const timelineSections = useMemo(() => {
+    if (!timelineData || timelineData.length === 0) return []
+    
+    // Generate year markers every 5 years from 1925 to 2025
+    const markers = generateYearMarkers(1925, 2025, 5)
+    
+    // Group events between markers
+    const sections = groupEventsByMarkers(timelineData, markers)
+    
+    return sections
+  }, [timelineData])
 
   const handleMouseDown = e => {
     // Only handle left mouse button
@@ -595,12 +601,13 @@ const Timeline = () => {
         <div className="relative pb-32 overflow-hidden">
           <motion.div
             ref={timelineRef}
-            className="overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing"
+            className="overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing relative"
             style={{
               scrollbarWidth: "none",
               msOverflowStyle: "none",
               scrollBehavior: isDragging ? "auto" : "smooth",
               userSelect: "none",
+              minWidth: "100%",
             }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
@@ -608,121 +615,167 @@ const Timeline = () => {
             onMouseLeave={handleMouseUp}
             onDragStart={e => e.preventDefault()}
           >
-            {/* Timeline Line */}
-            <div
-              className={`absolute top-1/2 transform -translate-y-1/2 h-2 bg-gradient-to-r ${theme.timeline.line} w-full min-w-max shadow-lg rounded-full`}
-            >
-              <div
-                className={`absolute inset-0 bg-gradient-to-r ${theme.timeline.line} blur-sm opacity-70 rounded-full`}
-              ></div>
-            </div>
-
-            {/* Timeline Items */}
+            {/* Horizontal Timeline with Year Markers and Event Sections */}
             <motion.div
-              className="flex items-center space-x-16 md:space-x-32 min-w-max px-16 md:px-32 pt-16 md:pt-24 pb-16"
+              className="flex flex-row items-start gap-0 min-w-max px-16 md:px-32 pt-16 md:pt-24 pb-16 relative"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 1, ease: "easeOut" }}
             >
-              {timelineData.map((period, index) => (
-                <motion.div
-                  key={period.id}
-                  className="relative flex-shrink-0 z-10"
-                  initial={{ opacity: 0, y: 100, scale: 0.8 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{
-                    duration: 0.8,
-                    delay: index * 0.2,
-                    ease: "easeOut",
+              {/* Timeline Line - Continuous Horizontal Line */}
+              <div className="absolute top-1/2 left-0 right-0 transform -translate-y-1/2 z-0 pointer-events-none">
+                <div
+                  className={`h-3 bg-gradient-to-r ${theme.timeline.line} shadow-2xl rounded-full w-full`}
+                  style={{
+                    boxShadow: "0 0 20px rgba(201, 163, 0, 0.3), 0 4px 12px rgba(0,0,0,0.2)",
                   }}
                 >
                   <div
-                    className={`${index % 2 === 0 ? "mb-48" : "mt-48"} w-80`}
-                  >
-                    <motion.div
-                      className="cursor-pointer"
-                      onClick={() => handleCardClick(period.id)}
-                      whileTap={{ scale: 0.98 }}
+                    className={`absolute inset-0 bg-gradient-to-r ${theme.timeline.line} blur-md opacity-70 rounded-full`}
+                  ></div>
+                </div>
+              </div>
+              {timelineSections.map((section, sectionIndex) => (
+                <div
+                  key={section.markerYear}
+                  className="flex flex-col items-start min-w-[500px] md:min-w-[600px] flex-shrink-0 relative pr-16 md:pr-24"
+                >
+                  {/* Year Marker - Large, Yellow, No Background */}
+                  <div className="sticky left-0 top-0 z-20 mb-12">
+                    <motion.span
+                      className="text-7xl md:text-8xl font-bold block whitespace-nowrap pointer-events-none"
+                      style={{
+                        color: "#c9a300",
+                        opacity: 0.5,
+                        textShadow: "0 2px 8px rgba(201, 163, 0, 0.2)",
+                        letterSpacing: "-0.02em",
+                      }}
+                      initial={{ opacity: 0, y: -30 }}
+                      animate={{ opacity: 0.5, y: 0 }}
+                      transition={{
+                        duration: 0.8,
+                        delay: sectionIndex * 0.1,
+                        ease: "easeOut",
+                      }}
                     >
-                      {/* Year - Animated */}
-                      <div className="text-center mb-6">
-                        <AnimatedYear
-                          year={period.year}
-                          theme={theme}
-                          gradient={period.gradient}
-                        />
-                      </div>
-
-                      {/* Kaart */}
-                      <motion.div
-                        className={`relative ${theme.timeline.cardBg} p-8 rounded-3xl border overflow-hidden mb-8 shadow-xl`}
-                        style={{
-                          filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.1))",
-                          borderColor: getCategoryBorderColor(period.category),
-                          borderWidth: "3px",
-                        }}
-                        animate={{
-                          filter:
-                            selectedPeriod === period.id
-                              ? "drop-shadow(0 6px 20px rgba(201,163,0,0.3))"
-                              : "drop-shadow(0 4px 12px rgba(0,0,0,0.1))",
-                        }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        <div className="relative flex justify-center mb-6">
-                          <motion.div
-                            className="w-20 h-20 flex items-center justify-center text-4xl rounded-2xl shadow-lg"
-                            style={{
-                              backgroundColor:
-                                theme.name === "museum"
-                                  ? "#a7b8b4"
-                                  : "rgba(255, 255, 255, 0.2)",
-                              borderColor:
-                                theme.name === "museum"
-                                  ? "#a7b8b4"
-                                  : "rgba(255, 255, 255, 0.3)",
-                              borderWidth:
-                                theme.name === "museum" ? "2px" : "1px",
-                              color:
-                                theme.name === "museum" ? "#ae5514" : undefined,
-                            }}
-                            whileHover={{
-                              rotate: [0, -10, 10, -10, 0],
-                              scale: 1.1,
-                            }}
-                            transition={{ duration: 0.5 }}
-                          >
-                            {period.icon || "🌾"}
-                          </motion.div>
-                        </div>
-
-                        <div className="text-center mb-4 relative">
-                          <h3
-                            className="text-2xl font-bold leading-tight"
-                            style={{
-                              color: "#440f0f",
-                            }}
-                          >
-                            {period.title}
-                          </h3>
-                        </div>
-
-                        <div className="text-center relative">
-                          <p
-                            className="leading-relaxed"
-                            style={{
-                              color: "#657575",
-                            }}
-                          >
-                            {period.description}
-                          </p>
-                        </div>
-
-                        {/* Removed selected checkmark/highlight */}
-                      </motion.div>
-                    </motion.div>
+                      {section.markerYear}
+                    </motion.span>
                   </div>
-                </motion.div>
+
+                  {/* Events in this section */}
+                  <div className="flex flex-row flex-wrap gap-8 md:gap-12 w-full py-5 relative z-10">
+                    {section.events.length > 0 ? (
+                      section.events.map((period, eventIndex) => (
+                        <motion.div
+                          key={period.id}
+                          className="relative flex-shrink-0"
+                          initial={{ opacity: 0, y: 100, scale: 0.8 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          transition={{
+                            duration: 0.8,
+                            delay: sectionIndex * 0.15 + eventIndex * 0.1,
+                            ease: "easeOut",
+                          }}
+                        >
+                          <div className={`${eventIndex % 2 === 0 ? "mb-48" : "mt-48"} relative`}>
+                            {/* Event Year Label */}
+                            <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-10">
+                              <span
+                                className="text-4xl font-light whitespace-nowrap pointer-events-none"
+                                style={{
+                                  color: "#c9a300",
+                                  opacity: 0.7,
+                                  textShadow: "0 2px 6px rgba(201, 163, 0, 0.2)",
+                                }}
+                              >
+                                {extractYear(period.year)}
+                              </span>
+                            </div>
+
+                            <motion.div
+                              className="cursor-pointer w-[280px] min-w-[280px] max-w-[280px]"
+                              onClick={() => handleCardClick(period.id)}
+                              whileTap={{ scale: 0.98 }}
+                            >
+                            {/* Event Card */}
+                            <motion.div
+                              className={`relative ${theme.timeline.cardBg} p-8 rounded-3xl border overflow-hidden shadow-xl`}
+                              style={{
+                                filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.1))",
+                                borderColor: getCategoryBorderColor(period.category),
+                                borderWidth: "5px",
+                              }}
+                              animate={{
+                                filter:
+                                  selectedPeriod === period.id
+                                    ? "drop-shadow(0 6px 20px rgba(201,163,0,0.3))"
+                                    : "drop-shadow(0 4px 12px rgba(0,0,0,0.1))",
+                              }}
+                              transition={{ duration: 0.3 }}
+                              whileHover={{
+                                y: -4,
+                                filter: "drop-shadow(0 6px 20px rgba(0,0,0,0.12))",
+                              }}
+                            >
+                              <div className="relative flex justify-center mb-6">
+                                <motion.div
+                                  className="w-20 h-20 flex items-center justify-center text-4xl rounded-2xl shadow-lg"
+                                  style={{
+                                    backgroundColor:
+                                      theme.name === "museum"
+                                        ? "#a7b8b4"
+                                        : "rgba(255, 255, 255, 0.2)",
+                                    borderColor:
+                                      theme.name === "museum"
+                                        ? "#a7b8b4"
+                                        : "rgba(255, 255, 255, 0.3)",
+                                    borderWidth:
+                                      theme.name === "museum" ? "2px" : "1px",
+                                    color:
+                                      theme.name === "museum" ? "#ae5514" : undefined,
+                                  }}
+                                  whileHover={{
+                                    rotate: [0, -10, 10, -10, 0],
+                                    scale: 1.1,
+                                  }}
+                                  transition={{ duration: 0.5 }}
+                                >
+                                  {period.icon || "🌾"}
+                                </motion.div>
+                              </div>
+
+                              <div className="text-center mb-4 relative">
+                                <h3
+                                  className="text-2xl font-bold leading-tight"
+                                  style={{
+                                    color: "#440f0f",
+                                  }}
+                                >
+                                  {period.title}
+                                </h3>
+                              </div>
+
+                              <div className="text-center relative">
+                                <p
+                                  className="leading-relaxed"
+                                  style={{
+                                    color: "#657575",
+                                  }}
+                                >
+                                  {period.description}
+                                </p>
+                              </div>
+                            </motion.div>
+                            </motion.div>
+                          </div>
+                        </motion.div>
+                      ))
+                    ) : (
+                      // Empty section - minimal space placeholder
+                      <div className="w-24 h-48 opacity-0" />
+                    )}
+                  </div>
+                </div>
               ))}
             </motion.div>
           </motion.div>
