@@ -415,11 +415,63 @@ const ImagePuzzleModal = React.memo(
       [draggedTile, tiles, moveTile]
     )
 
+    // Track loaded puzzle image to prevent re-loading
+    const loadedPuzzleImageRef = React.useRef(null)
+
     /**
      * Load and split image when modal opens or image changes
+     * If puzzleImage prop is provided, use it directly instead of menu
      */
     useEffect(() => {
-      if (isOpen && gameMode === "game" && currentLevel?.image) {
+      if (isOpen && puzzleImage && loadedPuzzleImageRef.current !== puzzleImage) {
+        // If puzzleImage is provided, use it directly and start game
+        const loadImage = async () => {
+          try {
+            setIsLoading(true)
+            setGameMode("game")
+            
+            // Create a custom level from the provided image
+            const customLevel = {
+              id: 'custom',
+              name: 'Event Puzzle',
+              image: puzzleImage,
+              gridSize: 3,
+              difficulty: '3x3',
+            }
+            setCurrentLevel(customLevel)
+
+            // Split image into pieces
+            const pieces = await splitImageIntoPieces(
+              puzzleImage,
+              3
+            )
+            setImagePieces(pieces)
+
+            // Create preview
+            const preview = await createImagePreview(puzzleImage)
+            setImagePreview(preview)
+
+            // Mark as loaded
+            loadedPuzzleImageRef.current = puzzleImage
+
+            // Reset game with new image (after loading is complete)
+            setTiles(shuffleTiles(createInitialState()))
+            setIsWon(false)
+            setMoves(0)
+            setJustPlacedCorrect(null)
+          } catch (error) {
+            console.error("Error loading puzzle image:", error)
+            // Fallback to original background-position method if splitting fails
+            setImagePieces([])
+            loadedPuzzleImageRef.current = puzzleImage // Mark as attempted even if failed
+          } finally {
+            setIsLoading(false)
+          }
+        }
+
+        loadImage()
+      } else if (isOpen && gameMode === "game" && currentLevel?.image && loadedPuzzleImageRef.current !== currentLevel.image) {
+        // Original behavior: load image from selected level
         const loadImage = async () => {
           try {
             setIsLoading(true)
@@ -435,12 +487,19 @@ const ImagePuzzleModal = React.memo(
             const preview = await createImagePreview(currentLevel.image)
             setImagePreview(preview)
 
-            // Reset game with new image
-            restartGame()
+            // Mark as loaded
+            loadedPuzzleImageRef.current = currentLevel.image
+
+            // Reset game with new image (after loading is complete)
+            setTiles(shuffleTiles(createInitialState()))
+            setIsWon(false)
+            setMoves(0)
+            setJustPlacedCorrect(null)
           } catch (error) {
             console.error("Error loading puzzle image:", error)
             // Fallback to original background-position method if splitting fails
             setImagePieces([])
+            loadedPuzzleImageRef.current = currentLevel.image // Mark as attempted even if failed
           } finally {
             setIsLoading(false)
           }
@@ -448,25 +507,36 @@ const ImagePuzzleModal = React.memo(
 
         loadImage()
       }
-    }, [isOpen, gameMode, currentLevel, restartGame])
+    }, [isOpen, gameMode, currentLevel, puzzleImage])
 
     // Track if modal was previously open to prevent reset on re-render
     const wasOpenRef = React.useRef(false)
 
     /**
      * Reset to menu mode only when modal FIRST opens (not on re-renders)
+     * If puzzleImage is provided, skip menu and go directly to game
      */
     useEffect(() => {
       if (isOpen && !wasOpenRef.current) {
         // Modal just opened for the first time
-        setGameMode("menu")
-        setCurrentLevel(null)
+        if (puzzleImage) {
+          // If puzzle image is provided, skip menu and go directly to game
+          setGameMode("game")
+          // Reset loaded image ref when modal opens
+          loadedPuzzleImageRef.current = null
+        } else {
+          // Otherwise show menu for puzzle selection
+          setGameMode("menu")
+          setCurrentLevel(null)
+          loadedPuzzleImageRef.current = null
+        }
         wasOpenRef.current = true
       } else if (!isOpen && wasOpenRef.current) {
-        // Modal just closed - reset flag
+        // Modal just closed - reset flags
         wasOpenRef.current = false
+        loadedPuzzleImageRef.current = null
       }
-    }, [isOpen])
+    }, [isOpen, puzzleImage])
 
     /**
      * Preload puzzle images for faster loading
@@ -1039,10 +1109,10 @@ const ImagePuzzleModal = React.memo(
                                     <div
                                       className="w-full h-full bg-cover bg-no-repeat"
                                       style={{
-                                        backgroundImage: `url(${puzzleImage})`,
+                                        backgroundImage: `url(${currentLevel?.image || puzzleImage})`,
                                         backgroundPosition:
                                           getBackgroundPosition(tile),
-                                        backgroundSize: "300%", // 3x3 grid = 300%
+                                        backgroundSize: "300%", // 3x3 grid = 300% 
                                       }}
                                     />
                                   )}
@@ -1076,7 +1146,7 @@ const ImagePuzzleModal = React.memo(
                                             <div
                                               className="w-full h-full bg-cover bg-no-repeat"
                                               style={{
-                                                backgroundImage: `url(${puzzleImage})`,
+                                                backgroundImage: `url(${currentLevel?.image || puzzleImage})`,
                                                 backgroundPosition:
                                                   getBackgroundPosition(
                                                     correctPiece

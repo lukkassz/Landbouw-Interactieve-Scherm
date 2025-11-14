@@ -11,23 +11,23 @@ include 'includes/functions.php';
 
 // Check if we are editing
 $isEdit = isset($_GET['id']);
-    $event = [
-        'jaar' => '',
-        'titel' => '',
-        'text' => '',
-        'icon' => '🌾',
-        'gradient' => '',
-        'museum_gradient' => '',
-        'stage' => '1',
-        'puzzle' => 0,
-        'puzzle_image' => '',
-        'detailed_modal' => 0,
-        'context' => '',
-        'volgorde' => '1',
-        'actief' => 1,
-        'category' => 'museum',
-        'has_key_moments' => 0
-    ];
+$event = [
+    'jaar' => '',
+    'titel' => '',
+    'text' => '',
+    'icon' => '🌾',
+    'gradient' => '',
+    'museum_gradient' => '',
+    'stage' => '1',
+    'puzzle' => 0,
+    'puzzle_image' => '',
+    'detailed_modal' => 0,
+    'context' => '',
+    'volgorde' => '1',
+    'actief' => 1,
+    'category' => 'museum',
+    'has_key_moments' => 0
+];
 
 // Get event sections (only when editing)
 $eventSections = [];
@@ -91,7 +91,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $gradient = mysqli_real_escape_string($conn, $_POST['gradient']);
     $museum_gradient = mysqli_real_escape_string($conn, $_POST['museum_gradient']);
     $stage = intval($_POST['stage']);
-    $puzzle = isset($_POST['puzzle']) ? 1 : 0;
+    // Handle puzzle checkbox - checkbox sends "1" when checked, nothing when unchecked
+    // Use hidden input to ensure "0" is sent when unchecked
+    $puzzle = (isset($_POST['puzzle']) && $_POST['puzzle'] == '1') ? 1 : 0;
     $detailed_modal = isset($_POST['detailed_modal']) ? 1 : 0;
     $context = mysqli_real_escape_string($conn, $_POST['context']);
     $volgorde = intval($_POST['volgorde']);
@@ -100,14 +102,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $has_key_moments = isset($_POST['has_key_moments']) ? 1 : 0;
 
     // Upload puzzle image
-    $puzzle_image = $event['puzzle_image'];
+    $puzzle_image = $event['puzzle_image'] ?? '';
     if (isset($_FILES['puzzle_image']) && $_FILES['puzzle_image']['error'] === 0) {
         $uploadDir = 'uploads/';
-        if (!file_exists($uploadDir)) mkdir($uploadDir);
+        if (!file_exists($uploadDir)) mkdir($uploadDir, 0777, true);
         $fileName = time() . '_' . basename($_FILES['puzzle_image']['name']);
         $targetPath = $uploadDir . $fileName;
-        move_uploaded_file($_FILES['puzzle_image']['tmp_name'], $targetPath);
-        $puzzle_image = $fileName;
+        if (move_uploaded_file($_FILES['puzzle_image']['tmp_name'], $targetPath)) {
+            $puzzle_image = $fileName;
+        }
     }
 
     // Validate year format (must be 4 digits, between 1820-2025)
@@ -166,7 +169,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $momentCount = 0;
                 foreach ($_POST['key_moments'] as $index => $moment) {
                     if ($momentCount >= 5) break; // Max 5 moments
-                    
+
                     if (!empty($moment['year']) && !empty($moment['title'])) {
                         $momentYear = intval($moment['year']);
                         $momentTitle = mysqli_real_escape_string($conn, $moment['title']);
@@ -519,9 +522,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="form-section">
                     <h3>🧩 Puzzle Game</h3>
                     <div class="checkbox-group">
-                        <input type="checkbox" name="puzzle" <?= $event['puzzle'] ? 'checked' : '' ?>>
-                        <label>Heeft puzzel?</label>
+                        <input type="hidden" name="puzzle" value="0">
+                        <input type="checkbox" name="puzzle" value="1" <?= ($event['puzzle'] == 1 || $event['puzzle'] === true || $event['puzzle'] === '1') ? 'checked' : '' ?>>
+                        <label>Heeft puzzel? (ON/OFF)</label>
                     </div>
+                    <small style="color: #666; display: block; margin-top: 5px;">Wanneer aangevinkt, wordt de "Speel Puzzle" knop getoond in de detailed modal</small>
 
                     <label>Puzzel afbeelding upload</label>
                     <div class="file-drop">
@@ -870,7 +875,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Add moment button
         document.getElementById('add-moment-btn')?.addEventListener('click', function() {
             const container = document.getElementById('key-moments-container');
-            
+
             // Check max 5 moments
             const currentMoments = container.querySelectorAll('.moment-item').length;
             if (currentMoments >= 5) {

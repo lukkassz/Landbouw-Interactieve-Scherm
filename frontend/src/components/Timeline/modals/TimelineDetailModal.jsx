@@ -4,7 +4,6 @@ import {
   X,
   Play,
   Puzzle,
-  ExternalLink,
   Image as ImageIcon,
   Video,
   MapPin,
@@ -20,7 +19,6 @@ import ImagePuzzleModal from "../../PuzzleGame/ImagePuzzleModal"
 import LeeuwardenMap from "../content/LeeuwardenMap"
 import MiniTimeline from "../ui/MiniTimeline"
 import Breadcrumb from "../ui/Breadcrumb"
-import FunFact from "../content/FunFact"
 import { useSound } from "../../../hooks/useSound"
 import { api } from "../../../services/api"
 
@@ -35,6 +33,8 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
   const [isLoadingMedia, setIsLoadingMedia] = useState(false)
   const [keyMoments, setKeyMoments] = useState([])
   const [isLoadingKeyMoments, setIsLoadingKeyMoments] = useState(false)
+  const [eventSections, setEventSections] = useState([])
+  const [isLoadingSections, setIsLoadingSections] = useState(false)
   const navigate = useNavigate()
   const theme = getTheme()
 
@@ -90,6 +90,37 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
         })
     } else {
       setEventMedia([])
+    }
+  }, [isOpen, eventData?.id])
+
+  // Fetch event sections from API when modal opens
+  useEffect(() => {
+    if (isOpen && eventData?.id) {
+      setIsLoadingSections(true)
+      const eventId =
+        typeof eventData.id === "string" ? parseInt(eventData.id) : eventData.id
+      api
+        .getEventSections(eventId)
+        .then(result => {
+          if (result.data && result.data.length > 0) {
+            // Sort sections by section_order
+            const sortedSections = result.data.sort(
+              (a, b) => (a.section_order || 0) - (b.section_order || 0)
+            )
+            setEventSections(sortedSections)
+          } else {
+            setEventSections([])
+          }
+        })
+        .catch(error => {
+          console.warn("Failed to fetch event sections:", error)
+          setEventSections([])
+        })
+        .finally(() => {
+          setIsLoadingSections(false)
+        })
+    } else {
+      setEventSections([])
     }
   }, [isOpen, eventData?.id])
 
@@ -231,12 +262,6 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
   const handleCloseImagePuzzleModal = React.useCallback(() => {
     setIsImagePuzzleModalOpen(false)
   }, [])
-
-  const handleViewCollection = () => {
-    playSound()
-    // TODO: Open filtered collection view
-    window.open("https://frieslandbouwmuseum.nl/collectie", "_blank")
-  }
 
   const handleSlideChange = direction => {
     if (galleryImages.length === 0) return
@@ -493,10 +518,23 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
                     </span>
                   </div>
                   <h1
-                    className={`text-2xl lg:text-3xl xl:text-4xl 2xl:text-5xl font-bold mb-6 bg-gradient-to-r ${theme.text.gradient} bg-clip-text text-transparent`}
+                    className={`text-2xl lg:text-3xl xl:text-4xl 2xl:text-5xl font-bold mb-4 bg-gradient-to-r ${theme.text.gradient} bg-clip-text text-transparent`}
                   >
                     {eventData.title}
                   </h1>
+
+                  {/* Event Description - Show only if no sections exist */}
+                  {eventSections.length === 0 &&
+                    !isLoadingSections &&
+                    eventData.description && (
+                      <p
+                        className={`${
+                          theme.text.darkSecondary || theme.text.secondary
+                        } leading-relaxed text-base lg:text-lg mb-6`}
+                      >
+                        {eventData.description}
+                      </p>
+                    )}
                 </motion.div>
 
                 {/* Content Sections */}
@@ -506,30 +544,8 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.3 }}
                 >
-                  {/* Historical Context */}
-                  <div>
-                    <h3
-                      className={`text-base lg:text-lg xl:text-xl font-bold ${
-                        theme.text.dark || theme.text.primary
-                      } mb-3`}
-                    >
-                      Historische Context
-                    </h3>
-                    <p
-                      className={`${
-                        theme.text.darkSecondary || theme.text.secondary
-                      } leading-relaxed text-sm lg:text-base`}
-                    >
-                      {eventData.historicalContext ||
-                        "In het begin van de 20ste eeuw onderging de Friese zuivelproductie een enorme transformatie. " +
-                          "Traditionele ambachtelijke methoden verdwenen snel door industrialisatie. " +
-                          "Deze culturele verschuiving bedreigde eeuwenoude kennis en werktuigen met vergetelheid."}
-                    </p>
-                  </div>
-
-                  {/* Mini-Timeline - Key Moments - Show if event has key moments */}
+                  {/* Mini-Timeline - Key Moments - Show if event has key moments (BEFORE sections) */}
                   {(() => {
-                    // Removed console.log to reduce re-render noise
                     if (eventData?.has_key_moments && keyMoments.length > 0) {
                       return (
                         <MiniTimeline
@@ -568,6 +584,65 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
                     return null
                   })()}
 
+                  {/* Event Sections - Dynamic sections from database (if available) - AFTER MiniTimeline */}
+                  {eventSections.length > 0 ? (
+                    eventSections.map((section, index) => {
+                      // Use has_border field from database to determine if section should have card styling
+                      const hasBorder =
+                        section.has_border === 1 ||
+                        section.has_border === true ||
+                        section.has_border === "1"
+                      return hasBorder ? (
+                        <div
+                          key={section.id || index}
+                          className={`${theme.timeline.cardBg} rounded-2xl p-4 lg:p-6 border ${theme.timeline.cardBorder}`}
+                        >
+                          <h3
+                            className={`text-base lg:text-lg xl:text-xl font-bold ${
+                              theme.text.dark || theme.text.primary
+                            } mb-3`}
+                          >
+                            {section.section_title}
+                          </h3>
+                          <p
+                            className={`${
+                              theme.text.darkSecondary || theme.text.secondary
+                            } leading-relaxed text-sm lg:text-base`}
+                          >
+                            {section.section_content}
+                          </p>
+                        </div>
+                      ) : (
+                        <div key={section.id || index}>
+                          <h3
+                            className={`text-base lg:text-lg xl:text-xl font-bold ${
+                              theme.text.dark || theme.text.primary
+                            } mb-3`}
+                          >
+                            {section.section_title}
+                          </h3>
+                          <p
+                            className={`${
+                              theme.text.darkSecondary || theme.text.secondary
+                            } leading-relaxed text-sm lg:text-base`}
+                          >
+                            {section.section_content}
+                          </p>
+                        </div>
+                      )
+                    })
+                  ) : isLoadingSections ? (
+                    <div className="text-center py-4">
+                      <p
+                        className={`text-sm ${
+                          theme.text.darkSecondary || "text-gray-500"
+                        }`}
+                      >
+                        Loading sections...
+                      </p>
+                    </div>
+                  ) : null}
+
                   {/* Interactive Map - Museum Locations - Only for 1925 event */}
                   {(eventData.year === "1925" ||
                     eventData.id === "1" ||
@@ -598,58 +673,6 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
                       <LeeuwardenMap />
                     </div>
                   )}
-
-                  {/* Key Figure */}
-                  <div
-                    className={`${theme.timeline.cardBg} rounded-2xl p-4 lg:p-6 border ${theme.timeline.cardBorder}`}
-                  >
-                    <h3
-                      className={`text-base lg:text-lg xl:text-xl font-bold ${
-                        theme.text.dark || theme.text.primary
-                      } mb-3`}
-                    >
-                      Sleutelfiguur: Nanne Ottema
-                    </h3>
-                    <p
-                      className={`${
-                        theme.text.darkSecondary || theme.text.secondary
-                      } leading-relaxed mb-3 text-sm lg:text-base`}
-                    >
-                      <strong>Nanne Ottema (1874-1955)</strong>, conservator van
-                      het Fries Museum, deed in 1921 een oproep om oude
-                      zuivelwerktuigen te bewaren voor toekomstige generaties.
-                    </p>
-                    <p
-                      className={`${
-                        theme.text.darkSecondary || theme.text.secondary
-                      } text-xs lg:text-sm italic`}
-                    >
-                      "Deze voorwerpen vertellen het verhaal van onze voorouders
-                      en hun vakmanschap."
-                    </p>
-                  </div>
-
-                  {/* Opening Details */}
-                  <div>
-                    <h3
-                      className={`text-base lg:text-lg xl:text-xl font-bold ${
-                        theme.text.dark || theme.text.primary
-                      } mb-3`}
-                    >
-                      Opening Museum
-                    </h3>
-                    <p
-                      className={`${
-                        theme.text.darkSecondary || theme.text.secondary
-                      } leading-relaxed text-sm lg:text-base`}
-                    >
-                      Op <strong>18 december 1925</strong> opende het museum
-                      zijn deuren in de kelders van het Eysingahuis aan de
-                      Turfmarkt in Leeuwarden. Deze bescheiden start zou
-                      uitgroeien tot een belangrijke bewaarplek van Friese
-                      landbouwgeschiedenis.
-                    </p>
-                  </div>
                 </motion.div>
 
                 {/* Interactive Buttons */}
@@ -679,48 +702,73 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
                       : "Audio Guide"}
                   </motion.button>
 
-                  {/* Puzzle Game Button */}
-                  <motion.button
-                    className={`w-full py-4 lg:py-5 px-6 lg:px-8 bg-gradient-to-r ${
-                      theme.name === "museum"
-                        ? "from-brand-rust to-brand-terracotta"
-                        : "from-orange-600 to-red-600"
-                    } hover:brightness-110 text-white rounded-2xl font-bold font-heading text-sm lg:text-base xl:text-lg flex items-center justify-center gap-3 shadow-lg min-h-[50px] lg:min-h-[60px]`}
-                    onClick={handlePuzzleGame}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <Puzzle size={24} />
-                    Speel Puzzle
-                  </motion.button>
+                  {/* Puzzle Game Button - Only show if event has puzzle enabled and has puzzle image */}
+                  {(() => {
+                    // Always log for debugging
+                    console.log("Puzzle debug - Full eventData:", eventData)
+                    console.log(
+                      "Puzzle debug - hasPuzzle value:",
+                      eventData?.hasPuzzle,
+                      "Type:",
+                      typeof eventData?.hasPuzzle
+                    )
+                    console.log(
+                      "Puzzle debug - puzzleImage value:",
+                      eventData?.puzzleImage,
+                      "Type:",
+                      typeof eventData?.puzzleImage
+                    )
 
-                  {/* View Collection Button */}
-                  <motion.button
-                    className={`w-full py-4 lg:py-5 px-6 lg:px-8 ${
-                      theme.name === "museum"
-                        ? "bg-brand-slate hover:bg-brand-maroon"
-                        : "bg-slate-700 hover:bg-slate-600"
-                    } text-white rounded-2xl font-bold text-sm lg:text-base xl:text-lg flex items-center justify-center gap-3 shadow-lg min-h-[50px] lg:min-h-[60px]`}
-                    onClick={handleViewCollection}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <ExternalLink size={24} />
-                    Bekijk originele objecten
-                  </motion.button>
+                    const hasPuzzle =
+                      eventData?.hasPuzzle === true ||
+                      eventData?.hasPuzzle === 1 ||
+                      eventData?.hasPuzzle === "1" ||
+                      Boolean(eventData?.hasPuzzle)
+
+                    // Check if puzzleImage exists (not null, not empty, not default fallback)
+                    const hasPuzzleImage =
+                      eventData?.puzzleImage &&
+                      typeof eventData.puzzleImage === "string" &&
+                      eventData.puzzleImage.trim() !== "" &&
+                      eventData.puzzleImage !== null &&
+                      !eventData.puzzleImage.includes("brown_cow_kids")
+
+                    console.log("Puzzle debug - Final check:", {
+                      hasPuzzle,
+                      hasPuzzleImage,
+                      puzzleImage: eventData?.puzzleImage,
+                      eventId: eventData?.id,
+                      eventTitle: eventData?.title,
+                    })
+
+                    return hasPuzzle && hasPuzzleImage
+                  })() && (
+                    <motion.button
+                      className={`w-full py-4 lg:py-5 px-6 lg:px-8 bg-gradient-to-r ${
+                        theme.name === "museum"
+                          ? "from-brand-rust to-brand-terracotta"
+                          : "from-orange-600 to-red-600"
+                      } hover:brightness-110 text-white rounded-2xl font-bold font-heading text-sm lg:text-base xl:text-lg flex items-center justify-center gap-3 shadow-lg min-h-[50px] lg:min-h-[60px]`}
+                      onClick={handlePuzzleGame}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Puzzle size={24} />
+                      Speel Puzzle
+                    </motion.button>
+                  )}
                 </motion.div>
-
-                {/* Fun Fact Footer - Only for 1925 event */}
-                {(eventData.year === "1925" ||
-                  eventData.id === "1" ||
-                  eventData.id === "museum-foundation") && (
-                  <FunFact fact="Het Eysingahuis stamt uit 1587 en is een rijksmonument." />
-                )}
               </div>
 
               {/* RIGHT PANEL - Media Section */}
               <div
-                className={`w-full xl:w-3/5 ${theme.background.modal} p-6 lg:p-8 xl:p-10 flex flex-col min-h-0`}
+                className={`w-full xl:w-3/5 bg-gradient-to-br ${theme.background.modal} p-6 lg:p-8 xl:p-10 flex flex-col min-h-0`}
+                style={{
+                  background:
+                    theme.name === "museum"
+                      ? "linear-gradient(135deg, rgba(68, 15, 15, 0.98) 0%, rgba(137, 53, 10, 0.95) 50%, rgba(174, 85, 20, 0.98) 100%)"
+                      : undefined,
+                }}
               >
                 {/* Media Preview Area */}
                 <motion.div
@@ -783,6 +831,54 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
       <ImagePuzzleModal
         isOpen={isImagePuzzleModalOpen}
         onClose={handleCloseImagePuzzleModal}
+        puzzleImage={(() => {
+          if (
+            !eventData?.puzzleImage ||
+            eventData.puzzleImage.includes("brown_cow_kids")
+          ) {
+            return null
+          }
+
+          const puzzleImg = eventData.puzzleImage
+
+          // If already a full URL, use it
+          if (puzzleImg.startsWith("http")) {
+            return puzzleImg
+          }
+
+          // If starts with /, it's an absolute path
+          if (puzzleImg.startsWith("/")) {
+            return puzzleImg
+          }
+
+          // Build full URL to adminpanel/uploads/
+          // Get current origin and construct path
+          const origin = window.location.origin
+          // Extract base path from current location
+          // Current: https://mbo-portal.nl/museumproject/landbouwmuseum/timeline/frontend/...
+          // Need: https://mbo-portal.nl/museumproject/landbouwmuseum/timeline/adminpanel/uploads/...
+          const currentPath = window.location.pathname
+          let basePath = ""
+
+          // Try to extract base path
+          if (currentPath.includes("/frontend/")) {
+            // Remove /frontend/ and everything after
+            basePath = currentPath.split("/frontend/")[0]
+          } else if (currentPath.includes("/museumproject/")) {
+            // Extract up to /timeline
+            const match = currentPath.match(
+              /^(\/museumproject\/[^\/]+\/timeline)/
+            )
+            if (match) {
+              basePath = match[1]
+            }
+          } else {
+            // Fallback: try to get from origin + common path
+            basePath = "/museumproject/landbouwmuseum/timeline"
+          }
+
+          return `${origin}${basePath}/adminpanel/uploads/${puzzleImg}`
+        })()}
       />
     </AnimatePresence>
   )

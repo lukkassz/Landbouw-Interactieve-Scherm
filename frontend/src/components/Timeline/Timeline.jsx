@@ -12,7 +12,13 @@ import { useTimeline } from "../../hooks/useTimeline"
 import { useSound } from "../../hooks/useSound"
 import { useIdleTimer } from "../../hooks/useIdleTimer"
 import LoadingSkeleton from "./ui/LoadingSkeleton"
-import { extractYear, generateYearMarkers, groupEventsByMarkers } from "../../utils/timelineCalculations"
+import AnimatedYear from "./ui/AnimatedYear"
+import {
+  generateYearMarkers,
+  groupEventsByMarkers,
+  calculateEventPosition,
+  extractYear as extractYearUtil,
+} from "../../utils/timelineCalculations"
 
 // Import puzzle images
 import puzzleImg from "../../assets/images/puzzle/brown_cow_kids.jpg"
@@ -20,7 +26,7 @@ import puzzleImg from "../../assets/images/puzzle/brown_cow_kids.jpg"
 import backgroundTimelineVideo from "../../assets/video/5197931-uhd_3840_2160_30fps.mp4"
 
 // Helper function to get border color based on category
-const getCategoryBorderColor = (category) => {
+const getCategoryBorderColor = category => {
   const categoryColors = {
     museum: "#a35514",
     landbouw: "#22c55e", // green-500
@@ -108,6 +114,13 @@ const GRADIENT_PALETTE = [
     museumGradient: "from-brand-amber to-brand-rust",
   },
 ]
+
+// Helper function to extract numeric year from year string (e.g. "1925", "1930-1956" -> 1925, 1930)
+const extractYear = yearString => {
+  if (!yearString) return null
+  const match = yearString.match(/\d{4}/)
+  return match ? parseInt(match[0], 10) : null
+}
 
 // Helper function to get gradient for an event
 const getGradientForEvent = event => {
@@ -224,13 +237,18 @@ const Timeline = () => {
         gradient: gradients.gradient,
         museumGradient: gradients.museumGradient,
         stage: event.stage || 1,
-        hasPuzzle: event.has_puzzle || false,
-        puzzleImage: event.puzzle_image_url
-          ? event.puzzle_image_url
-          : puzzleImg,
+        hasPuzzle:
+          event.has_puzzle === true ||
+          event.has_puzzle === 1 ||
+          event.has_puzzle === "1" ||
+          Boolean(event.has_puzzle),
+        puzzleImage:
+          event.puzzle_image_url &&
+          event.puzzle_image_url.trim() !== ""
+            ? event.puzzle_image_url
+            : null,
         icon: event.icon || "🌾",
-        useDetailedModal:
-          event.use_detailed_modal === true || event.use_detailed_modal === 1,
+        useDetailedModal: true, // Always use detailed modal
         historicalContext: event.historical_context || "",
         has_key_moments:
           event.has_key_moments === true ||
@@ -242,18 +260,15 @@ const Timeline = () => {
     })
   }, [apiData])
 
-  // Generate year markers (1925, 1930, 1935... 2025) and group events by markers
+  // Generate year markers (1925, 1930, 1935... 2025)
+  const yearMarkers = useMemo(() => {
+    return generateYearMarkers(1925, 2025, 5)
+  }, [])
+
+  // Group events by year markers
   const timelineSections = useMemo(() => {
-    if (!timelineData || timelineData.length === 0) return []
-    
-    // Generate year markers every 5 years from 1925 to 2025
-    const markers = generateYearMarkers(1925, 2025, 5)
-    
-    // Group events between markers
-    const sections = groupEventsByMarkers(timelineData, markers)
-    
-    return sections
-  }, [timelineData])
+    return groupEventsByMarkers(timelineData, yearMarkers)
+  }, [timelineData, yearMarkers])
 
   const handleMouseDown = e => {
     // Only handle left mouse button
@@ -287,12 +302,8 @@ const Timeline = () => {
       const timelineItem = timelineData.find(item => item.id === periodId)
       setSelectedTimelineItem(timelineItem)
 
-      // Use detailed modal for items with enhanced data, otherwise use legacy modal
-      if (timelineItem?.useDetailedModal) {
-        setIsDetailModalOpen(true)
-      } else {
-        setIsLegacyModalOpen(true)
-      }
+      // Always use detailed modal
+      setIsDetailModalOpen(true)
       console.log("Navigeer naar periode:", periodId)
     }
   }
@@ -601,13 +612,12 @@ const Timeline = () => {
         <div className="relative pb-32 overflow-hidden">
           <motion.div
             ref={timelineRef}
-            className="overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing relative"
+            className="overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing"
             style={{
               scrollbarWidth: "none",
               msOverflowStyle: "none",
               scrollBehavior: isDragging ? "auto" : "smooth",
               userSelect: "none",
-              minWidth: "100%",
             }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
@@ -688,7 +698,7 @@ const Timeline = () => {
                                   textShadow: "0 2px 6px rgba(201, 163, 0, 0.2)",
                                 }}
                               >
-                                {extractYear(period.year)}
+                                {extractYearUtil(period.year)}
                               </span>
                             </div>
 
@@ -778,6 +788,117 @@ const Timeline = () => {
                 </div>
               ))}
             </motion.div>
+            
+            {/* Fallback: If no sections, show events normally */}
+            {timelineSections.length === 0 && (
+              <motion.div
+                className="flex items-center space-x-16 md:space-x-32 min-w-max px-16 md:px-32 pt-16 md:pt-24 pb-16"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 1, ease: "easeOut" }}
+              >
+                {timelineData.map((period, index) => (
+                <motion.div
+                  key={period.id}
+                  className="relative flex-shrink-0 z-10"
+                  initial={{ opacity: 0, y: 100, scale: 0.8 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{
+                    duration: 0.8,
+                    delay: index * 0.2,
+                    ease: "easeOut",
+                  }}
+                >
+                  <div
+                    className={`${index % 2 === 0 ? "mb-48" : "mt-48"} w-80`}
+                  >
+                    <motion.div
+                      className="cursor-pointer"
+                      onClick={() => handleCardClick(period.id)}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      {/* Year - Animated */}
+                      <div className="text-center mb-6">
+                        <AnimatedYear
+                          year={period.year}
+                          theme={theme}
+                          gradient={period.gradient}
+                        />
+                      </div>
+
+                      {/* Kaart */}
+                      <motion.div
+                        className={`relative ${theme.timeline.cardBg} p-8 rounded-3xl border overflow-hidden mb-8 shadow-xl`}
+                        style={{
+                          filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.1))",
+                          borderColor: getCategoryBorderColor(period.category),
+                          borderWidth: "3px",
+                        }}
+                        animate={{
+                          filter:
+                            selectedPeriod === period.id
+                              ? "drop-shadow(0 6px 20px rgba(201,163,0,0.3))"
+                              : "drop-shadow(0 4px 12px rgba(0,0,0,0.1))",
+                        }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <div className="relative flex justify-center mb-6">
+                          <motion.div
+                            className="w-20 h-20 flex items-center justify-center text-4xl rounded-2xl shadow-lg"
+                            style={{
+                              backgroundColor:
+                                theme.name === "museum"
+                                  ? "#a7b8b4"
+                                  : "rgba(255, 255, 255, 0.2)",
+                              borderColor:
+                                theme.name === "museum"
+                                  ? "#a7b8b4"
+                                  : "rgba(255, 255, 255, 0.3)",
+                              borderWidth:
+                                theme.name === "museum" ? "2px" : "1px",
+                              color:
+                                theme.name === "museum" ? "#ae5514" : undefined,
+                            }}
+                            whileHover={{
+                              rotate: [0, -10, 10, -10, 0],
+                              scale: 1.1,
+                            }}
+                            transition={{ duration: 0.5 }}
+                          >
+                            {period.icon || "🌾"}
+                          </motion.div>
+                        </div>
+
+                        <div className="text-center mb-4 relative">
+                          <h3
+                            className="text-2xl font-bold leading-tight"
+                            style={{
+                              color: "#440f0f",
+                            }}
+                          >
+                            {period.title}
+                          </h3>
+                        </div>
+
+                        <div className="text-center relative">
+                          <p
+                            className="leading-relaxed"
+                            style={{
+                              color: "#657575",
+                            }}
+                          >
+                            {period.description}
+                          </p>
+                        </div>
+
+                        {/* Removed selected checkmark/highlight */}
+                      </motion.div>
+                    </motion.div>
+                  </div>
+                </motion.div>
+                ))}
+              </motion.div>
+            )}
           </motion.div>
         </div>
       </div>
