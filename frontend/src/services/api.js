@@ -156,11 +156,15 @@ export const api = {
 
   /**
    * Get event sections for a specific event
-   * Maps to: GET /api/event/{id}/sections
+   * Uses direct endpoint: GET /api/event_sections_direct.php?event_id={id}
+   * (Direct endpoint works reliably, routing has issues)
    */
   getEventSections: async eventId => {
     try {
-      const response = await apiClient.get(`/event/${eventId}/sections`)
+      // Use direct endpoint directly (routing doesn't work reliably)
+      const response = await apiClient.get(
+        `/event_sections_direct.php?event_id=${eventId}`
+      )
       if (response.data.success) {
         return {
           data: response.data.data || [],
@@ -312,6 +316,25 @@ export const api = {
       },
     })
     return response
+  },
+
+  /**
+   * Get puzzle image URL
+   * Maps to: GET /api/puzzle_image_direct.php?filename={filename}
+   */
+  getPuzzleImageUrl: async filename => {
+    try {
+      const response = await apiClient.get(
+        `/puzzle_image_direct.php?filename=${encodeURIComponent(filename)}`
+      )
+      if (response.data.success) {
+        return response.data
+      }
+      throw new Error(response.data.message || "Failed to get puzzle image URL")
+    } catch (error) {
+      console.error("Failed to get puzzle image URL:", error.message)
+      throw error
+    }
   },
 }
 

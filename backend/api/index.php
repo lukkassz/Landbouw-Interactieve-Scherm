@@ -56,12 +56,21 @@ $eventId = null;
 
 // Try to extract event ID from the original request URI first
 // Match pattern: /event/{id}/media anywhere in the URI
+$isSections = false;
 if (preg_match('#/event/(\d+)/media#i', $request_uri, $uriMatches)) {
     $eventId = intval($uriMatches[1]);
     error_log("API Router - Found event ID from REQUEST_URI: " . $eventId . " (URI: " . $request_uri . ")");
+} elseif (preg_match('#/event/(\d+)/sections#i', $request_uri, $uriMatches)) {
+    $eventId = intval($uriMatches[1]);
+    $isSections = true;
+    error_log("API Router - Found event ID for sections from REQUEST_URI: " . $eventId);
 } elseif (preg_match('#/event/(\d+)/media#i', $path, $pathMatches)) {
     $eventId = intval($pathMatches[1]);
     error_log("API Router - Found event ID from path: " . $eventId . " (Path: " . $path . ")");
+} elseif (preg_match('#/event/(\d+)/sections#i', $path, $pathMatches)) {
+    $eventId = intval($pathMatches[1]);
+    $isSections = true;
+    error_log("API Router - Found event ID for sections from path: " . $eventId);
 } elseif (isset($_GET['event_id'])) {
     $eventId = intval($_GET['event_id']);
     error_log("API Router - Found event ID from GET param: " . $eventId);
@@ -70,9 +79,16 @@ if (preg_match('#/event/(\d+)/media#i', $request_uri, $uriMatches)) {
     error_log("API Router - No event ID found. REQUEST_URI: " . $request_uri . ", Path: " . $path);
 }
 
-// If we found an event ID, route to event_media endpoint
+// If we found an event ID, route to appropriate endpoint
 if ($eventId) {
     $_GET['event_id'] = $eventId;
+    
+    if ($isSections) {
+        error_log("API Router - Routing to event_sections_direct.php with event_id: " . $eventId);
+        include_once __DIR__ . '/event_sections_direct.php';
+        exit;
+    }
+    
     error_log("API Router - Routing to event_media.php with event_id: " . $eventId);
     include_once __DIR__ . '/endpoints/event_media.php';
     exit;

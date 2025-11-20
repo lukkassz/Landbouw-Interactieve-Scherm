@@ -75,11 +75,15 @@ try {
         
         // Convert has_puzzle to boolean - handle both string and numeric values
         $hasPuzzle = $event['has_puzzle'] ?? false;
-        $event['has_puzzle'] = ($hasPuzzle === true || $hasPuzzle === 1 || $hasPuzzle === '1');
+        $event['has_puzzle'] = ($hasPuzzle === true || $hasPuzzle === 1 || $hasPuzzle === '1' || $hasPuzzle === 'true');
         
         // Keep puzzle_image_url as string (or null if empty)
-        if (empty($event['puzzle_image_url'])) {
+        // Don't set to null if it's an empty string - keep it as empty string so frontend can check
+        if (empty($event['puzzle_image_url']) || $event['puzzle_image_url'] === null) {
             $event['puzzle_image_url'] = null;
+        } else {
+            // Ensure it's a string
+            $event['puzzle_image_url'] = (string)$event['puzzle_image_url'];
         }
 
         // Year might be a string like "1925" or range like "1930-1956"

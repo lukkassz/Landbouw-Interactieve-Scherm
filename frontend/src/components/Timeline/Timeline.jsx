@@ -164,6 +164,118 @@ const getGradientForEvent = event => {
   }
 }
 
+// Swipe Hint Component
+const SwipeHint = ({ visible }) => (
+  <AnimatePresence>
+    {visible && (
+      <motion.div
+        className="absolute right-8 top-1/2 -translate-y-1/2 z-40 pointer-events-none flex flex-col items-center gap-2"
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: 20 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center shadow-lg border border-white/30 animate-pulse">
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            width="24" 
+            height="24" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="white" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+            className="animate-bounce-x"
+          >
+            <path d="M5 12h14" />
+            <path d="M12 5l7 7-7 7" />
+          </svg>
+        </div>
+        <span className="text-white/80 text-sm font-medium tracking-wider uppercase drop-shadow-md">Veeg</span>
+      </motion.div>
+    )}
+  </AnimatePresence>
+)
+
+// Era Background Component
+const EraBackground = ({ currentYear, theme }) => {
+  // Calculate decade (e.g., 1930, 1940)
+  const decade = Math.floor(currentYear / 10) * 10
+  
+  return (
+    <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden flex items-center justify-center">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={decade}
+          className="text-[20vw] font-bold font-heading opacity-[0.15] select-none whitespace-nowrap"
+          style={{ color: theme.colors.gold }}
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 0.15, scale: 1 }}
+          exit={{ opacity: 0, scale: 1.1 }}
+          transition={{ duration: 1 }}
+        >
+          Jaren '{decade.toString().slice(2)}
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  )
+}
+
+// Timeline Scrubber Component
+const TimelineScrubber = ({ scrollProgress, onScrub, theme }) => {
+  const scrubberRef = useRef(null)
+
+  const handleClick = (e) => {
+    if (!scrubberRef.current) return
+    const rect = scrubberRef.current.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const percentage = Math.max(0, Math.min(1, x / rect.width))
+    onScrub(percentage)
+  }
+
+  return (
+    <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[80%] max-w-4xl z-50 h-12 flex items-center justify-center">
+      <div 
+        className="relative w-full h-1 bg-black/20 rounded-full cursor-pointer group"
+        ref={scrubberRef}
+        onClick={handleClick}
+      >
+        {/* Track */}
+        <div className="absolute inset-0 bg-white/30 rounded-full backdrop-blur-sm" />
+        
+        {/* Progress Fill */}
+        <motion.div 
+          className="absolute left-0 top-0 bottom-0 rounded-full"
+          style={{ 
+            width: `${scrollProgress * 100}%`,
+            background: theme.colors.gold 
+          }}
+        />
+
+        {/* Thumb */}
+        <motion.div 
+          className="absolute top-1/2 -translate-y-1/2 w-6 h-6 bg-white rounded-full shadow-lg border-2 cursor-grab active:cursor-grabbing hover:scale-110 transition-transform"
+          style={{ 
+            left: `${scrollProgress * 100}%`,
+            borderColor: theme.colors.gold,
+            marginLeft: "-12px" // Center thumb
+          }}
+        />
+
+        {/* Decade Markers */}
+        {[0, 0.25, 0.5, 0.75, 1].map((pos, i) => (
+          <div 
+            key={i}
+            className="absolute top-1/2 -translate-y-1/2 w-2 h-2 bg-white/50 rounded-full pointer-events-none"
+            style={{ left: `${pos * 100}%`, marginLeft: "-4px" }}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 const Timeline = () => {
   const theme = getTheme()
   const { timelineData: apiData, loading, error } = useTimeline()
@@ -176,8 +288,12 @@ const Timeline = () => {
   const [isDragging, setIsDragging] = useState(false)
   const [startX, setStartX] = useState(0)
   const [scrollLeft, setScrollLeft] = useState(0)
+  const [scrollProgress, setScrollProgress] = useState(0)
+  const [currentYear, setCurrentYear] = useState(1925)
+  const [showSwipeHint, setShowSwipeHint] = useState(false)
   const timelineRef = useRef(null)
   const videoRef = useRef(null)
+  const hintTimerRef = useRef(null)
 
   // Idle screen state - start in idle mode
   const [isIdle, setIsIdle] = useState(true)
@@ -243,8 +359,7 @@ const Timeline = () => {
           event.has_puzzle === "1" ||
           Boolean(event.has_puzzle),
         puzzleImage:
-          event.puzzle_image_url &&
-          event.puzzle_image_url.trim() !== ""
+          event.puzzle_image_url && event.puzzle_image_url.trim() !== ""
             ? event.puzzle_image_url
             : null,
         icon: event.icon || "🌾",
@@ -256,6 +371,7 @@ const Timeline = () => {
           event.has_key_moments === "1" ||
           Boolean(event.has_key_moments),
         category: event.category || "museum", // Default to museum if not set
+        mainImage: event.main_image || event.image_url || null, // Add main image for card display
       }
     })
   }, [apiData])
@@ -278,6 +394,7 @@ const Timeline = () => {
     if (timelineRef.current) {
       setScrollLeft(timelineRef.current.scrollLeft)
     }
+    resetHintTimer()
   }
 
   const handleMouseMove = e => {
@@ -288,13 +405,64 @@ const Timeline = () => {
     const walk = (x - startX) * 2
     const newScrollLeft = scrollLeft - walk
     timelineRef.current.scrollLeft = newScrollLeft
+    resetHintTimer()
   }
 
   const handleMouseUp = e => {
     // Only handle left mouse button
     if (e.button !== 0 && e.type === "mouseup") return
     setIsDragging(false)
+    resetHintTimer()
   }
+
+  // Scroll Handler for Progress & Year Calculation
+  const handleScroll = () => {
+    if (!timelineRef.current) return
+    
+    const { scrollLeft, scrollWidth, clientWidth } = timelineRef.current
+    const maxScroll = scrollWidth - clientWidth
+    const progress = maxScroll > 0 ? scrollLeft / maxScroll : 0
+    setScrollProgress(progress)
+
+    // Calculate approximate year based on progress
+    // Assuming 1925 to 2025 range
+    const year = 1925 + Math.round(progress * 100)
+    setCurrentYear(year)
+    
+    resetHintTimer()
+  }
+
+  // Scrubber Handler
+  const handleScrub = (percentage) => {
+    if (!timelineRef.current) return
+    const { scrollWidth, clientWidth } = timelineRef.current
+    const maxScroll = scrollWidth - clientWidth
+    const newScrollLeft = maxScroll * percentage
+    
+    timelineRef.current.scrollTo({
+      left: newScrollLeft,
+      behavior: 'smooth'
+    })
+  }
+
+  // Hint Timer Logic
+  const resetHintTimer = () => {
+    setShowSwipeHint(false)
+    if (hintTimerRef.current) clearTimeout(hintTimerRef.current)
+    
+    if (!isIdle && !isModalOpen && !isDetailModalOpen) {
+      hintTimerRef.current = setTimeout(() => {
+        setShowSwipeHint(true)
+      }, 4000) // Show hint after 4s of inactivity
+    }
+  }
+
+  useEffect(() => {
+    resetHintTimer()
+    return () => {
+      if (hintTimerRef.current) clearTimeout(hintTimerRef.current)
+    }
+  }, [isIdle, isModalOpen, isDetailModalOpen])
 
   const handleCardClick = periodId => {
     if (!isDragging) {
@@ -557,9 +725,6 @@ const Timeline = () => {
         touchAction: "pan-x pan-y",
         WebkitOverflowScrolling: "touch",
       }}
-      onTouchStart={handleMouseDown}
-      onTouchMove={handleMouseMove}
-      onTouchEnd={handleMouseUp}
     >
       {/* Background video */}
       <video
@@ -581,6 +746,19 @@ const Timeline = () => {
       {/* Subtle pattern overlay - reduced opacity */}
       <div
         className={`absolute inset-0 bg-gradient-to-t ${theme.background.overlay}`}
+      />
+
+      {/* Era Background Text */}
+      <EraBackground currentYear={currentYear} theme={theme} />
+
+      {/* Swipe Hint */}
+      <SwipeHint visible={showSwipeHint} />
+
+      {/* Scrubber */}
+      <TimelineScrubber 
+        scrollProgress={scrollProgress} 
+        onScrub={handleScrub} 
+        theme={theme} 
       />
 
       {/* Studentenwerk Logo */}
@@ -619,6 +797,7 @@ const Timeline = () => {
               scrollBehavior: isDragging ? "auto" : "smooth",
               userSelect: "none",
             }}
+            onScroll={handleScroll}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
@@ -632,18 +811,15 @@ const Timeline = () => {
               animate={{ opacity: 1 }}
               transition={{ duration: 1, ease: "easeOut" }}
             >
-              {/* Timeline Line - Continuous Horizontal Line */}
+              {/* Timeline Line - Continuous Horizontal Line - FUTURISTIC GLOW */}
               <div className="absolute top-1/2 left-0 right-0 transform -translate-y-1/2 z-0 pointer-events-none">
+                <div className="h-1 bg-[#f3f2e9] shadow-[0_0_20px_rgba(201,163,0,0.6)] w-full relative z-10"></div>
                 <div
-                  className={`h-3 bg-gradient-to-r ${theme.timeline.line} shadow-2xl rounded-full w-full`}
+                  className={`absolute top-1/2 transform -translate-y-1/2 h-6 w-full blur-md opacity-60`}
                   style={{
-                    boxShadow: "0 0 20px rgba(201, 163, 0, 0.3), 0 4px 12px rgba(0,0,0,0.2)",
+                    background: `linear-gradient(90deg, ${theme.colors.terracotta}, ${theme.colors.gold}, ${theme.colors.terracotta})`,
                   }}
-                >
-                  <div
-                    className={`absolute inset-0 bg-gradient-to-r ${theme.timeline.line} blur-md opacity-70 rounded-full`}
-                  ></div>
-                </div>
+                ></div>
               </div>
               {timelineSections.map((section, sectionIndex) => (
                 <div
@@ -653,15 +829,15 @@ const Timeline = () => {
                   {/* Year Marker - Large, Yellow, No Background */}
                   <div className="sticky left-0 top-0 z-20 mb-12">
                     <motion.span
-                      className="text-7xl md:text-8xl font-bold block whitespace-nowrap pointer-events-none"
+                      className="text-7xl md:text-8xl font-bold block whitespace-nowrap pointer-events-none font-mono"
                       style={{
                         color: "#c9a300",
-                        opacity: 0.5,
-                        textShadow: "0 2px 8px rgba(201, 163, 0, 0.2)",
-                        letterSpacing: "-0.02em",
+                        opacity: 0.6,
+                        textShadow: "0 0 30px rgba(201, 163, 0, 0.4)", // Neon glow
+                        letterSpacing: "-0.05em",
                       }}
                       initial={{ opacity: 0, y: -30 }}
-                      animate={{ opacity: 0.5, y: 0 }}
+                      animate={{ opacity: 0.6, y: 0 }}
                       transition={{
                         duration: 0.8,
                         delay: sectionIndex * 0.1,
@@ -687,15 +863,18 @@ const Timeline = () => {
                             ease: "easeOut",
                           }}
                         >
-                          <div className={`${eventIndex % 2 === 0 ? "mb-48" : "mt-48"} relative`}>
-                            {/* Event Year Label */}
+                          <div
+                            className={`${
+                              eventIndex % 2 === 0 ? "mb-48" : "mt-48"
+                            } relative`}
+                          >
+                            {/* Event Year Label - Modern & Clean */}
                             <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-10">
                               <span
-                                className="text-4xl font-light whitespace-nowrap pointer-events-none"
+                                className="text-4xl font-bold whitespace-nowrap pointer-events-none tracking-widest font-heading"
                                 style={{
                                   color: "#c9a300",
-                                  opacity: 0.7,
-                                  textShadow: "0 2px 6px rgba(201, 163, 0, 0.2)",
+                                  textShadow: "0 2px 4px rgba(0,0,0,0.1)",
                                 }}
                               >
                                 {extractYearUtil(period.year)}
@@ -707,75 +886,167 @@ const Timeline = () => {
                               onClick={() => handleCardClick(period.id)}
                               whileTap={{ scale: 0.98 }}
                             >
-                            {/* Event Card */}
+                        <motion.div
+                          key={period.id}
+                          className="relative flex-shrink-0"
+                          initial={{ opacity: 0, y: 100, scale: 0.8 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          transition={{
+                            duration: 0.8,
+                            delay: sectionIndex * 0.15 + eventIndex * 0.1,
+                            ease: "easeOut",
+                          }}
+                        >
+                          <div
+                            className={`${
+                              eventIndex % 2 === 0 ? "mb-48" : "mt-48"
+                            } relative`}
+                          >
+                            {/* Event Year Label - Modern & Clean */}
+                            <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-10">
+                              <span
+                                className="text-4xl font-bold whitespace-nowrap pointer-events-none tracking-widest font-heading"
+                                style={{
+                                  color: "#c9a300",
+                                  textShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                                }}
+                              >
+                                {extractYearUtil(period.year)}
+                              </span>
+                            </div>
+
                             <motion.div
-                              className={`relative ${theme.timeline.cardBg} p-8 rounded-3xl border overflow-hidden shadow-xl`}
-                              style={{
-                                filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.1))",
-                                borderColor: getCategoryBorderColor(period.category),
-                                borderWidth: "5px",
-                              }}
-                              animate={{
-                                filter:
-                                  selectedPeriod === period.id
-                                    ? "drop-shadow(0 6px 20px rgba(201,163,0,0.3))"
-                                    : "drop-shadow(0 4px 12px rgba(0,0,0,0.1))",
-                              }}
-                              transition={{ duration: 0.3 }}
-                              whileHover={{
-                                y: -4,
-                                filter: "drop-shadow(0 6px 20px rgba(0,0,0,0.12))",
-                              }}
+                              className="cursor-pointer w-[280px] min-w-[280px] max-w-[280px]"
+                              onClick={() => handleCardClick(period.id)}
+                              whileTap={{ scale: 0.98 }}
                             >
-                              <div className="relative flex justify-center mb-6">
-                                <motion.div
-                                  className="w-20 h-20 flex items-center justify-center text-4xl rounded-2xl shadow-lg"
-                                  style={{
-                                    backgroundColor:
-                                      theme.name === "museum"
-                                        ? "#a7b8b4"
-                                        : "rgba(255, 255, 255, 0.2)",
-                                    borderColor:
-                                      theme.name === "museum"
-                                        ? "#a7b8b4"
-                                        : "rgba(255, 255, 255, 0.3)",
-                                    borderWidth:
-                                      theme.name === "museum" ? "2px" : "1px",
-                                    color:
-                                      theme.name === "museum" ? "#ae5514" : undefined,
-                                  }}
-                                  whileHover={{
-                                    rotate: [0, -10, 10, -10, 0],
-                                    scale: 1.1,
-                                  }}
-                                  transition={{ duration: 0.5 }}
-                                >
-                                  {period.icon || "🌾"}
-                                </motion.div>
-                              </div>
+                        <motion.div
+                          key={period.id}
+                          className="relative flex-shrink-0"
+                          initial={{ opacity: 0, y: 100, scale: 0.8 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          transition={{
+                            duration: 0.8,
+                            delay: sectionIndex * 0.15 + eventIndex * 0.1,
+                            ease: "easeOut",
+                          }}
+                        >
+                          <div
+                            className={`${
+                              eventIndex % 2 === 0 ? "mb-48" : "mt-48"
+                            } relative`}
+                          >
+                            {/* Event Year Label - Modern & Clean */}
+                            <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-10">
+                              <span
+                                className="text-4xl font-bold whitespace-nowrap pointer-events-none tracking-widest font-heading"
+                                style={{
+                                  color: "#c9a300",
+                                  textShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                                }}
+                              >
+                                {extractYearUtil(period.year)}
+                              </span>
+                            </div>
 
-                              <div className="text-center mb-4 relative">
-                                <h3
-                                  className="text-2xl font-bold leading-tight"
-                                  style={{
-                                    color: "#440f0f",
-                                  }}
+                            <motion.div
+                              className="cursor-pointer w-[280px] min-w-[280px] max-w-[280px]"
+                              onClick={() => handleCardClick(period.id)}
+                              whileTap={{ scale: 0.98 }}
+                            >
+                              {/* Event Card - Typographic Museum Plaque */}
+                              <motion.div
+                                className={`relative bg-[#f3f2e9] rounded-xl overflow-hidden h-[420px] flex flex-col shadow-lg border-t-4 group`}
+                                style={{
+                                  borderTopColor: getCategoryBorderColor(period.category),
+                                  borderLeft: "1px solid rgba(167, 184, 180, 0.3)",
+                                  borderRight: "1px solid rgba(167, 184, 180, 0.3)",
+                                  borderBottom: "1px solid rgba(167, 184, 180, 0.3)",
+                                }}
+                                animate={{
+                                  y: selectedPeriod === period.id ? -10 : 0,
+                                  boxShadow: selectedPeriod === period.id 
+                                    ? `0 20px 40px -10px rgba(0,0,0,0.15), 0 0 0 1px ${getCategoryBorderColor(period.category)}`
+                                    : "0 10px 30px -10px rgba(0,0,0,0.05)",
+                                }}
+                                whileHover={{
+                                  y: -10,
+                                  boxShadow: `0 20px 40px -10px rgba(0,0,0,0.15), 0 0 0 1px ${getCategoryBorderColor(period.category)}`,
+                                }}
+                                transition={{ duration: 0.3 }}
+                              >
+                                {/* Background Watermark (Year) */}
+                                <div 
+                                  className="absolute -right-4 -bottom-12 text-[180px] font-bold font-heading opacity-5 pointer-events-none select-none transform -rotate-12"
+                                  style={{ color: getCategoryBorderColor(period.category) }}
                                 >
-                                  {period.title}
-                                </h3>
-                              </div>
+                                  {extractYearUtil(period.year)}
+                                </div>
 
-                              <div className="text-center relative">
-                                <p
-                                  className="leading-relaxed"
-                                  style={{
-                                    color: "#657575",
-                                  }}
-                                >
-                                  {period.description}
-                                </p>
-                              </div>
+                                {/* Card Content */}
+                                <div className="p-8 flex flex-col h-full relative z-10">
+                                  
+                                  {/* Category Label */}
+                                  <div className="mb-6">
+                                    <span 
+                                      className="inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest"
+                                      style={{ 
+                                        backgroundColor: `${getCategoryBorderColor(period.category)}15`,
+                                        color: getCategoryBorderColor(period.category)
+                                      }}
+                                    >
+                                      {period.category === 'museum' ? 'Museum' : 'Landbouw'}
+                                    </span>
+                                  </div>
+
+                                  {/* Title */}
+                                  <div className="mb-6">
+                                    <h3
+                                      className="text-2xl font-bold leading-tight font-heading"
+                                      style={{
+                                        color: "#440f0f",
+                                      }}
+                                    >
+                                      {period.title}
+                                    </h3>
+                                    <div 
+                                      className="h-1 w-12 mt-4 rounded-full"
+                                      style={{ background: getCategoryBorderColor(period.category) }}
+                                    />
+                                  </div>
+
+                                  {/* Description */}
+                                  <div className="flex-grow overflow-hidden relative">
+                                    <p
+                                      className="leading-relaxed font-medium text-base text-[#657575] line-clamp-6"
+                                    >
+                                      {period.description}
+                                    </p>
+                                    {/* Fade out effect */}
+                                    <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#f3f2e9] to-transparent" />
+                                  </div>
+                                  
+                                  {/* Footer / CTA */}
+                                  <div className="mt-auto pt-6 flex items-center justify-between">
+                                    <span 
+                                      className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 transition-all group-hover:gap-3"
+                                      style={{ color: theme.colors.gold }}
+                                    >
+                                      Lees meer
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                        <polyline points="12 5 19 12 12 19"></polyline>
+                                      </svg>
+                                    </span>
+                                  </div>
+                                </div>
+                              </motion.div>
                             </motion.div>
+                          </div>
+                        </motion.div>
+                            </motion.div>
+                          </div>
+                        </motion.div>
                             </motion.div>
                           </div>
                         </motion.div>
@@ -788,7 +1059,7 @@ const Timeline = () => {
                 </div>
               ))}
             </motion.div>
-            
+
             {/* Fallback: If no sections, show events normally */}
             {timelineSections.length === 0 && (
               <motion.div
@@ -798,104 +1069,124 @@ const Timeline = () => {
                 transition={{ duration: 1, ease: "easeOut" }}
               >
                 {timelineData.map((period, index) => (
-                <motion.div
-                  key={period.id}
-                  className="relative flex-shrink-0 z-10"
-                  initial={{ opacity: 0, y: 100, scale: 0.8 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{
-                    duration: 0.8,
-                    delay: index * 0.2,
-                    ease: "easeOut",
-                  }}
-                >
-                  <div
-                    className={`${index % 2 === 0 ? "mb-48" : "mt-48"} w-80`}
+                  <motion.div
+                    key={period.id}
+                    className="relative flex-shrink-0 z-10"
+                    initial={{ opacity: 0, y: 100, scale: 0.8 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{
+                      duration: 0.8,
+                      delay: index * 0.2,
+                      ease: "easeOut",
+                    }}
                   >
-                    <motion.div
-                      className="cursor-pointer"
-                      onClick={() => handleCardClick(period.id)}
-                      whileTap={{ scale: 0.98 }}
+                    <div
+                      className={`${index % 2 === 0 ? "mb-48" : "mt-48"} w-80`}
                     >
-                      {/* Year - Animated */}
-                      <div className="text-center mb-6">
-                        <AnimatedYear
-                          year={period.year}
-                          theme={theme}
-                          gradient={period.gradient}
-                        />
-                      </div>
-
-                      {/* Kaart */}
                       <motion.div
-                        className={`relative ${theme.timeline.cardBg} p-8 rounded-3xl border overflow-hidden mb-8 shadow-xl`}
-                        style={{
-                          filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.1))",
-                          borderColor: getCategoryBorderColor(period.category),
-                          borderWidth: "3px",
-                        }}
-                        animate={{
-                          filter:
-                            selectedPeriod === period.id
-                              ? "drop-shadow(0 6px 20px rgba(201,163,0,0.3))"
-                              : "drop-shadow(0 4px 12px rgba(0,0,0,0.1))",
-                        }}
-                        transition={{ duration: 0.3 }}
+                        className="cursor-pointer"
+                        onClick={() => handleCardClick(period.id)}
+                        whileTap={{ scale: 0.98 }}
                       >
-                        <div className="relative flex justify-center mb-6">
-                          <motion.div
-                            className="w-20 h-20 flex items-center justify-center text-4xl rounded-2xl shadow-lg"
-                            style={{
-                              backgroundColor:
-                                theme.name === "museum"
-                                  ? "#a7b8b4"
-                                  : "rgba(255, 255, 255, 0.2)",
-                              borderColor:
-                                theme.name === "museum"
-                                  ? "#a7b8b4"
-                                  : "rgba(255, 255, 255, 0.3)",
-                              borderWidth:
-                                theme.name === "museum" ? "2px" : "1px",
-                              color:
-                                theme.name === "museum" ? "#ae5514" : undefined,
-                            }}
-                            whileHover={{
-                              rotate: [0, -10, 10, -10, 0],
-                              scale: 1.1,
-                            }}
-                            transition={{ duration: 0.5 }}
-                          >
-                            {period.icon || "🌾"}
-                          </motion.div>
+                        {/* Year - Animated */}
+                        <div className="text-center mb-6">
+                          <AnimatedYear
+                            year={period.year}
+                            theme={theme}
+                            gradient={period.gradient}
+                          />
                         </div>
 
-                        <div className="text-center mb-4 relative">
-                          <h3
-                            className="text-2xl font-bold leading-tight"
-                            style={{
-                              color: "#440f0f",
-                            }}
+                        {/* Event Card - Typographic Museum Plaque */}
+                        <motion.div
+                          className={`relative bg-[#f3f2e9] rounded-xl overflow-hidden h-[420px] flex flex-col shadow-lg border-t-4 group`}
+                          style={{
+                            borderTopColor: getCategoryBorderColor(period.category),
+                            borderLeft: "1px solid rgba(167, 184, 180, 0.3)",
+                            borderRight: "1px solid rgba(167, 184, 180, 0.3)",
+                            borderBottom: "1px solid rgba(167, 184, 180, 0.3)",
+                          }}
+                          animate={{
+                            y: selectedPeriod === period.id ? -10 : 0,
+                            boxShadow: selectedPeriod === period.id 
+                              ? `0 20px 40px -10px rgba(0,0,0,0.15), 0 0 0 1px ${getCategoryBorderColor(period.category)}`
+                              : "0 10px 30px -10px rgba(0,0,0,0.05)",
+                          }}
+                          whileHover={{
+                            y: -10,
+                            boxShadow: `0 20px 40px -10px rgba(0,0,0,0.15), 0 0 0 1px ${getCategoryBorderColor(period.category)}`,
+                          }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          {/* Background Watermark (Year) */}
+                          <div 
+                            className="absolute -right-4 -bottom-12 text-[180px] font-bold font-heading opacity-5 pointer-events-none select-none transform -rotate-12"
+                            style={{ color: getCategoryBorderColor(period.category) }}
                           >
-                            {period.title}
-                          </h3>
-                        </div>
+                            {extractYearUtil(period.year)}
+                          </div>
 
-                        <div className="text-center relative">
-                          <p
-                            className="leading-relaxed"
-                            style={{
-                              color: "#657575",
-                            }}
-                          >
-                            {period.description}
-                          </p>
-                        </div>
+                          {/* Card Content */}
+                          <div className="p-8 flex flex-col h-full relative z-10">
+                            
+                            {/* Category Label */}
+                            <div className="mb-6">
+                              <span 
+                                className="inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest"
+                                style={{ 
+                                  backgroundColor: `${getCategoryBorderColor(period.category)}15`,
+                                  color: getCategoryBorderColor(period.category)
+                                }}
+                              >
+                                {period.category === 'museum' ? 'Museum' : period.category === 'maatschappelijk' ? 'Maatschappelijk' : 'Landbouw'}
+                              </span>
+                            </div>
 
-                        {/* Removed selected checkmark/highlight */}
+                            {/* Title */}
+                            <div className="mb-6">
+                              <h3
+                                className="text-2xl font-bold leading-tight font-heading"
+                                style={{
+                                  color: "#440f0f",
+                                }}
+                              >
+                                {period.title}
+                              </h3>
+                              <div 
+                                className="h-1 w-12 mt-4 rounded-full"
+                                style={{ background: getCategoryBorderColor(period.category) }}
+                              />
+                            </div>
+
+                            {/* Description */}
+                            <div className="flex-grow overflow-hidden relative">
+                              <p
+                                className="leading-relaxed font-medium text-base text-[#657575] line-clamp-6"
+                              >
+                                {period.description}
+                              </p>
+                              {/* Fade out effect */}
+                              <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#f3f2e9] to-transparent" />
+                            </div>
+                            
+                            {/* Footer / CTA */}
+                            <div className="mt-auto pt-6 flex items-center justify-between">
+                              <span 
+                                className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 transition-all group-hover:gap-3"
+                                style={{ color: theme.colors.gold }}
+                              >
+                                Lees meer
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                                  <polyline points="12 5 19 12 12 19"></polyline>
+                                </svg>
+                              </span>
+                            </div>
+                          </div>
+                        </motion.div>
                       </motion.div>
-                    </motion.div>
-                  </div>
-                </motion.div>
+                    </div>
+                  </motion.div>
                 ))}
               </motion.div>
             )}
