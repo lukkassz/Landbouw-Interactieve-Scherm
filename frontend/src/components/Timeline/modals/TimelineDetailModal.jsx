@@ -177,7 +177,14 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
           .then(data => {
             if (data.success && data.url) {
               console.log("✅ Puzzle image URL received:", data.url)
-              setPuzzleImageUrl(data.url)
+              
+              // Use proxy to handle CORS
+              const apiUrl = import.meta.env.VITE_API_URL || "http://localhost/backend/api"
+              const baseUrl = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl
+              const proxyUrl = `${baseUrl}/proxy_image.php?url=${encodeURIComponent(data.url)}`
+              
+              console.log("🔄 Using proxy URL:", proxyUrl)
+              setPuzzleImageUrl(proxyUrl)
             } else {
               console.error("❌ Puzzle image API returned error:", data.message)
               setPuzzleImageUrl(null)
@@ -561,7 +568,7 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
                         section.has_border === "1"
                         
                        return hasBorder ? (
-                        <div key={section.id || index} className="bg-[#f3f2e9] rounded-2xl p-6 lg:p-8 border border-[#a7b8b4]/40 hover:border-[#c9a300]/30 shadow-sm transition-all duration-300">
+                        <div key={`section-border-${section.id || index}`} className="bg-[#f3f2e9] rounded-2xl p-6 lg:p-8 border border-[#a7b8b4]/40 hover:border-[#c9a300]/30 shadow-sm transition-all duration-300">
                           <h3 className="text-xl lg:text-2xl font-bold text-[#c9a300] mb-4 font-heading">
                             {section.section_title}
                           </h3>
@@ -570,7 +577,7 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
                           </p>
                         </div>
                        ) : (
-                        <div key={section.id || index} className="py-2">
+                        <div key={`section-plain-${section.id || index}`} className="py-2">
                           <h3 className="text-xl lg:text-2xl font-bold text-[#440f0f] mb-4 font-heading">
                             {section.section_title}
                           </h3>

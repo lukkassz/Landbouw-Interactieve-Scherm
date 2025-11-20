@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import TimelineModal from "./modals/TimelineModal"
 import TimelineDetailModal from "./modals/TimelineDetailModal"
 import MuseumHeadline from "./content/MuseumHeadline"
 import VirtualGuide from "./content/VirtualGuide"
@@ -20,9 +19,6 @@ import {
   extractYear as extractYearUtil,
 } from "../../utils/timelineCalculations"
 
-// Import puzzle images
-import puzzleImg from "../../assets/images/puzzle/brown_cow_kids.jpg"
-// Import background video
 import backgroundTimelineVideo from "../../assets/video/5197931-uhd_3840_2160_30fps.mp4"
 
 // Helper function to get border color based on category
@@ -281,8 +277,6 @@ const Timeline = () => {
   const { timelineData: apiData, loading, error } = useTimeline()
   const playSound = useSound()
   const [selectedPeriod, setSelectedPeriod] = useState(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isLegacyModalOpen, setIsLegacyModalOpen] = useState(false)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [selectedTimelineItem, setSelectedTimelineItem] = useState(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -305,7 +299,6 @@ const Timeline = () => {
     setShowLoadingAnimation(false)
     // Reset timeline state when returning to idle
     setSelectedPeriod(null)
-    setIsModalOpen(false)
     setIsDetailModalOpen(false)
     setSelectedTimelineItem(null)
   })
@@ -450,7 +443,7 @@ const Timeline = () => {
     setShowSwipeHint(false)
     if (hintTimerRef.current) clearTimeout(hintTimerRef.current)
     
-    if (!isIdle && !isModalOpen && !isDetailModalOpen) {
+    if (!isIdle && !isDetailModalOpen) {
       hintTimerRef.current = setTimeout(() => {
         setShowSwipeHint(true)
       }, 4000) // Show hint after 4s of inactivity
@@ -462,7 +455,7 @@ const Timeline = () => {
     return () => {
       if (hintTimerRef.current) clearTimeout(hintTimerRef.current)
     }
-  }, [isIdle, isModalOpen, isDetailModalOpen])
+  }, [isIdle, isDetailModalOpen])
 
   const handleCardClick = periodId => {
     if (!isDragging) {
@@ -476,23 +469,9 @@ const Timeline = () => {
     }
   }
 
-  const closeModal = () => {
-    setIsModalOpen(false)
-    setSelectedTimelineItem(null)
-    setSelectedPeriod(null)
-  }
-
   const closeDetailModal = () => {
     setIsDetailModalOpen(false)
     setSelectedTimelineItem(null)
-  }
-
-  const openPuzzleModal = () => {
-    setIsLegacyModalOpen(true)
-  }
-
-  const closePuzzleModal = () => {
-    setIsLegacyModalOpen(false)
   }
 
   // Show loading state with skeleton
@@ -1203,17 +1182,6 @@ const Timeline = () => {
             isOpen={isDetailModalOpen}
             onClose={closeDetailModal}
             eventData={selectedTimelineItem}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Original timeline modal for puzzle and legacy interactions */}
-      <AnimatePresence>
-        {isLegacyModalOpen && (
-          <TimelineModal
-            isOpen={isLegacyModalOpen}
-            onClose={closePuzzleModal}
-            timelineItem={selectedTimelineItem}
           />
         )}
       </AnimatePresence>
