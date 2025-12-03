@@ -22,10 +22,59 @@ import { useSound } from "../../hooks/useSound"
 import { api } from "../../services/api"
 import VirtualKeyboard from "../Common/VirtualKeyboard"
 
-const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage }) => {
+const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) => {
   const theme = getTheme()
   const playSound = useSound()
   const loadedPuzzleImageRef = useRef(null)
+
+  // Theme Styles Configuration
+  const getThemeStyles = () => {
+    switch (variant) {
+      case "landbouw":
+        return {
+          modalBg: "bg-[#f3eeda] bg-[radial-gradient(circle_at_center,#f2ebd4_0%,#d9ceae_100%)]",
+          headerBg: "bg-[#7c8f38]", // Green
+          headerText: "text-[#f3eeda]",
+          cardBg: "bg-[#e6dfc8]",
+          cardBorder: "border-[#d1c7a7]",
+          buttonEasy: "bg-[#7c8f38] hover:bg-[#66752e]",
+          buttonHard: "bg-[#a0522d] hover:bg-[#8a4220]",
+          textPrimary: "text-[#3a2d20]",
+          textSecondary: "text-[#6b5a45]",
+          accent: "text-[#7c8f38]",
+        }
+      case "newspaper":
+      case "maatschappelijk":
+        return {
+          modalBg: "bg-[#f0f0f0] bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')]",
+          headerBg: "bg-[#1a1a1a]", // Black/Dark Grey
+          headerText: "text-[#f0f0f0] font-serif tracking-widest uppercase",
+          cardBg: "bg-white border border-black/20",
+          cardBorder: "border-black",
+          buttonEasy: "bg-[#333] hover:bg-black text-white border border-black uppercase tracking-wider",
+          buttonHard: "bg-white hover:bg-gray-100 text-black border-2 border-black uppercase tracking-wider font-bold",
+          textPrimary: "text-black font-serif",
+          textSecondary: "text-gray-600 font-serif",
+          accent: "text-black",
+        }
+      case "museum":
+      default:
+        return {
+          modalBg: "bg-[#f3f2e9]",
+          headerBg: "bg-gradient-to-r from-[#c9a300] to-[#a68600]",
+          headerText: "text-white font-heading",
+          cardBg: "bg-white",
+          cardBorder: "border-[#a7b8b4]/30",
+          buttonEasy: "bg-gradient-to-br from-green-500 to-green-600",
+          buttonHard: "bg-gradient-to-br from-red-500 to-red-600",
+          textPrimary: "text-[#440f0f]",
+          textSecondary: "text-[#657575]",
+          accent: "text-[#c9a300]",
+        }
+    }
+  }
+
+  const styles = getThemeStyles()
 
   // Constants
   const GRID_SIZE = 3
@@ -393,22 +442,26 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage }) => {
           onClick={e => e.target === e.currentTarget && onClose()}
         >
           <motion.div
-            className="relative bg-[#f3f2e9] rounded-3xl shadow-2xl w-[98vw] max-w-7xl max-h-[98vh] flex flex-col overflow-hidden"
+            className={`relative ${styles.modalBg} rounded-xl shadow-2xl w-[98vw] max-w-7xl max-h-[98vh] flex flex-col overflow-hidden border-4 ${
+              variant === "newspaper" ? "border-black" : "border-transparent"
+            }`}
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-5 bg-gradient-to-r from-[#c9a300] to-[#a68600]">
+            <div className={`flex items-center justify-between p-5 ${styles.headerBg}`}>
               <div className="flex items-center gap-4">
-                <h2 className="text-2xl lg:text-3xl font-bold text-white">
-                  Foto Schuifpuzzel
+                <h2 className={`text-2xl lg:text-3xl font-bold ${styles.headerText}`}>
+                  {variant === "newspaper" ? "FOTO PUZZEL" : "Foto Schuifpuzzel"}
                 </h2>
                 {difficulty && (
                   <span
                     className={`px-3 py-1 rounded-full text-sm font-bold ${
-                      difficulty === "easy"
+                      variant === "newspaper"
+                        ? "bg-white text-black border border-black uppercase tracking-wider"
+                        : difficulty === "easy"
                         ? "bg-green-500 text-white"
                         : "bg-red-500 text-white"
                     }`}
@@ -421,8 +474,15 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage }) => {
               <div className="flex items-center gap-3">
                 {!showDifficultySelect && (
                   <>
-                    <div className="text-white text-lg font-bold">
-                      Zetten: <span className="text-yellow-200">{moves}</span>
+                    <div className={`${styles.headerText} text-lg font-bold`}>
+                      Zetten:{" "}
+                      <span
+                        className={
+                          variant === "newspaper" ? "text-white underline" : "text-yellow-200"
+                        }
+                      >
+                        {moves}
+                      </span>
                     </div>
 
                     {/* Hint Button */}
@@ -477,7 +537,11 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage }) => {
             <div className="flex-1 overflow-auto p-4 lg:p-6">
               {isLoading ? (
                 <div className="flex items-center justify-center h-full">
-                  <div className="animate-spin w-16 h-16 border-4 border-[#c9a300] border-t-transparent rounded-full" />
+                  <div
+                    className={`animate-spin w-16 h-16 border-4 ${
+                      variant === "newspaper" ? "border-black" : "border-[#c9a300]"
+                    } border-t-transparent rounded-full`}
+                  />
                 </div>
               ) : loadError ? (
                 <div className="flex flex-col items-center justify-center h-full gap-4">
@@ -487,39 +551,140 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage }) => {
                   <p className="text-gray-500 text-sm">{loadError.message}</p>
                   <button
                     onClick={onClose}
-                    className="px-6 py-3 bg-[#c9a300] text-white rounded-xl font-bold"
+                    className={`px-6 py-3 ${
+                      variant === "newspaper" ? "bg-black text-white" : "bg-[#c9a300] text-white"
+                    } rounded-xl font-bold`}
                   >
                     Sluiten
                   </button>
                 </div>
               ) : showDifficultySelect ? (
-                /* Difficulty Selection Screen - Simple */
-                <div className="flex flex-col items-center justify-center h-full gap-10">
-                  <h3 className="text-3xl lg:text-4xl font-bold text-[#440f0f]">
-                    Kies je niveau
-                  </h3>
+                /* Difficulty Selection Screen - Dynamic Style */
+                <div className="flex flex-col items-center justify-center h-full gap-12 py-8">
+                  <div className="text-center">
+                    <h3
+                      className={`text-3xl lg:text-5xl font-bold mb-3 ${styles.textPrimary} ${
+                        variant === "newspaper" ? "font-serif uppercase tracking-widest" : "font-heading"
+                      }`}
+                    >
+                      {variant === "newspaper" ? "KIES NIVEAU" : "Kies je niveau"}
+                    </h3>
+                    <p className={`text-lg ${styles.textSecondary}`}>
+                      {variant === "newspaper"
+                        ? "Selecteer de moeilijkheidsgraad"
+                        : "Hoe moeilijk wil je het maken?"}
+                    </p>
+                  </div>
 
-                  <div className="flex gap-8">
+                  <div className="flex gap-8 lg:gap-12">
                     {/* Easy Button */}
                     <motion.button
-                      className="flex flex-col items-center justify-center gap-2 w-48 h-48 bg-gradient-to-br from-green-400 to-green-600 rounded-3xl shadow-xl text-white"
+                      className={`relative flex flex-col items-center justify-center gap-5 w-56 h-72 lg:w-72 lg:h-80 rounded-2xl shadow-2xl transition-all overflow-hidden ${
+                        variant === "newspaper"
+                          ? "bg-[#1a1a1a] border-4 border-black"
+                          : variant === "landbouw"
+                          ? "bg-gradient-to-br from-[#7c8f38] via-[#6a7d2e] to-[#5a6d24] border-4 border-[#4a5d1a]"
+                          : "bg-gradient-to-br from-[#5c9a4d] via-[#4a8a3d] to-[#3a7a2d] border-4 border-[#2a6a1d]"
+                      }`}
                       onClick={() => startGame("easy")}
-                      whileHover={{ scale: 1.08, y: -5 }}
+                      whileHover={{ scale: 1.05, y: -8 }}
                       whileTap={{ scale: 0.95 }}
                     >
-                      <Zap size={56} />
-                      <span className="text-2xl font-bold">Makkelijk</span>
+                      {/* Decorative Pattern */}
+                      {variant !== "newspaper" && (
+                        <div className="absolute inset-0 opacity-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMjAgMEwyMCA0ME0wIDIwTDQwIDIwIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMSIvPjwvc3ZnPg==')]" />
+                      )}
+                      
+                      {/* Icon */}
+                      <div
+                        className={`p-5 rounded-full ${
+                          variant === "newspaper"
+                            ? "bg-white text-black"
+                            : "bg-white/25 text-white backdrop-blur-sm"
+                        }`}
+                      >
+                        <Zap size={56} strokeWidth={2} />
+                      </div>
+                      
+                      {/* Text */}
+                      <div className="text-center px-4 relative z-10">
+                        <span
+                          className={`text-2xl lg:text-3xl font-bold block ${
+                            variant === "newspaper" ? "text-white font-serif uppercase tracking-wider" : "text-white"
+                          }`}
+                        >
+                          {variant === "newspaper" ? "MAKKELIJK" : "Makkelijk"}
+                        </span>
+                        <span
+                          className={`text-sm lg:text-base opacity-90 block mt-2 ${
+                            variant === "newspaper" ? "text-gray-400 uppercase tracking-wide" : "text-white/80"
+                          }`}
+                        >
+                          Voor beginners
+                        </span>
+                        <span
+                          className={`text-xs opacity-70 block mt-1 ${
+                            variant === "newspaper" ? "text-gray-500" : "text-white/60"
+                          }`}
+                        >
+                          3 hints beschikbaar
+                        </span>
+                      </div>
                     </motion.button>
 
                     {/* Hard Button */}
                     <motion.button
-                      className="flex flex-col items-center justify-center gap-2 w-48 h-48 bg-gradient-to-br from-red-400 to-red-600 rounded-3xl shadow-xl text-white"
+                      className={`relative flex flex-col items-center justify-center gap-5 w-56 h-72 lg:w-72 lg:h-80 rounded-2xl shadow-2xl transition-all overflow-hidden ${
+                        variant === "newspaper"
+                          ? "bg-white border-4 border-black"
+                          : variant === "landbouw"
+                          ? "bg-gradient-to-br from-[#8b5a2b] via-[#7a4a1b] to-[#6a3a0b] border-4 border-[#5a2a00]"
+                          : "bg-gradient-to-br from-[#c9514d] via-[#b9413d] to-[#a9312d] border-4 border-[#99211d]"
+                      }`}
                       onClick={() => startGame("hard")}
-                      whileHover={{ scale: 1.08, y: -5 }}
+                      whileHover={{ scale: 1.05, y: -8 }}
                       whileTap={{ scale: 0.95 }}
                     >
-                      <Brain size={56} />
-                      <span className="text-2xl font-bold">Moeilijk</span>
+                      {/* Decorative Pattern */}
+                      {variant !== "newspaper" && (
+                        <div className="absolute inset-0 opacity-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMjAgMEwyMCA0ME0wIDIwTDQwIDIwIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMSIvPjwvc3ZnPg==')]" />
+                      )}
+                      
+                      {/* Icon */}
+                      <div
+                        className={`p-5 rounded-full ${
+                          variant === "newspaper"
+                            ? "bg-black text-white"
+                            : "bg-white/25 text-white backdrop-blur-sm"
+                        }`}
+                      >
+                        <Brain size={56} strokeWidth={2} />
+                      </div>
+                      
+                      {/* Text */}
+                      <div className="text-center px-4 relative z-10">
+                        <span
+                          className={`text-2xl lg:text-3xl font-bold block ${
+                            variant === "newspaper" ? "text-black font-serif uppercase tracking-wider" : "text-white"
+                          }`}
+                        >
+                          {variant === "newspaper" ? "MOEILIJK" : "Moeilijk"}
+                        </span>
+                        <span
+                          className={`text-sm lg:text-base opacity-90 block mt-2 ${
+                            variant === "newspaper" ? "text-gray-700 uppercase tracking-wide" : "text-white/80"
+                          }`}
+                        >
+                          Voor experts
+                        </span>
+                        <span
+                          className={`text-xs opacity-70 block mt-1 ${
+                            variant === "newspaper" ? "text-gray-500" : "text-white/60"
+                          }`}
+                        >
+                          1 hint beschikbaar
+                        </span>
+                      </div>
                     </motion.button>
                   </div>
                 </div>

@@ -634,8 +634,8 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
                 </div>
               </div>
 
-              {/* Video Pagination Indicator (Museum & Maatschappelijk) */}
-              {(!isLandbouw || isMaatschappelijk) && eventVideos.length > 1 && (
+              {/* Video Pagination Indicator (All models) */}
+              {eventVideos.length > 1 && (
                 <div className="flex justify-center items-center gap-2 mt-2">
                   {eventVideos.map((_, idx) => (
                     <button
@@ -649,9 +649,13 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
                       }}
                       className={`transition-all duration-300 ${
                         currentVideoIndex === idx
-                          ? isMaatschappelijk
+                          ? isLandbouw
+                            ? "w-3 h-3 bg-[#7c8f38] rounded-full"
+                            : isMaatschappelijk
                             ? "w-3 h-3 bg-black rounded-full"
                             : "w-3 h-3 bg-[#5c4033] rounded-full"
+                          : isLandbouw
+                          ? "w-2 h-2 bg-[#7c8f38]/40 rounded-full hover:bg-[#7c8f38]/60"
                           : isMaatschappelijk
                           ? "w-2 h-2 bg-black/30 rounded-full"
                           : "w-2 h-2 bg-[#8c7b75] rounded-full opacity-50 hover:opacity-75"
@@ -745,8 +749,8 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
               )}
             </div>
 
-            {/* Image Pagination Indicator (Museum & Maatschappelijk) */}
-            {(!isLandbouw || isMaatschappelijk) && galleryImages.length > 1 && (
+            {/* Image Pagination Indicator (All models) */}
+            {galleryImages.length > 1 && (
               <div className="flex justify-center items-center gap-2 mt-4">
                 {galleryImages.map((_, idx) => (
                   <button
@@ -754,9 +758,13 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
                     onClick={() => setCurrentSlideIndex(idx)}
                     className={`transition-all duration-300 ${
                       currentSlideIndex === idx
-                        ? isMaatschappelijk
+                        ? isLandbouw
+                          ? "w-3 h-3 bg-[#7c8f38] rounded-full"
+                          : isMaatschappelijk
                           ? "w-3 h-3 bg-black rounded-full"
                           : "w-3 h-3 bg-[#5c4033] rounded-full"
+                        : isLandbouw
+                        ? "w-2 h-2 bg-[#7c8f38]/40 rounded-full hover:bg-[#7c8f38]/60"
                         : isMaatschappelijk
                         ? "w-2 h-2 bg-black/30 rounded-full"
                         : "w-2 h-2 bg-[#8c7b75] rounded-full opacity-50 hover:opacity-75"
@@ -1258,6 +1266,9 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
         isOpen={isImagePuzzleModalOpen}
         onClose={handleCloseImagePuzzleModal}
         puzzleImage={puzzleImageUrl}
+        variant={
+          isLandbouw ? "landbouw" : isMaatschappelijk ? "newspaper" : "museum"
+        }
       />
       <MemoryGame
         isOpen={isMemoryGameModalOpen}
