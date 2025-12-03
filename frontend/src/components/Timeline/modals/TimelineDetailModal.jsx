@@ -508,10 +508,12 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
 
   // Updated Media Renderer with "Wooden Frame" support for Landbouw and "Photo Album" for Museum
   const renderMediaContent = () => {
-    const isMuseum = !isLandbouw
+    const isMuseum = !isLandbouw && !isMaatschappelijk
     const frameClass = isLandbouw
       ? "border-[12px] border-[#5e4b35] shadow-[inset_0_0_20px_rgba(0,0,0,0.5)] rounded-sm"
-      : "p-3 bg-white shadow-[0_4px_10px_rgba(0,0,0,0.15)] rotate-[-1deg] border border-[#e5e5e5]" // Photo print style with white border
+      : isMaatschappelijk
+      ? "p-1 bg-white shadow-sm border border-black/20" // Newspaper: Straight, simple border
+      : "p-3 bg-white shadow-[0_4px_10px_rgba(0,0,0,0.15)] rotate-[-1deg] border border-[#e5e5e5]" // Museum: Photo print style with rotation
 
     switch (activeMedia) {
       case "video":
@@ -560,11 +562,7 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
               </div>
 
               {/* Custom Video Controls */}
-              <div
-                className={`mt-4 flex flex-col items-center gap-3 ${
-                  isLandbouw ? "" : ""
-                }`}
-              >
+              <div className={`mt-4 flex flex-col items-center gap-3`}>
                 {/* Play/Pause Button */}
                 <button
                   onClick={handleVideoPlayPause}
@@ -572,7 +570,7 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
                     isLandbouw
                       ? "bg-[#5e4b35] text-[#f3eeda] hover:bg-[#4a3b2a] shadow-md border border-[#42301e]"
                       : isMaatschappelijk
-                      ? "bg-black text-white hover:bg-black/80 shadow-sm border border-black font-serif uppercase tracking-widest" // Newspaper style control
+                      ? "bg-[#5e4b35] text-[#f3eeda] hover:bg-[#4a3b2a] shadow-md border border-[#42301e] font-heading" // Same as Museum style requested by user
                       : "bg-[#5e4b35] text-[#f3eeda] hover:bg-[#4a3b2a] shadow-md border border-[#42301e] font-heading"
                   }`}
                   aria-label={isVideoPlaying ? "Pause" : "Play"}
@@ -595,7 +593,7 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
                       isLandbouw
                         ? "text-[#5e4b35] hover:text-[#4a3b2a]"
                         : isMaatschappelijk
-                        ? "text-black hover:text-black/70"
+                        ? "text-[#5e4b35] hover:text-[#4a3b2a]" // Same as Museum
                         : "text-[#5e4b35] hover:text-[#4a3b2a]"
                     } transition-colors`}
                     aria-label={isVideoMuted ? "Unmute" : "Mute"}
@@ -617,7 +615,7 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
                       isLandbouw
                         ? "bg-[#3a2d20]/20 [&::-webkit-slider-thumb]:bg-[#5e4b35] [&::-moz-range-thumb]:bg-[#5e4b35]"
                         : isMaatschappelijk
-                        ? "bg-black/20 [&::-webkit-slider-thumb]:bg-black [&::-moz-range-thumb]:bg-black"
+                        ? "bg-[#3a2d20]/20 [&::-webkit-slider-thumb]:bg-[#5e4b35] [&::-moz-range-thumb]:bg-[#5e4b35]" // Same as Museum
                         : "bg-[#3a2d20]/20 [&::-webkit-slider-thumb]:bg-[#5e4b35] [&::-moz-range-thumb]:bg-[#5e4b35]"
                     } [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-0`}
                     aria-label="Volume"
@@ -876,7 +874,7 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
           >
             {/* NEWSPAPER HEADER (MAATSCHAPPELIJK ONLY) */}
             {isMaatschappelijk && (
-              <div className="w-full px-8 pt-6 pb-4 flex flex-col items-center border-b-4 border-double border-black/20 bg-[#f0f0f0]">
+              <div className="w-full pl-8 pr-16 pt-6 pb-4 flex flex-col items-center border-b-4 border-double border-black/20 bg-[#f0f0f0]">
                 {/* Dynamic Header Content */}
                 <div className="flex justify-between items-center w-full border-b-2 border-black mb-3 pb-2">
                   <span className="font-serif font-bold uppercase tracking-widest text-xs md:text-sm text-black/60">
@@ -1030,21 +1028,19 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
                           >
                             FOTO'S
                           </button>
-                          {eventVideos.length > 0 && (
-                            <button
-                              className={`px-3 py-1 text-[11px] font-bold uppercase tracking-widest border border-black transition-all ${
-                                activeMedia === "video"
-                                  ? "bg-black text-white"
-                                  : "bg-white text-black hover:bg-gray-100"
-                              }`}
-                              onClick={() => {
-                                playSound()
-                                setActiveMedia("video")
-                              }}
-                            >
-                              VIDEO
-                            </button>
-                          )}
+                          <button
+                            className={`px-3 py-1 text-[11px] font-bold uppercase tracking-widest border border-black transition-all ${
+                              activeMedia === "video"
+                                ? "bg-black text-white"
+                                : "bg-white text-black hover:bg-gray-100"
+                            }`}
+                            onClick={() => {
+                              playSound()
+                              setActiveMedia("video")
+                            }}
+                          >
+                            VIDEO
+                          </button>
                         </div>
                       )}
                     </div>
@@ -1225,7 +1221,8 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
 
                     {/* Game Button */}
                     <div className="mt-8 pt-4">
-                      {eventData?.game_type === "puzzle" && (
+                      {(eventData?.gameType === "puzzle" ||
+                        eventData?.game_type === "puzzle") && (
                         <motion.button
                           className={`w-full py-4 rounded-xl font-bold font-heading flex items-center justify-center gap-3 shadow-lg ${theme.buttonPrimary}`}
                           onClick={handlePuzzleGame}
@@ -1236,7 +1233,8 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
                           {isLandbouw ? "Bekijk de Ploeg" : "Speel Puzzle"}
                         </motion.button>
                       )}
-                      {eventData?.game_type === "memory" && (
+                      {(eventData?.gameType === "memory" ||
+                        eventData?.game_type === "memory") && (
                         <motion.button
                           className={`w-full py-4 rounded-xl font-bold font-heading flex items-center justify-center gap-3 shadow-lg ${theme.buttonPrimary}`}
                           onClick={handleMemoryGame}

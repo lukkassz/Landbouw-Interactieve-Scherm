@@ -78,7 +78,7 @@ export const splitImageIntoPieces = async (imageSrc, gridSize = 3) => {
  * @param {number} maxSize - Maximum size for the preview
  * @returns {Promise<string>} Data URL of the resized preview image
  */
-export const createImagePreview = async (imageSrc, maxSize = 200) => {
+export const createImagePreview = async (imageSrc, maxSize = 600) => {
   return new Promise((resolve, reject) => {
     const img = new Image()
     img.crossOrigin = 'anonymous'

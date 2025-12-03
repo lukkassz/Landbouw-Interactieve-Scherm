@@ -410,8 +410,33 @@ const Timeline = () => {
           event.puzzle_image_url && event.puzzle_image_url.trim() !== ""
             ? event.puzzle_image_url
             : null,
-        gameType: event.game_type || "none", // 'none', 'puzzle', 'memory'
-        hasGame: event.game_type && event.game_type !== "none", // true if any game is enabled
+        gameType: (() => {
+          // First check explicit game_type from API
+          if (event.game_type && event.game_type !== "none")
+            return event.game_type
+
+          // Fallback logic based on has_puzzle and puzzle_image_url
+          const hasPuz =
+            event.has_puzzle === true ||
+            event.has_puzzle === 1 ||
+            event.has_puzzle === "1" ||
+            Boolean(event.has_puzzle)
+          const hasImg =
+            event.puzzle_image_url && event.puzzle_image_url.trim() !== ""
+
+          if (hasPuz && hasImg) return "puzzle"
+          if (hasPuz) return "memory"
+          return "none"
+        })(),
+        hasGame: (() => {
+          if (event.game_type && event.game_type !== "none") return true
+          const hasPuz =
+            event.has_puzzle === true ||
+            event.has_puzzle === 1 ||
+            event.has_puzzle === "1" ||
+            Boolean(event.has_puzzle)
+          return hasPuz
+        })(),
         useDetailedModal: true, // Always use detailed modal
         historicalContext: event.historical_context || "",
         has_key_moments:

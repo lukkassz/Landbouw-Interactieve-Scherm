@@ -603,13 +603,13 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage }) => {
                   {/* Preview - always visible */}
                   {imagePreview && (
                     <div className="flex-shrink-0">
-                      <div className="p-4 bg-white rounded-2xl shadow-lg border-4 border-[#c9a300]">
+                      <div className="p-3 bg-white rounded-2xl shadow-lg border-2 border-[#c9a300]">
                         <img
                           src={imagePreview}
                           alt="Origineel"
-                          className="w-72 h-72 object-cover rounded-xl"
+                          className="w-64 h-64 lg:w-72 lg:h-72 object-contain rounded-xl bg-gray-50"
                         />
-                        <p className="text-center text-base text-[#657575] mt-3 font-semibold">
+                        <p className="text-center text-sm text-[#657575] mt-2 font-bold uppercase tracking-wide">
                           Origineel
                         </p>
                       </div>
