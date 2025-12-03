@@ -325,14 +325,64 @@ const Timeline = () => {
     }
   }
 
-  // Handle video loop
+  // Handle video playback with error handling
   useEffect(() => {
     const video = videoRef.current
     if (video) {
-      video.addEventListener("ended", () => {
+      // Handle video loop
+      const handleEnded = () => {
         video.currentTime = 0
-        video.play()
-      })
+        video.play().catch(() => {
+          // Silently handle play errors on loop
+        })
+      }
+      
+      // Handle autoplay errors gracefully
+      const handlePlayError = (error) => {
+        // Autoplay was prevented - this is normal browser behavior
+        // Video will play after user interaction
+        console.debug("Video autoplay prevented (normal browser behavior)")
+      }
+      
+      // Try to play video on load
+      const tryPlay = async () => {
+        try {
+          await video.play()
+        } catch (error) {
+          // Autoplay prevented - wait for user interaction
+          handlePlayError(error)
+        }
+      }
+      
+      video.addEventListener("ended", handleEnded)
+      video.addEventListener("error", handlePlayError)
+      
+      // Try to play when video is loaded
+      if (video.readyState >= 2) {
+        tryPlay()
+      } else {
+        video.addEventListener("loadeddata", tryPlay, { once: true })
+      }
+      
+      // Retry play on user interaction
+      const handleUserInteraction = () => {
+        if (video.paused) {
+          video.play().catch(() => {
+            // Silently handle - user interaction might not be enough
+          })
+        }
+      }
+      
+      // Listen for any user interaction to retry play
+      document.addEventListener("click", handleUserInteraction, { once: true })
+      document.addEventListener("touchstart", handleUserInteraction, { once: true })
+      
+      return () => {
+        video.removeEventListener("ended", handleEnded)
+        video.removeEventListener("error", handlePlayError)
+        document.removeEventListener("click", handleUserInteraction)
+        document.removeEventListener("touchstart", handleUserInteraction)
+      }
     }
   }, [])
 
