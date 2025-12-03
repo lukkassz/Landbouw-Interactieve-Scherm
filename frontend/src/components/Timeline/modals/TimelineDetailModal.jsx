@@ -1278,6 +1278,11 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
             ? galleryImages.map(img => img.src || img)
             : null
         }
+        variant={
+          isLandbouw ? "landbouw" : isMaatschappelijk ? "newspaper" : "museum"
+        }
+        eventTitle={eventData?.title || ""}
+        eventDescription={eventData?.description || ""}
       />
     </AnimatePresence>
   )
