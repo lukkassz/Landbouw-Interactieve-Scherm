@@ -49,26 +49,12 @@ export const api = {
    */
   getTimeline: async () => {
     try {
-      console.log(`Fetching from: ${API_BASE_URL}/events.php`)
       const response = await apiClient.get("/events.php")
-      console.log("API response status:", response.status)
-      console.log("API response data:", response.data)
 
       // Backend returns: { success: true, count: 9, data: [...] }
       if (response.data.success) {
         const data = response.data.data || []
         const count = response.data.count || 0
-        console.log(`API returned ${count} events`)
-        // Debug: Check has_key_moments for event 18
-        const event18 = data.find(e => e.id === 18 || e.id === "18")
-        if (event18) {
-          console.log("Event 18 from API:", {
-            id: event18.id,
-            has_key_moments: event18.has_key_moments,
-            type: typeof event18.has_key_moments,
-            raw: event18,
-          })
-        }
         return {
           data: data,
           count: count,
@@ -76,12 +62,10 @@ export const api = {
       }
       throw new Error(response.data.message || "Failed to fetch events")
     } catch (error) {
-      console.error("Timeline API error:", error.message)
-      console.error("Error details:", {
-        code: error.code,
-        response: error.response?.data,
-        status: error.response?.status,
-      })
+      // Log errors for debugging but don't spam console
+      if (process.env.NODE_ENV === 'development') {
+        console.error("Timeline API error:", error.message)
+      }
 
       // If it's a connection error, show helpful message
       if (error.code === "ECONNREFUSED" || error.message.includes("connect")) {

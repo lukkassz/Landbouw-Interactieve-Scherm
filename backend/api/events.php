@@ -45,6 +45,7 @@ try {
                 has_key_moments,
                 has_puzzle,
                 puzzle_image_url,
+                game_type,
                 category,
                 sort_order,
                 created_at,
@@ -87,16 +88,19 @@ try {
             $hasPuzzleImage = true;
         }
         
-        // Calculate game_type based on has_puzzle and puzzle_image_url
-        // If has_puzzle is true AND puzzle_image_url exists -> puzzle
-        // If has_puzzle is true AND no puzzle_image_url -> memory
-        // Otherwise -> none
-        if ($event['has_puzzle'] && $hasPuzzleImage) {
-            $event['game_type'] = 'puzzle';
-        } elseif ($event['has_puzzle']) {
-            $event['game_type'] = 'memory';
+        // Calculate game_type - use database value if exists, otherwise fallback to legacy logic
+        if (isset($event['game_type']) && !empty($event['game_type']) && $event['game_type'] !== 'none') {
+            // Use database value (can be 'puzzle', 'memory', 'harvest', etc.)
+            $event['game_type'] = (string)$event['game_type'];
         } else {
-            $event['game_type'] = 'none';
+            // Legacy fallback logic - only if game_type is not set or is 'none'
+            if ($event['has_puzzle'] && $hasPuzzleImage) {
+                $event['game_type'] = 'puzzle';
+            } elseif ($event['has_puzzle']) {
+                $event['game_type'] = 'memory';
+            } else {
+                $event['game_type'] = 'none';
+            }
         }
 
         // Year might be a string like "1925" or range like "1930-1956"

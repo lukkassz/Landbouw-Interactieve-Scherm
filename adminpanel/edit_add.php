@@ -57,12 +57,15 @@ if ($isEdit) {
     }
 }
 
-// Determine game type
-$gameType = 'none';
-if ($event['has_puzzle'] && !empty($event['puzzle_image_url'])) {
-    $gameType = 'puzzle';
-} elseif ($event['has_puzzle']) {
-    $gameType = 'memory';
+// Determine game type - check database first, then fallback to legacy logic
+$gameType = $event['game_type'] ?? 'none';
+if ($gameType === 'none' || empty($gameType)) {
+    // Legacy fallback logic
+    if ($event['has_puzzle'] && !empty($event['puzzle_image_url'])) {
+        $gameType = 'puzzle';
+    } elseif ($event['has_puzzle']) {
+        $gameType = 'memory';
+    }
 }
 
 $error = '';
@@ -82,6 +85,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $gameType = $_POST['game_type'] ?? 'none';
     $has_puzzle = ($gameType === 'puzzle' || $gameType === 'memory') ? 1 : 0;
     $puzzle_image_url = $event['puzzle_image_url'] ?? '';
+    
+    // For harvest game, we don't need has_puzzle or puzzle_image_url
+    if ($gameType === 'harvest') {
+        $has_puzzle = 0;
+        $puzzle_image_url = '';
+    }
     
     // Handle puzzle image upload
     if ($gameType === 'puzzle' && isset($_FILES['puzzle_image']) && $_FILES['puzzle_image']['error'] === UPLOAD_ERR_OK) {
@@ -108,6 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         // Save event
         if ($isEdit) {
+            $gameTypeEscaped = mysqli_real_escape_string($conn, $gameType);
             $query = "UPDATE timeline_events SET 
                 year = '$year',
                 title = '$title',
@@ -117,12 +127,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 is_active = $is_active,
                 has_puzzle = $has_puzzle,
                 puzzle_image_url = '$puzzle_image_url',
+                game_type = '$gameTypeEscaped',
                 has_key_moments = $has_key_moments,
                 use_detailed_modal = 1
                 WHERE id = $eventId";
         } else {
-            $query = "INSERT INTO timeline_events (year, title, description, historical_context, category, is_active, has_puzzle, puzzle_image_url, has_key_moments, use_detailed_modal)
-                VALUES ('$year', '$title', '$description', '$historical_context', '$category', $is_active, $has_puzzle, '$puzzle_image_url', $has_key_moments, 1)";
+            $gameTypeEscaped = mysqli_real_escape_string($conn, $gameType);
+            $query = "INSERT INTO timeline_events (year, title, description, historical_context, category, is_active, has_puzzle, puzzle_image_url, game_type, has_key_moments, use_detailed_modal)
+                VALUES ('$year', '$title', '$description', '$historical_context', '$category', $is_active, $has_puzzle, '$puzzle_image_url', '$gameTypeEscaped', $has_key_moments, 1)";
         }
         
         if (mysqli_query($conn, $query)) {
@@ -753,6 +765,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <div class="icon">🃏</div>
                             <div class="title">Memory</div>
                             <div class="desc">Vind de paren</div>
+                        </div>
+                    </label>
+                    <label class="radio-card">
+                        <input type="radio" name="game_type" value="harvest" <?= $gameType === 'harvest' ? 'checked' : '' ?> onchange="updateGameType()">
+                        <div class="radio-card-content">
+                            <div class="icon">🧺</div>
+                            <div class="title">Oogst Tijd</div>
+                            <div class="desc">Vang de items</div>
                         </div>
                     </label>
                 </div>

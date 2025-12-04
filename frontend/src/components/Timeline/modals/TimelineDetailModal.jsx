@@ -17,6 +17,7 @@ import { useNavigate } from "react-router-dom"
 import { getGalleryData } from "../../../config/timelineGalleries"
 import ImagePuzzleModal from "../../PuzzleGame/ImagePuzzleModal"
 import MemoryGame from "../../PuzzleGame/MemoryGame"
+import HarvestGame from "../../PuzzleGame/HarvestGame"
 import LeeuwardenMap from "../content/LeeuwardenMap"
 import MiniTimeline from "../ui/MiniTimeline"
 import Breadcrumb from "../ui/Breadcrumb"
@@ -28,10 +29,25 @@ import landbouwIcon from "../../../assets/icons/landbouw-model.png"
 
 const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
   const playSound = useSound()
+  
+  // Debug: Log eventData to see what we receive
+  useEffect(() => {
+    if (eventData) {
+      console.log("TimelineDetailModal - eventData:", {
+        id: eventData.id,
+        gameType: eventData.gameType,
+        game_type: eventData.game_type,
+        has_puzzle: eventData.has_puzzle,
+        fullData: eventData
+      })
+    }
+  }, [eventData])
+  
   const [activeMedia, setActiveMedia] = useState("image")
   const [selectedGalleryImage, setSelectedGalleryImage] = useState(null)
   const [isImagePuzzleModalOpen, setIsImagePuzzleModalOpen] = useState(false)
   const [isMemoryGameModalOpen, setIsMemoryGameModalOpen] = useState(false)
+  const [isHarvestGameModalOpen, setIsHarvestGameModalOpen] = useState(false)
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0)
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0)
   const [isVideoPlaying, setIsVideoPlaying] = useState(false)
@@ -132,11 +148,13 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
   const configGalleryImages = galleryConfig.gallery || []
 
   useEffect(() => {
+    let isMounted = true
     if (isOpen && eventData?.id) {
       setIsLoadingMedia(true)
       api
         .getEventMedia(eventData.id)
         .then(result => {
+          if (!isMounted) return
           if (result.data && result.data.length > 0) {
             // Helper function to detect media type from file extension if media_type is missing
             const detectMediaType = media => {
@@ -182,7 +200,6 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
               })
 
               if (hasVideoExt) {
-                console.log("Detected VIDEO from URL:", fileUrl)
                 return "video"
               }
 
@@ -200,11 +217,6 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
               }
 
               // Default to image if cannot determine
-              console.warn(
-                "Cannot determine media type for:",
-                fileUrl,
-                "defaulting to image"
-              )
               return "image"
             }
 
@@ -227,18 +239,6 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
               }
             })
 
-            console.log("Media filtering:", {
-              total: result.data.length,
-              images: images.length,
-              videos: videos.length,
-              rawData: result.data.map(m => ({
-                id: m.id,
-                media_type: m.media_type,
-                file_url: m.file_url,
-                detected: detectMediaType(m),
-              })),
-            })
-
             setEventMedia(images)
             setEventVideos(videos)
           } else {
@@ -246,14 +246,20 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
             setEventVideos([])
           }
         })
-        .finally(() => setIsLoadingMedia(false))
+        .finally(() => {
+          if (isMounted) setIsLoadingMedia(false)
+        })
     } else {
       setEventMedia([])
       setEventVideos([])
     }
+    return () => {
+      isMounted = false
+    }
   }, [isOpen, eventData?.id])
 
   useEffect(() => {
+    let isMounted = true
     if (isOpen && eventData?.id) {
       setIsLoadingSections(true)
       const eventId =
@@ -261,6 +267,7 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
       api
         .getEventSections(eventId)
         .then(result => {
+          if (!isMounted) return
           if (result.data && result.data.length > 0) {
             setEventSections(
               result.data.sort(
@@ -269,11 +276,17 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
             )
           } else setEventSections([])
         })
-        .finally(() => setIsLoadingSections(false))
+        .finally(() => {
+          if (isMounted) setIsLoadingSections(false)
+        })
     } else setEventSections([])
+    return () => {
+      isMounted = false
+    }
   }, [isOpen, eventData?.id])
 
   useEffect(() => {
+    let isMounted = true
     if (isOpen && eventData?.id && eventData?.has_key_moments) {
       setIsLoadingKeyMoments(true)
       const eventId =
@@ -281,6 +294,7 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
       api
         .getKeyMoments(eventId)
         .then(result => {
+          if (!isMounted) return
           if (result.data && result.data.length > 0) {
             setKeyMoments(
               result.data.map(moment => ({
@@ -292,8 +306,13 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
             )
           } else setKeyMoments([])
         })
-        .finally(() => setIsLoadingKeyMoments(false))
+        .finally(() => {
+          if (isMounted) setIsLoadingKeyMoments(false)
+        })
     } else setKeyMoments([])
+    return () => {
+      isMounted = false
+    }
   }, [isOpen, eventData?.id, eventData?.has_key_moments])
 
   useEffect(() => {
@@ -345,31 +364,11 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
   // Filter out any videos that might have slipped through
   const filteredEventMedia = eventMedia.filter(item => {
     const isVideo = isVideoFile(item.src)
-    if (isVideo) {
-      console.warn(
-        "Video found in eventMedia, moving to eventVideos:",
-        item.src
-      )
-    }
     return !isVideo
   })
 
   const galleryImages =
     filteredEventMedia.length > 0 ? filteredEventMedia : configGalleryImages
-
-  // Debug log
-  useEffect(() => {
-    if (isOpen) {
-      console.log("Current media state:", {
-        eventMedia: eventMedia.length,
-        eventVideos: eventVideos.length,
-        galleryImages: galleryImages.length,
-        activeMedia,
-        eventMediaItems: eventMedia.map(m => m.src),
-        eventVideosItems: eventVideos.map(v => v.src),
-      })
-    }
-  }, [isOpen, eventMedia, eventVideos, galleryImages, activeMedia])
 
   const getActiveYear = () => {
     if (!eventData?.year) return null
@@ -487,12 +486,20 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
     playSound()
     setIsMemoryGameModalOpen(true)
   }
+  const handleHarvestGame = () => {
+    playSound()
+    setIsHarvestGameModalOpen(true)
+  }
   const handleCloseImagePuzzleModal = React.useCallback(
     () => setIsImagePuzzleModalOpen(false),
     []
   )
   const handleCloseMemoryGameModal = React.useCallback(
     () => setIsMemoryGameModalOpen(false),
+    []
+  )
+  const handleCloseHarvestGameModal = React.useCallback(
+    () => setIsHarvestGameModalOpen(false),
     []
   )
 
@@ -1229,6 +1236,12 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
 
                     {/* Game Button */}
                     <div className="mt-8 pt-4">
+                      {/* Debug: Show game type */}
+                      {process.env.NODE_ENV === 'development' && (
+                        <div className="text-xs text-gray-400 mb-2">
+                          Debug: gameType={eventData?.gameType}, game_type={eventData?.game_type}
+                        </div>
+                      )}
                       {(eventData?.gameType === "puzzle" ||
                         eventData?.game_type === "puzzle") && (
                         <motion.button
@@ -1250,6 +1263,17 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
                           whileTap={{ scale: 0.98 }}
                         >
                           <Brain size={24} /> Speel Memory
+                        </motion.button>
+                      )}
+                      {(eventData?.gameType === "harvest" ||
+                        eventData?.game_type === "harvest") && (
+                        <motion.button
+                          className={`w-full py-4 rounded-xl font-bold font-heading flex items-center justify-center gap-3 shadow-lg ${theme.buttonPrimary}`}
+                          onClick={handleHarvestGame}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          🧺 Speel Oogst Tijd
                         </motion.button>
                       )}
                     </div>
@@ -1283,6 +1307,16 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
         }
         eventTitle={eventData?.title || ""}
         eventDescription={eventData?.description || ""}
+        eventCategory={eventData?.category || null}
+        eventIcon={eventData?.icon || null}
+        eventYear={eventData?.year || null}
+      />
+      <HarvestGame
+        isOpen={isHarvestGameModalOpen}
+        onClose={handleCloseHarvestGameModal}
+        variant={
+          isLandbouw ? "landbouw" : isMaatschappelijk ? "newspaper" : "museum"
+        }
       />
     </AnimatePresence>
   )

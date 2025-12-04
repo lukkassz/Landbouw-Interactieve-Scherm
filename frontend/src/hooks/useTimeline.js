@@ -10,12 +10,9 @@ export const useTimeline = () => {
     try {
       setLoading(true)
       setError(null)
-      console.log("Fetching timeline data from API...")
       const response = await api.getTimeline()
-      console.log("API response:", response)
       const data = response.data || []
-      console.log(`Received ${data.length} timeline events`)
-      if (data.length === 0) {
+      if (data.length === 0 && process.env.NODE_ENV === 'development') {
         console.warn(
           "No timeline events found. Check if events are marked as active in admin panel."
         )
@@ -24,12 +21,9 @@ export const useTimeline = () => {
     } catch (err) {
       const errorMessage = err.message || "Failed to fetch timeline data"
       setError(errorMessage)
-      console.error("Timeline fetch error:", err)
-      console.error("Error details:", {
-        message: err.message,
-        response: err.response,
-        code: err.code,
-      })
+      if (process.env.NODE_ENV === 'development') {
+        console.error("Timeline fetch error:", err)
+      }
     } finally {
       setLoading(false)
     }

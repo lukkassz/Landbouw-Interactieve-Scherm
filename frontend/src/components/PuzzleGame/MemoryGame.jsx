@@ -16,7 +16,7 @@ import { useSound } from "../../hooks/useSound"
 import { api } from "../../services/api"
 import VirtualKeyboard from "../Common/VirtualKeyboard"
 
-// Thematic icon sets for Memory Game
+// Thematic icon sets for Memory Game - Expanded with more variety
 const THEME_ICONS = {
   // Landbouw / Agriculture
   landbouw: {
@@ -41,53 +41,115 @@ const THEME_ICONS = {
   },
 }
 
-// Detect theme from event title and description
-const detectTheme = (title = "", description = "", variant = "museum") => {
+// Detect theme from event data - improved with category and icon support
+const detectTheme = (
+  title = "",
+  description = "",
+  variant = "museum",
+  category = null,
+  icon = null,
+  year = null
+) => {
   const text = (title + " " + description).toLowerCase()
 
+  // Use category as primary indicator if available
+  const effectiveVariant = category || variant
+
   // Landbouw themes
-  if (variant === "landbouw") {
+  if (effectiveVariant === "landbouw" || effectiveVariant === "Landbouw") {
+    // Check for specific animal keywords
     if (
       text.match(
-        /\b(dier|animal|koe|cow|varken|pig|kip|chicken|schaap|sheep)\b/
-      )
+        /\b(dier|animal|koe|cow|varken|pig|kip|chicken|schaap|sheep|paard|horse|geit|goat|eend|duck|konijn|rabbit)\b/
+      ) ||
+      icon?.match(/🐄|🐷|🐑|🐔|🦆|🐐|🐴|🐰/)
     ) {
       return "animals"
     }
-    if (text.match(/\b(gewas|crop|graan|grain|mais|corn|aardappel|potato)\b/)) {
+    // Check for crop keywords
+    if (
+      text.match(
+        /\b(gewas|crop|graan|grain|mais|corn|aardappel|potato|groente|vegetable|fruit|tarwe|wheat)\b/
+      ) ||
+      icon?.match(/🌾|🌽|🥔|🥕|🍅|🥬|🌻|🌿/)
+    ) {
       return "crops"
     }
-    if (text.match(/\b(tractor|machine|gereedschap|tool|werktuig)\b/)) {
+    // Check for tools/machinery keywords
+    if (
+      text.match(
+        /\b(tractor|machine|gereedschap|tool|werktuig|ploeg|plow|zaaien|planten)\b/
+      ) ||
+      icon?.match(/🚜|🔨|⚒️|🧺/)
+    ) {
       return "tools"
     }
     return "default"
   }
 
   // Museum themes
-  if (variant === "museum") {
+  if (effectiveVariant === "museum" || !effectiveVariant) {
+    // Check for history keywords
     if (
-      text.match(/\b(geschiedenis|history|historisch|oud|ancient|verleden)\b/)
+      text.match(
+        /\b(geschiedenis|history|historisch|oud|ancient|verleden|tijdperk|era|periode)\b/
+      ) ||
+      (year && parseInt(year) < 1950)
     ) {
       return "history"
     }
-    if (text.match(/\b(artefact|voorwerp|object|vondst|archeolog)\b/)) {
+    // Check for artifacts keywords
+    if (
+      text.match(
+        /\b(artefact|voorwerp|object|vondst|archeolog|museum|collectie|expositie)\b/
+      ) ||
+      icon?.match(/⚱️|🏺|🗿|💎|👑|⚔️|🛡️/)
+    ) {
       return "artifacts"
     }
-    if (text.match(/\b(boek|book|document|archief|bibliotheek)\b/)) {
+    // Check for books/documents keywords
+    if (
+      text.match(
+        /\b(boek|book|document|archief|bibliotheek|schrift|manuscript|papier)\b/
+      ) ||
+      icon?.match(/📚|📖|📜|✍️|🖋️|📝/)
+    ) {
       return "books"
     }
     return "default"
   }
 
   // Maatschappelijk themes
-  if (variant === "newspaper" || variant === "maatschappelijk") {
-    if (text.match(/\b(oorlog|war|strijd|battle|militair|soldaat)\b/)) {
+  if (
+    effectiveVariant === "newspaper" ||
+    effectiveVariant === "maatschappelijk" ||
+    effectiveVariant === "Maatschappelijk"
+  ) {
+    // Check for war keywords
+    if (
+      text.match(
+        /\b(oorlog|war|strijd|battle|militair|soldaat|soldier|vredes|peace|conflict)\b/
+      ) ||
+      icon?.match(/⚔️|🛡️|🎖️/)
+    ) {
       return "war"
     }
-    if (text.match(/\b(maatschappij|society|samenleving|gemeenschap|volk)\b/)) {
+    // Check for society keywords
+    if (
+      text.match(
+        /\b(maatschappij|society|samenleving|gemeenschap|volk|people|social|gemeente)\b/
+      ) ||
+      icon?.match(/👥|🏛️|🌍/)
+    ) {
       return "society"
     }
-    if (text.match(/\b(nieuws|news|krant|gazet|journalist|verslag)\b/)) {
+    // Check for news/media keywords
+    if (
+      text.match(
+        /\b(nieuws|news|krant|gazet|journalist|verslag|media|pers|publicatie)\b/
+      ) ||
+      icon?.match(/📰|✍️|📸|📻|📡|📺|📷/)
+    ) {
       return "news"
     }
     return "default"
@@ -103,12 +165,15 @@ const MemoryGame = ({
   variant = "museum",
   eventTitle = "",
   eventDescription = "",
+  eventCategory = null, // Direct category from event (landbouw, maatschappelijk, museum)
+  eventIcon = null, // Icon emoji from event
+  eventYear = null, // Year of event for historical context
 }) => {
   const theme = getTheme()
   const playSound = useSound()
 
-  // Theme Styles Configuration
-  const getThemeStyles = () => {
+  // Theme Styles Configuration - memoized for performance
+  const styles = useMemo(() => {
     switch (variant) {
       case "landbouw":
         return {
@@ -149,9 +214,7 @@ const MemoryGame = ({
             "bg-gradient-to-br from-[#c9514d] via-[#b9413d] to-[#a9312d] border-4 border-[#99211d]",
         }
     }
-  }
-
-  const styles = getThemeStyles()
+  }, [variant])
 
   // Game mode state
   const [gameMode, setGameMode] = useState(null) // null = selection, 1 = single, 2 = two players
@@ -193,11 +256,39 @@ const MemoryGame = ({
   const [saveError, setSaveError] = useState("")
   const [savedRank, setSavedRank] = useState(null)
   const [showLeaderboard, setShowLeaderboard] = useState(false)
+  const [isSavingScore, setIsSavingScore] = useState(false)
 
-  // Detect theme and get appropriate icon set
+  // Memoized flattened matched pairs for performance optimization
+  const flattenedMatchedPairs = useMemo(() => {
+    return matchedPairs.flat()
+  }, [matchedPairs])
+
+  const flattenedPlayer1MatchedPairs = useMemo(() => {
+    return player1MatchedPairs.flat()
+  }, [player1MatchedPairs])
+
+  const flattenedPlayer2MatchedPairs = useMemo(() => {
+    return player2MatchedPairs.flat()
+  }, [player2MatchedPairs])
+
+  // Detect theme and get appropriate icon set - improved with category and icon
   const detectedTheme = useMemo(() => {
-    return detectTheme(eventTitle, eventDescription, variant)
-  }, [eventTitle, eventDescription, variant])
+    return detectTheme(
+      eventTitle,
+      eventDescription,
+      variant,
+      eventCategory,
+      eventIcon,
+      eventYear
+    )
+  }, [
+    eventTitle,
+    eventDescription,
+    variant,
+    eventCategory,
+    eventIcon,
+    eventYear,
+  ])
 
   // Use provided images or thematic emoji images based on event content
   const gameImages = useMemo(() => {
@@ -214,19 +305,30 @@ const MemoryGame = ({
     }
 
     // Otherwise, use thematic icons based on detected theme
-    const variantKey = variant === "newspaper" ? "maatschappelijk" : variant
+    // Use category if available, otherwise fall back to variant
+    const categoryKey =
+      eventCategory?.toLowerCase() ||
+      (variant === "newspaper" ? "maatschappelijk" : variant)
+
     const themeIcons =
-      THEME_ICONS[variantKey]?.[detectedTheme] ||
-      THEME_ICONS[variantKey]?.default ||
+      THEME_ICONS[categoryKey]?.[detectedTheme] ||
+      THEME_ICONS[categoryKey]?.default ||
       THEME_ICONS.museum.default
 
-    themeIcons.forEach((icon, index) => {
+    // If event has an icon, try to include it in the set (if it matches the theme)
+    let iconsToUse = [...themeIcons]
+    if (eventIcon && !iconsToUse.includes(eventIcon)) {
+      // Replace first icon with event icon if it's relevant
+      iconsToUse[0] = eventIcon
+    }
+
+    iconsToUse.forEach((icon, index) => {
       pairs.push({ id: index * 2, image: icon, type: index })
       pairs.push({ id: index * 2 + 1, image: icon, type: index })
     })
 
     return pairs
-  }, [images, detectedTheme, variant])
+  }, [images, detectedTheme, variant, eventCategory, eventIcon])
 
   // Shuffle cards
   const shuffleCards = useCallback(cardsArray => {
@@ -340,6 +442,7 @@ const MemoryGame = ({
   const handleSaveScore = useCallback(
     async playerName => {
       setSaveError("")
+      setIsSavingScore(true)
       try {
         const result = await api.saveMemoryScore(playerName, moves, timeElapsed)
         if (result.success) {
@@ -351,6 +454,8 @@ const MemoryGame = ({
         }
       } catch (error) {
         setSaveError("Failed to save score. Try again.")
+      } finally {
+        setIsSavingScore(false)
       }
     },
     [moves, timeElapsed]
@@ -362,7 +467,7 @@ const MemoryGame = ({
       resetGame()
       fetchScores()
     }
-  }, [isOpen])
+  }, [isOpen, resetGame, fetchScores])
 
   // Timer for single player
   useEffect(() => {
@@ -409,36 +514,36 @@ const MemoryGame = ({
     return () => clearInterval(interval)
   }, [gameMode, player2Started, player2Won, raceWinner, isOpen])
 
-  // Check if card is flipped or matched (single player)
+  // Check if card is flipped or matched (single player) - optimized
   const isCardFlipped = useCallback(
     cardId => {
       return (
-        flippedCards.includes(cardId) || matchedPairs.flat().includes(cardId)
+        flippedCards.includes(cardId) || flattenedMatchedPairs.includes(cardId)
       )
     },
-    [flippedCards, matchedPairs]
+    [flippedCards, flattenedMatchedPairs]
   )
 
-  // Check if card is flipped or matched (player 1)
+  // Check if card is flipped or matched (player 1) - optimized
   const isPlayer1CardFlipped = useCallback(
     cardId => {
       return (
         player1FlippedCards.includes(cardId) ||
-        player1MatchedPairs.flat().includes(cardId)
+        flattenedPlayer1MatchedPairs.includes(cardId)
       )
     },
-    [player1FlippedCards, player1MatchedPairs]
+    [player1FlippedCards, flattenedPlayer1MatchedPairs]
   )
 
-  // Check if card is flipped or matched (player 2)
+  // Check if card is flipped or matched (player 2) - optimized
   const isPlayer2CardFlipped = useCallback(
     cardId => {
       return (
         player2FlippedCards.includes(cardId) ||
-        player2MatchedPairs.flat().includes(cardId)
+        flattenedPlayer2MatchedPairs.includes(cardId)
       )
     },
-    [player2FlippedCards, player2MatchedPairs]
+    [player2FlippedCards, flattenedPlayer2MatchedPairs]
   )
 
   // Handle card click (single player)
@@ -1057,12 +1162,17 @@ const MemoryGame = ({
                           ) : (
                             <div className="flex flex-col items-center gap-4">
                               <motion.button
-                                className="px-8 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-2xl font-bold text-lg shadow-lg"
+                                className="px-8 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-2xl font-bold text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                                 onClick={() => setShowKeyboard(true)}
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
+                                disabled={isSavingScore}
+                                whileHover={
+                                  !isSavingScore ? { scale: 1.05 } : {}
+                                }
+                                whileTap={!isSavingScore ? { scale: 0.95 } : {}}
                               >
-                                📝 Score Opslaan
+                                {isSavingScore
+                                  ? "⏳ Opslaan..."
+                                  : "📝 Score Opslaan"}
                               </motion.button>
                               {saveError && (
                                 <p className="text-red-500">{saveError}</p>
@@ -1126,9 +1236,9 @@ const MemoryGame = ({
                     >
                       {player1Cards.map(card => {
                         const flipped = isPlayer1CardFlipped(card.id)
-                        const matched = player1MatchedPairs
-                          .flat()
-                          .includes(card.id)
+                        const matched = flattenedPlayer1MatchedPairs.includes(
+                          card.id
+                        )
                         const canClick =
                           !flipped &&
                           player1FlippedCards.length < 2 &&
@@ -1226,9 +1336,9 @@ const MemoryGame = ({
                     >
                       {player2Cards.map(card => {
                         const flipped = isPlayer2CardFlipped(card.id)
-                        const matched = player2MatchedPairs
-                          .flat()
-                          .includes(card.id)
+                        const matched = flattenedPlayer2MatchedPairs.includes(
+                          card.id
+                        )
                         const canClick =
                           !flipped &&
                           player2FlippedCards.length < 2 &&
@@ -1303,7 +1413,7 @@ const MemoryGame = ({
                   >
                     {cards.map(card => {
                       const flipped = isCardFlipped(card.id)
-                      const matched = matchedPairs.flat().includes(card.id)
+                      const matched = flattenedMatchedPairs.includes(card.id)
                       const canClick =
                         !flipped && flippedCards.length < 2 && !gameWon
 

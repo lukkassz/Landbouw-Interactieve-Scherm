@@ -5,6 +5,7 @@ import DetailPage from "./pages/DetailPage"
 import AdminPage from "./pages/AdminPage"
 import PuzzleGamePage from "./pages/PuzzleGamePage"
 import MemoryGamePage from "./pages/MemoryGamePage"
+import HarvestGamePage from "./pages/HarvestGamePage"
 import "./styles/index.css"
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/puzzle-game" element={<PuzzleGamePage />} />
             <Route path="/memory-game" element={<MemoryGamePage />} />
+            <Route path="/harvest-game" element={<HarvestGamePage />} />
           </Routes>
         </main>
       </div>
