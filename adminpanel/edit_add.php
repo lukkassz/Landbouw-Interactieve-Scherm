@@ -940,89 +940,94 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
 
                 <div id="quiz-questions" class="quiz-questions <?= $gameType === 'quiz' ? 'show' : '' ?>">
+                    <?php
+                    // Fetch existing quiz questions for this event (before rendering form)
+                    $quizQuestions = [];
+                    $currentQuizDifficulty = '';
+                    if ($isEdit && $gameType === 'quiz') {
+                        $quizQuery = mysqli_query($conn, "SELECT * FROM quiz_questions WHERE event_id = $eventId ORDER BY id ASC");
+                        while ($row = mysqli_fetch_assoc($quizQuery)) {
+                            $quizQuestions[] = $row;
+                            if (empty($currentQuizDifficulty)) {
+                                $currentQuizDifficulty = $row['difficulty'];
+                            }
+                        }
+                    }
+                    
+                    if (empty($quizQuestions)) {
+                        $quizQuestions = [['id' => '', 'question' => '', 'image_url' => '', 'correct_answer' => '', 'option_1' => '', 'option_2' => '', 'option_3' => '', 'option_4' => '', 'difficulty' => '']];
+                    }
+                    ?>
+                    
                     <div class="form-group">
                         <label>Selecteer niveau</label>
                         <div class="radio-group-horizontal" style="display:flex;gap:16px;margin-top:8px;">
                             <label class="radio-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-                                <input type="radio" name="quiz_difficulty" value="easy" <?= isset($event['quiz_difficulty']) && $event['quiz_difficulty'] === 'easy' ? 'checked' : '' ?> onchange="toggleQuizForm()">
+                                <input type="radio" name="quiz_difficulty" value="easy" <?= $currentQuizDifficulty === 'easy' ? 'checked' : '' ?> onchange="toggleQuizForm()">
                                 <span>Makkelijk</span>
                             </label>
                             <label class="radio-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-                                <input type="radio" name="quiz_difficulty" value="hard" <?= isset($event['quiz_difficulty']) && $event['quiz_difficulty'] === 'hard' ? 'checked' : '' ?> onchange="toggleQuizForm()">
+                                <input type="radio" name="quiz_difficulty" value="hard" <?= $currentQuizDifficulty === 'hard' ? 'checked' : '' ?> onchange="toggleQuizForm()">
                                 <span>Moeilijk</span>
                             </label>
                         </div>
                     </div>
 
-                    <div id="quiz-form" style="display:none;margin-top:24px;">
+                    <div id="quiz-form" style="<?= !empty($currentQuizDifficulty) ? '' : 'display:none;' ?>margin-top:24px;">
                         <div id="quiz-container">
-                        <?php
-                        // Fetch existing quiz questions for this event
-                        $quizQuestions = [];
-                        if ($isEdit) {
-                            $quizQuery = mysqli_query($conn, "SELECT * FROM quiz_questions WHERE event_id = $eventId ORDER BY id ASC");
-                            while ($row = mysqli_fetch_assoc($quizQuery)) {
-                                $quizQuestions[] = $row;
-                            }
-                        }
+                        <?php foreach ($quizQuestions as $idx => $question):
+                            ?>
+                                <div class="repeater-item quiz-item">
+                                    <button type="button" class="remove-btn" onclick="this.parentElement.remove()">Verwijderen</button>
+                                    <input type="hidden" name="quiz_questions[<?= $idx ?>][id]" value="<?= htmlspecialchars($question['id']) ?>">
 
-                        if (empty($quizQuestions)) {
-                            $quizQuestions = [['id' => '', 'question' => '', 'image_url' => '', 'correct_answer' => '', 'option_1' => '', 'option_2' => '', 'option_3' => '', 'option_4' => '', 'difficulty' => 'medium']];
-                        }
-
-                        foreach ($quizQuestions as $idx => $question):
-                        ?>
-                            <div class="repeater-item quiz-item">
-                                <button type="button" class="remove-btn" onclick="this.parentElement.remove()">Verwijderen</button>
-                                <input type="hidden" name="quiz_questions[<?= $idx ?>][id]" value="<?= htmlspecialchars($question['id']) ?>">
-
-                                <div class="form-group">
-                                    <label>Vraag</label>
-                                    <input type="text" name="quiz_questions[<?= $idx ?>][question]" value="<?= htmlspecialchars($question['question']) ?>" placeholder="Waarvoor werd dit werktuig gebruikt?">
-                                </div>
-
-                                <div class="form-group">
-                                    <label>Afbeelding URL</label>
-                                    <input type="text" name="quiz_questions[<?= $idx ?>][image_url]" value="<?= htmlspecialchars($question['image_url']) ?>" placeholder="https://...">
-                                    <small style="color:#64748b;display:block;margin-top:4px;">Direct link naar afbeelding of upload via media library</small>
-                                </div>
-
-                                <div class="form-row">
-                                    <div class="form-group" style="flex:1;">
-                                        <label>Antwoord 1</label>
-                                        <input type="text" name="quiz_questions[<?= $idx ?>][option_1]" value="<?= htmlspecialchars($question['option_1']) ?>" placeholder="Eerste optie">
+                                    <div class="form-group">
+                                        <label>Vraag</label>
+                                        <input type="text" name="quiz_questions[<?= $idx ?>][question]" value="<?= htmlspecialchars($question['question']) ?>" placeholder="Waarvoor werd dit werktuig gebruikt?">
                                     </div>
-                                    <div class="form-group" style="flex:1;">
-                                        <label>Antwoord 2</label>
-                                        <input type="text" name="quiz_questions[<?= $idx ?>][option_2]" value="<?= htmlspecialchars($question['option_2']) ?>" placeholder="Tweede optie">
-                                    </div>
-                                </div>
 
-                                <div class="form-row">
-                                    <div class="form-group" style="flex:1;">
-                                        <label>Antwoord 3</label>
-                                        <input type="text" name="quiz_questions[<?= $idx ?>][option_3]" value="<?= htmlspecialchars($question['option_3']) ?>" placeholder="Derde optie">
+                                    <div class="form-group">
+                                        <label>Afbeelding URL</label>
+                                        <input type="text" name="quiz_questions[<?= $idx ?>][image_url]" value="<?= htmlspecialchars($question['image_url']) ?>" placeholder="https://...">
+                                        <small style="color:#64748b;display:block;margin-top:4px;">Direct link naar afbeelding of upload via media library</small>
                                     </div>
-                                    <div class="form-group" style="flex:1;">
-                                        <label>Antwoord 4 (optioneel)</label>
-                                        <input type="text" name="quiz_questions[<?= $idx ?>][option_4]" value="<?= htmlspecialchars($question['option_4']) ?>" placeholder="Vierde optie (optioneel)">
+
+                                    <div class="form-row">
+                                        <div class="form-group" style="flex:1;">
+                                            <label>Antwoord 1</label>
+                                            <input type="text" name="quiz_questions[<?= $idx ?>][option_1]" value="<?= htmlspecialchars($question['option_1']) ?>" placeholder="Eerste optie">
+                                        </div>
+                                        <div class="form-group" style="flex:1;">
+                                            <label>Antwoord 2</label>
+                                            <input type="text" name="quiz_questions[<?= $idx ?>][option_2]" value="<?= htmlspecialchars($question['option_2']) ?>" placeholder="Tweede optie">
+                                        </div>
+                                    </div>
+
+                                    <div class="form-row">
+                                        <div class="form-group" style="flex:1;">
+                                            <label>Antwoord 3</label>
+                                            <input type="text" name="quiz_questions[<?= $idx ?>][option_3]" value="<?= htmlspecialchars($question['option_3']) ?>" placeholder="Derde optie">
+                                        </div>
+                                        <div class="form-group" style="flex:1;">
+                                            <label>Antwoord 4 (optioneel)</label>
+                                            <input type="text" name="quiz_questions[<?= $idx ?>][option_4]" value="<?= htmlspecialchars($question['option_4']) ?>" placeholder="Vierde optie (optioneel)">
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Juiste antwoord</label>
+                                        <select name="quiz_questions[<?= $idx ?>][correct_answer]" required>
+                                            <option value="">Kies het juiste antwoord</option>
+                                            <option value="1" <?= $question['correct_answer'] === $question['option_1'] ? 'selected' : '' ?>>Antwoord 1</option>
+                                            <option value="2" <?= $question['correct_answer'] === $question['option_2'] ? 'selected' : '' ?>>Antwoord 2</option>
+                                            <option value="3" <?= $question['correct_answer'] === $question['option_3'] ? 'selected' : '' ?>>Antwoord 3</option>
+                                            <option value="4" <?= !empty($question['option_4']) && $question['correct_answer'] === $question['option_4'] ? 'selected' : '' ?>>Antwoord 4</option>
+                                        </select>
                                     </div>
                                 </div>
-
-                                <div class="form-group">
-                                    <label>Juiste antwoord</label>
-                                    <select name="quiz_questions[<?= $idx ?>][correct_answer]" required>
-                                        <option value="">Kies het juiste antwoord</option>
-                                        <option value="1" <?= $question['correct_answer'] === $question['option_1'] ? 'selected' : '' ?>>Antwoord 1</option>
-                                        <option value="2" <?= $question['correct_answer'] === $question['option_2'] ? 'selected' : '' ?>>Antwoord 2</option>
-                                        <option value="3" <?= $question['correct_answer'] === $question['option_3'] ? 'selected' : '' ?>>Antwoord 3</option>
-                                        <option value="4" <?= !empty($question['option_4']) && $question['correct_answer'] === $question['option_4'] ? 'selected' : '' ?>>Antwoord 4</option>
-                                    </select>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                    <button type="button" class="add-btn" onclick="addQuizQuestion()">+ Vraag toevoegen</button>
+                            <?php endforeach; ?>
+                        </div>
+                        <button type="button" class="add-btn" onclick="addQuizQuestion()">+ Vraag toevoegen</button>
                     </div>
                 </div>
             </div>
@@ -1095,7 +1100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             const selectedType = document.querySelector('input[name="game_type"]:checked').value;
             puzzleUpload.classList.toggle('show', selectedType === 'puzzle');
             quizQuestions.classList.toggle('show', selectedType === 'quiz');
-            
+
             // Reset quiz form when switching game type
             if (selectedType !== 'quiz') {
                 document.getElementById('quiz-form').style.display = 'none';
@@ -1109,6 +1114,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             const selectedDifficulty = document.querySelector('input[name="quiz_difficulty"]:checked');
             quizForm.style.display = selectedDifficulty ? 'block' : 'none';
         }
+
+        // Initialize quiz form visibility on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            toggleQuizForm();
+        });
 
         function addQuizQuestion() {
             const container = document.getElementById('quiz-container');
