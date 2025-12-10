@@ -189,6 +189,9 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
   const [showKeyboard, setShowKeyboard] = useState(false)
   const [saveError, setSaveError] = useState("")
   const [savedRank, setSavedRank] = useState(null)
+  
+  // Instructions state
+  const [showInstructions, setShowInstructions] = useState(false)
 
   // Check if tile is in correct position
   const isTileCorrect = useCallback((tile, index) => {
@@ -317,18 +320,25 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
     selectedDifficulty => {
       setDifficulty(selectedDifficulty)
       setShowDifficultySelect(false)
-      const initial = createInitialState()
-      setTiles(shuffleTiles(initial, selectedDifficulty))
-      setMoves(0)
-      setIsWon(false)
-      setHintsRemaining(selectedDifficulty === "easy" ? MAX_HINTS : 1) // Less hints for hard
-      setHighlightedTile(null)
-      setSelectedSwapTile(null)
-      setSavedRank(null)
-      setSaveError("")
+      // Show instructions before starting
+      setShowInstructions(true)
     },
-    [createInitialState, shuffleTiles]
+    []
   )
+
+  // Actually start the game after instructions
+  const beginGame = useCallback(() => {
+    setShowInstructions(false)
+    const initial = createInitialState()
+    setTiles(shuffleTiles(initial, difficulty))
+    setMoves(0)
+    setIsWon(false)
+    setHintsRemaining(difficulty === "easy" ? MAX_HINTS : 1) // Less hints for hard
+    setHighlightedTile(null)
+    setSelectedSwapTile(null)
+    setSavedRank(null)
+    setSaveError("")
+  }, [difficulty, createInitialState, shuffleTiles])
 
   // Reset game (restart with same difficulty)
   const resetGame = useCallback(() => {
@@ -348,6 +358,7 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
   // Go back to difficulty selection
   const changeDifficulty = useCallback(() => {
     setShowDifficultySelect(true)
+    setShowInstructions(false)
     setDifficulty(null)
     setIsWon(false)
     setMoves(0)
@@ -464,6 +475,7 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
       setHighlightedTile(null)
       setSelectedSwapTile(null)
       setShowDifficultySelect(true)
+      setShowInstructions(false)
       setDifficulty(null)
     }
   }, [isOpen])
@@ -513,8 +525,8 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
                 )}
               </div>
 
-              <div className="flex items-center gap-3">
-                {!showDifficultySelect && (
+                <div className="flex items-center gap-3">
+                {!showDifficultySelect && !showInstructions && (
                   <>
                     <div className={`${styles.headerText} text-lg font-bold`}>
                       Zetten:{" "}
@@ -528,13 +540,13 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
                     </div>
 
                     {/* Hint Button */}
-                    <motion.button
-                      className={`px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-colors ${
-                        hintsRemaining > 0 && !isWon
-                          ? "bg-white/20 hover:bg-white/30 text-white"
-                          : "bg-white/10 text-white/50 cursor-not-allowed"
-                      }`}
-                      onClick={useHint}
+                      <motion.button
+                        className={`px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-colors ${
+                          hintsRemaining > 0 && !isWon
+                            ? "bg-white/20 hover:bg-white/30 text-white animate-pulse"
+                            : "bg-white/10 text-white/50 cursor-not-allowed"
+                        }`}
+                        onClick={useHint}
                       disabled={hintsRemaining <= 0 || isWon}
                       whileHover={hintsRemaining > 0 ? { scale: 1.05 } : {}}
                       whileTap={hintsRemaining > 0 ? { scale: 0.95 } : {}}
@@ -730,6 +742,62 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
                     </motion.button>
                   </div>
                 </div>
+              ) : showInstructions ? (
+                /* Instructions Screen */
+                <div className="flex flex-col items-center justify-center h-full gap-8 p-4 lg:p-8 text-center max-w-3xl mx-auto">
+                  <h3 className={`text-3xl lg:text-4xl font-bold ${styles.textPrimary}`}>
+                    Hoe werkt het?
+                  </h3>
+                  
+                  <div className="bg-white/50 p-6 rounded-2xl backdrop-blur-sm border border-white/20 shadow-sm">
+                    {difficulty === "easy" ? (
+                      <div className="space-y-4">
+                        <p className={`text-xl ${styles.textSecondary}`}>
+                          1. Tik op een puzzelstukje om het te selecteren.
+                        </p>
+                        <p className={`text-xl ${styles.textSecondary}`}>
+                          2. Tik op een ander stukje om ze van <span className="font-bold text-green-600">plaats te wisselen</span>.
+                        </p>
+                        <p className={`text-xl ${styles.textSecondary}`}>
+                          3. Maak de afbeelding compleet!
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <p className={`text-xl ${styles.textSecondary}`}>
+                          1. Tik op een puzzelstukje naast het lege vak.
+                        </p>
+                        <p className={`text-xl ${styles.textSecondary}`}>
+                          2. Schuif de stukjes totdat de afbeelding compleet is.
+                        </p>
+                        <p className={`text-xl ${styles.textSecondary}`}>
+                          3. Dit is een klassieke schuifpuzzel!
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-4 bg-yellow-100 p-4 rounded-xl border-2 border-yellow-300">
+                    <Lightbulb size={32} className="text-yellow-600" />
+                    <div className="text-left">
+                      <p className="font-bold text-yellow-800">Heb je hulp nodig?</p>
+                      <p className="text-yellow-700 text-sm">
+                        Je hebt <span className="font-bold text-lg">3</span> hints beschikbaar! Gebruik ze verstandig.
+                      </p>
+                    </div>
+                  </div>
+
+                  <motion.button
+                    className={`px-12 py-4 rounded-2xl font-bold text-xl shadow-lg mt-4 ${
+                      difficulty === "easy" ? styles.buttonEasy : styles.buttonHard
+                    } text-white`}
+                    onClick={beginGame}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    Start Spel
+                  </motion.button>
+                </div>
               ) : isWon ? (
                 /* Win Screen */
                 <motion.div
@@ -779,7 +847,7 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                       >
-                        📝 Score Opslaan
+                        Score Opslaan
                       </motion.button>
                       {saveError && <p className="text-red-500">{saveError}</p>}
                     </div>
@@ -792,7 +860,7 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                     >
-                      🔄 Opnieuw
+                      Opnieuw
                     </motion.button>
                     <motion.button
                       className="px-6 py-3 bg-gradient-to-r from-gray-400 to-gray-500 text-white rounded-2xl font-bold shadow-lg"

@@ -1015,7 +1015,7 @@ const MemoryGame = ({
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
                         >
-                          🔄 Opnieuw Spelen
+                          Opnieuw Spelen
                         </motion.button>
                         <motion.button
                           className="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-[#440f0f] rounded-2xl font-bold shadow-lg"
@@ -1053,7 +1053,7 @@ const MemoryGame = ({
                           {raceWinner === 1 ? (
                             <>
                               <h3 className="text-4xl lg:text-5xl font-bold text-blue-600">
-                                Speler 1 Wint! 🎉
+                                Speler 1 Wint!
                               </h3>
                               <p className="text-xl text-[#657575]">
                                 Speler 1 heeft alle paren gevonden in{" "}
@@ -1081,7 +1081,7 @@ const MemoryGame = ({
                           ) : raceWinner === 2 ? (
                             <>
                               <h3 className="text-4xl lg:text-5xl font-bold text-purple-600">
-                                Speler 2 Wint! 🎉
+                                Speler 2 Wint!
                               </h3>
                               <p className="text-xl text-[#657575]">
                                 Speler 2 heeft alle paren gevonden in{" "}
@@ -1109,7 +1109,7 @@ const MemoryGame = ({
                           ) : (
                             <>
                               <h3 className="text-4xl lg:text-5xl font-bold text-yellow-600">
-                                Gelijk Spel! 🤝
+                                Gelijk Spel!
                               </h3>
                               <p className="text-xl text-[#657575]">
                                 Beide spelers hebben alle paren gevonden!
@@ -1124,7 +1124,7 @@ const MemoryGame = ({
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
                             >
-                              🔄 Opnieuw Spelen
+                              Opnieuw Spelen
                             </motion.button>
                           </div>
                         </>
@@ -1170,9 +1170,7 @@ const MemoryGame = ({
                                 }
                                 whileTap={!isSavingScore ? { scale: 0.95 } : {}}
                               >
-                                {isSavingScore
-                                  ? "⏳ Opslaan..."
-                                  : "📝 Score Opslaan"}
+                                {isSavingScore ? "Opslaan..." : "Score Opslaan"}
                               </motion.button>
                               {saveError && (
                                 <p className="text-red-500">{saveError}</p>
@@ -1187,7 +1185,7 @@ const MemoryGame = ({
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
                             >
-                              🔄 Opnieuw Spelen
+                              Opnieuw Spelen
                             </motion.button>
                             <motion.button
                               className="px-6 py-3 bg-white border-2 border-[#22c55e] text-[#22c55e] rounded-2xl font-bold shadow-lg"
@@ -1195,7 +1193,7 @@ const MemoryGame = ({
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
                             >
-                              🏆 Bekijk Scores
+                              Bekijk Scores
                             </motion.button>
                           </div>
                         </>
