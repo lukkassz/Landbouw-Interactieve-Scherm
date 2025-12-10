@@ -169,10 +169,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Save quiz questions
             if ($gameType === 'quiz') {
+                // Debug logging
+                error_log("Quiz game type detected");
+                error_log("Quiz difficulty: " . print_r($_POST['quiz_difficulty'] ?? 'NOT SET', true));
+                error_log("Quiz questions: " . print_r($_POST['quiz_questions'] ?? 'NOT SET', true));
+                
                 mysqli_query($conn, "DELETE FROM quiz_questions WHERE event_id = $currentEventId");
                 $quizDifficulty = mysqli_real_escape_string($conn, $_POST['quiz_difficulty'] ?? 'easy');
                 if (isset($_POST['quiz_questions']) && is_array($_POST['quiz_questions'])) {
                     foreach ($_POST['quiz_questions'] as $index => $question) {
+                        error_log("Processing question $index: " . print_r($question, true));
                         if (!empty($question['question']) && !empty($question['image_url']) && !empty($question['correct_answer'])) {
                             $qQuestion = mysqli_real_escape_string($conn, $question['question']);
                             $qImageUrl = mysqli_real_escape_string($conn, $question['image_url']);
@@ -200,11 +206,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             }
 
                             if (!empty($correctAnswerText)) {
-                                mysqli_query($conn, "INSERT INTO quiz_questions (event_id, question, image_url, correct_answer, option_1, option_2, option_3, option_4, difficulty) 
-                                    VALUES ($currentEventId, '$qQuestion', '$qImageUrl', '$correctAnswerText', '$qOption1', '$qOption2', '$qOption3', " . ($qOption4 ? "'$qOption4'" : "NULL") . ", '$quizDifficulty')");
+                                $insertQuery = "INSERT INTO quiz_questions (event_id, question, image_url, correct_answer, option_1, option_2, option_3, option_4, difficulty) 
+                                    VALUES ($currentEventId, '$qQuestion', '$qImageUrl', '$correctAnswerText', '$qOption1', '$qOption2', '$qOption3', " . ($qOption4 ? "'$qOption4'" : "NULL") . ", '$quizDifficulty')";
+                                error_log("Executing insert: " . $insertQuery);
+                                $result = mysqli_query($conn, $insertQuery);
+                                if (!$result) {
+                                    error_log("MySQL Error: " . mysqli_error($conn));
+                                } else {
+                                    error_log("Question saved successfully!");
+                                }
+                            } else {
+                                error_log("Skipped question - empty correct answer");
                             }
                         }
                     }
+                } else {
+                    error_log("No quiz_questions array found in POST");
                 }
             }
 
@@ -959,6 +976,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     ?>
                     
+                    <!-- Debug info -->
+                    <div style="background:#fff3cd;padding:12px;border-radius:8px;margin-bottom:16px;border:1px solid #ffc107;">
+                        <strong>Debug Info:</strong><br>
+                        - Gevonden vragen: <?= count($quizQuestions) ?><br>
+                        - Huidige niveau: <?= !empty($currentQuizDifficulty) ? $currentQuizDifficulty : 'NIET INGESTELD' ?><br>
+                        - Game type: <?= $gameType ?><br>
+                        - Event ID: <?= $eventId ?? 'nieuw' ?>
+                    </div>
+                    
                     <div class="form-group">
                         <label>Selecteer niveau</label>
                         <div class="radio-group-horizontal" style="display:flex;gap:16px;margin-top:8px;">
@@ -975,7 +1001,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     <div id="quiz-form" style="<?= !empty($currentQuizDifficulty) ? '' : 'display:none;' ?>margin-top:24px;">
                         <div id="quiz-container">
-                        <?php foreach ($quizQuestions as $idx => $question):
+                            <?php foreach ($quizQuestions as $idx => $question):
                             ?>
                                 <div class="repeater-item quiz-item">
                                     <button type="button" class="remove-btn" onclick="this.parentElement.remove()">Verwijderen</button>
