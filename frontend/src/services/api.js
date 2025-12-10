@@ -393,6 +393,58 @@ export const api = {
       return { success: false, message: "Failed to save score" }
     }
   },
+
+  /**
+   * Get quiz questions (optionally filtered by event_id)
+   * Maps to: GET /api/quiz_questions.php
+   */
+  getQuizQuestions: async (eventId = null) => {
+    try {
+      const url = eventId 
+        ? `/quiz_questions.php?event_id=${eventId}`
+        : "/quiz_questions.php"
+      const response = await apiClient.get(url)
+      return response.data
+    } catch (error) {
+      console.error("Failed to get quiz questions:", error.message)
+      return { success: false, questions: [] }
+    }
+  },
+
+  /**
+   * Get quiz high scores
+   * Maps to: GET /api/quiz_scores.php
+   */
+  getQuizScores: async () => {
+    try {
+      const response = await apiClient.get("/quiz_scores.php")
+      return response.data
+    } catch (error) {
+      console.error("Failed to get quiz scores:", error.message)
+      return { success: false, scores: [] }
+    }
+  },
+
+  /**
+   * Save quiz score
+   * Maps to: POST /api/quiz_scores.php
+   */
+  saveQuizScore: async (playerName, score, totalQuestions) => {
+    try {
+      const response = await apiClient.post("/quiz_scores.php", {
+        player_name: playerName,
+        score: score,
+        total_questions: totalQuestions
+      })
+      return response.data
+    } catch (error) {
+      console.error("Failed to save quiz score:", error.message)
+      if (error.response?.data) {
+        return error.response.data
+      }
+      return { success: false, message: "Failed to save score" }
+    }
+  },
 }
 
 export default api

@@ -12,12 +12,14 @@ import {
   MapPin,
   Clock,
   Brain,
+  HelpCircle,
 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { getGalleryData } from "../../../config/timelineGalleries"
 import ImagePuzzleModal from "../../PuzzleGame/ImagePuzzleModal"
 import MemoryGame from "../../PuzzleGame/MemoryGame"
 import HarvestGame from "../../PuzzleGame/HarvestGame"
+import ToolQuizGame from "../../PuzzleGame/ToolQuizGame"
 import LeeuwardenMap from "../content/LeeuwardenMap"
 import MiniTimeline from "../ui/MiniTimeline"
 import Breadcrumb from "../ui/Breadcrumb"
@@ -48,6 +50,7 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
   const [isImagePuzzleModalOpen, setIsImagePuzzleModalOpen] = useState(false)
   const [isMemoryGameModalOpen, setIsMemoryGameModalOpen] = useState(false)
   const [isHarvestGameModalOpen, setIsHarvestGameModalOpen] = useState(false)
+  const [isToolQuizGameModalOpen, setIsToolQuizGameModalOpen] = useState(false)
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0)
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0)
   const [isVideoPlaying, setIsVideoPlaying] = useState(false)
@@ -490,6 +493,10 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
     playSound()
     setIsHarvestGameModalOpen(true)
   }
+  const handleToolQuizGame = () => {
+    playSound()
+    setIsToolQuizGameModalOpen(true)
+  }
   const handleCloseImagePuzzleModal = React.useCallback(
     () => setIsImagePuzzleModalOpen(false),
     []
@@ -500,6 +507,10 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
   )
   const handleCloseHarvestGameModal = React.useCallback(
     () => setIsHarvestGameModalOpen(false),
+    []
+  )
+  const handleCloseToolQuizGameModal = React.useCallback(
+    () => setIsToolQuizGameModalOpen(false),
     []
   )
 
@@ -1268,12 +1279,23 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
                       {(eventData?.gameType === "harvest" ||
                         eventData?.game_type === "harvest") && (
                         <motion.button
-                          className={`w-full py-4 rounded-xl font-bold font-heading flex items-center justify-center gap-3 shadow-lg ${theme.buttonPrimary}`}
+                          className={`w-full py-4 rounded-xl font-bold font-bold font-heading flex items-center justify-center gap-3 shadow-lg ${theme.buttonPrimary}`}
                           onClick={handleHarvestGame}
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                         >
                           🧺 Speel Oogst Tijd
+                        </motion.button>
+                      )}
+                      {(eventData?.gameType === "quiz" ||
+                        eventData?.game_type === "quiz") && (
+                        <motion.button
+                          className={`w-full py-4 rounded-xl font-bold font-heading flex items-center justify-center gap-3 shadow-lg ${theme.buttonPrimary}`}
+                          onClick={handleToolQuizGame}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <HelpCircle size={24} /> Speel Quiz
                         </motion.button>
                       )}
                     </div>
@@ -1317,6 +1339,14 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
         variant={
           isLandbouw ? "landbouw" : isMaatschappelijk ? "newspaper" : "museum"
         }
+      />
+      <ToolQuizGame
+        isOpen={isToolQuizGameModalOpen}
+        onClose={handleCloseToolQuizGameModal}
+        variant={
+          isLandbouw ? "landbouw" : isMaatschappelijk ? "newspaper" : "museum"
+        }
+        eventId={eventData?.id || null}
       />
     </AnimatePresence>
   )
