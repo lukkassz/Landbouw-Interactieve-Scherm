@@ -176,6 +176,9 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
   // Hint state
   const [hintsRemaining, setHintsRemaining] = useState(MAX_HINTS)
   const [highlightedTile, setHighlightedTile] = useState(null)
+  
+  // Swap Puzzle State (Easy Mode)
+  const [selectedSwapTile, setSelectedSwapTile] = useState(null)
 
   // Leaderboard state
   const [scoresEasy, setScoresEasy] = useState([])
@@ -252,26 +255,61 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
     clickedIndex => {
       if (isWon) return
 
-      const emptyIndex = tiles.indexOf(null)
-      const neighbors = getNeighbors(emptyIndex)
+      // HARD MODE: Sliding Puzzle (Classic)
+      if (difficulty === "hard") {
+        const emptyIndex = tiles.indexOf(null)
+        const neighbors = getNeighbors(emptyIndex)
 
-      if (neighbors.includes(clickedIndex)) {
-        playSound()
-        const newTiles = [...tiles]
-        ;[newTiles[emptyIndex], newTiles[clickedIndex]] = [
-          newTiles[clickedIndex],
-          newTiles[emptyIndex],
-        ]
-        setTiles(newTiles)
-        setMoves(prev => prev + 1)
-        setHighlightedTile(null)
+        if (neighbors.includes(clickedIndex)) {
+          playSound()
+          const newTiles = [...tiles]
+          ;[newTiles[emptyIndex], newTiles[clickedIndex]] = [
+            newTiles[clickedIndex],
+            newTiles[emptyIndex],
+          ]
+          setTiles(newTiles)
+          setMoves(prev => prev + 1)
+          setHighlightedTile(null)
 
-        if (checkWin(newTiles)) {
-          setIsWon(true)
+          if (checkWin(newTiles)) {
+            setIsWon(true)
+          }
+        }
+      }
+      // EASY MODE: Swap Puzzle (Click & Swap)
+      else {
+        if (selectedSwapTile === null) {
+          // Select first tile to swap
+          setSelectedSwapTile(clickedIndex)
+          // Optional: Add a subtle sound for selection
+        } else {
+          // If clicked the same tile, deselect it
+          if (selectedSwapTile === clickedIndex) {
+            setSelectedSwapTile(null)
+            return
+          }
+
+          // Swap the two tiles
+          playSound()
+          const newTiles = [...tiles]
+          
+          // Swap logic
+          const temp = newTiles[clickedIndex]
+          newTiles[clickedIndex] = newTiles[selectedSwapTile]
+          newTiles[selectedSwapTile] = temp
+
+          setTiles(newTiles)
+          setMoves(prev => prev + 1)
+          setSelectedSwapTile(null)
+          setHighlightedTile(null)
+
+          if (checkWin(newTiles)) {
+            setIsWon(true)
+          }
         }
       }
     },
-    [tiles, isWon, getNeighbors, playSound, checkWin]
+    [tiles, isWon, getNeighbors, playSound, checkWin, difficulty, selectedSwapTile]
   )
 
   // Start game with selected difficulty
@@ -285,6 +323,7 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
       setIsWon(false)
       setHintsRemaining(selectedDifficulty === "easy" ? MAX_HINTS : 1) // Less hints for hard
       setHighlightedTile(null)
+      setSelectedSwapTile(null)
       setSavedRank(null)
       setSaveError("")
     },
@@ -300,6 +339,7 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
       setIsWon(false)
       setHintsRemaining(difficulty === "easy" ? MAX_HINTS : 1)
       setHighlightedTile(null)
+      setSelectedSwapTile(null)
       setSavedRank(null)
       setSaveError("")
     }
@@ -311,6 +351,7 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
     setDifficulty(null)
     setIsWon(false)
     setMoves(0)
+    setSelectedSwapTile(null)
     setSavedRank(null)
   }, [])
 
@@ -421,6 +462,7 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
       setShowKeyboard(false)
       setHintsRemaining(MAX_HINTS)
       setHighlightedTile(null)
+      setSelectedSwapTile(null)
       setShowDifficultySelect(true)
       setDifficulty(null)
     }
@@ -786,6 +828,7 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
                     {tiles.map((tile, index) => {
                       const isCorrect = isTileCorrect(tile, index)
                       const isHighlighted = highlightedTile === index
+                      const isSelected = selectedSwapTile === index
 
                       return (
                         <motion.div
@@ -793,6 +836,8 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
                           className={`w-32 h-32 lg:w-40 lg:h-40 rounded-xl cursor-pointer overflow-hidden relative ${
                             tile === null
                               ? "bg-[#440f0f]/20 border-3 border-dashed border-[#440f0f]/30"
+                              : isSelected
+                              ? "shadow-2xl border-4 border-blue-500 ring-4 ring-blue-300/50 scale-105 z-10"
                               : isHighlighted
                               ? "shadow-xl border-4 border-yellow-400 ring-4 ring-yellow-300/50"
                               : isCorrect

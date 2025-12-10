@@ -21,7 +21,10 @@ import {
   formatYearRange,
 } from "../../utils/timelineCalculations"
 
-import backgroundTimelineVideo from "../../assets/video/5197931-uhd_3840_2160_30fps.mp4"
+// import backgroundTimelineVideo from "../../assets/video/5197931-uhd_3840_2160_30fps.mp4"
+
+// Farm Background (Neutral)
+const BACKGROUND_IMAGE_URL = "https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=2832&auto=format&fit=crop"
 
 // Helper function to get border color based on category
 const getCategoryBorderColor = category => {
@@ -292,7 +295,7 @@ const Timeline = () => {
   const [currentYear, setCurrentYear] = useState(1925)
   const [showSwipeHint, setShowSwipeHint] = useState(false)
   const timelineRef = useRef(null)
-  const videoRef = useRef(null)
+  // const videoRef = useRef(null)
   const hintTimerRef = useRef(null)
 
   // Idle screen state - start in idle mode
@@ -325,66 +328,7 @@ const Timeline = () => {
     }
   }
 
-  // Handle video playback with error handling
-  useEffect(() => {
-    const video = videoRef.current
-    if (video) {
-      // Handle video loop
-      const handleEnded = () => {
-        video.currentTime = 0
-        video.play().catch(() => {
-          // Silently handle play errors on loop
-        })
-      }
-      
-      // Handle autoplay errors gracefully
-      const handlePlayError = (error) => {
-        // Autoplay was prevented - this is normal browser behavior
-        // Video will play after user interaction
-        console.debug("Video autoplay prevented (normal browser behavior)")
-      }
-      
-      // Try to play video on load
-      const tryPlay = async () => {
-        try {
-          await video.play()
-        } catch (error) {
-          // Autoplay prevented - wait for user interaction
-          handlePlayError(error)
-        }
-      }
-      
-      video.addEventListener("ended", handleEnded)
-      video.addEventListener("error", handlePlayError)
-      
-      // Try to play when video is loaded
-      if (video.readyState >= 2) {
-        tryPlay()
-      } else {
-        video.addEventListener("loadeddata", tryPlay, { once: true })
-      }
-      
-      // Retry play on user interaction
-      const handleUserInteraction = () => {
-        if (video.paused) {
-          video.play().catch(() => {
-            // Silently handle - user interaction might not be enough
-          })
-        }
-      }
-      
-      // Listen for any user interaction to retry play
-      document.addEventListener("click", handleUserInteraction, { once: true })
-      document.addEventListener("touchstart", handleUserInteraction, { once: true })
-      
-      return () => {
-        video.removeEventListener("ended", handleEnded)
-        video.removeEventListener("error", handlePlayError)
-        document.removeEventListener("click", handleUserInteraction)
-        document.removeEventListener("touchstart", handleUserInteraction)
-      }
-    }
-  }, [])
+  // Video playback effect removed (replaced with static image)
 
   // Map API data to component format
   const timelineData = useMemo(() => {
@@ -592,17 +536,15 @@ const Timeline = () => {
         onTouchMove={handleMouseMove}
         onTouchEnd={handleMouseUp}
       >
-        {/* Background video */}
-        <video
-          ref={videoRef}
-          className="absolute inset-0 w-full h-full object-cover"
-          autoPlay
-          loop
-          muted
-          playsInline
-        >
-          <source src={backgroundTimelineVideo} type="video/mp4" />
-        </video>
+        {/* Background Image (Farm/Neutral) */}
+        <div className="absolute inset-0 w-full h-full">
+          <img
+            src={BACKGROUND_IMAGE_URL}
+            alt="Farm Background"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-black/20" />
+        </div>
 
         {/* Theme-based overlay - reduced opacity for less orange tint */}
         <div
@@ -735,17 +677,15 @@ const Timeline = () => {
           WebkitOverflowScrolling: "touch",
         }}
       >
-        {/* Background video */}
-        <video
-          ref={videoRef}
-          className="absolute inset-0 w-full h-full object-cover"
-          autoPlay
-          loop
-          muted
-          playsInline
-        >
-          <source src={backgroundTimelineVideo} type="video/mp4" />
-        </video>
+        {/* Background Image (Farm/Neutral) */}
+        <div className="absolute inset-0 w-full h-full">
+          <img
+            src={BACKGROUND_IMAGE_URL}
+            alt="Farm Background"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-black/20" />
+        </div>
 
         {/* Theme-based overlay - reduced opacity for less orange tint */}
         <div
@@ -807,21 +747,20 @@ const Timeline = () => {
         WebkitOverflowScrolling: "touch",
       }}
     >
-      {/* Background video */}
-      <video
-        ref={videoRef}
-        className="absolute inset-0 w-full h-full object-cover"
-        autoPlay
-        loop
-        muted
-        playsInline
-      >
-        <source src={backgroundTimelineVideo} type="video/mp4" />
-      </video>
+      {/* Background Image (Farm/Neutral) */}
+      <div className="absolute inset-0 w-full h-full">
+        <img
+          src={BACKGROUND_IMAGE_URL}
+          alt="Farm Background"
+          className="w-full h-full object-cover"
+        />
+        {/* Dark overlay for readability */}
+        <div className="absolute inset-0 bg-black/20" />
+      </div>
 
       {/* Theme-based overlay - reduced opacity for less orange tint */}
       <div
-        className={`absolute inset-0 bg-gradient-to-br ${theme.background.primary}`}
+        className={`absolute inset-0 bg-gradient-to-br ${theme.background.primary} opacity-80 mix-blend-overlay`}
       />
 
       {/* Subtle pattern overlay - reduced opacity */}
