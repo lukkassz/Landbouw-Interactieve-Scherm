@@ -28,16 +28,16 @@ CREATE TABLE IF NOT EXISTS quiz_scores (
     INDEX idx_score (score DESC, played_at DESC)
 );
 
--- Insert some example questions
+-- Enkele voorbeeldvragen toevoegen
 INSERT INTO quiz_questions (question, image_url, correct_answer, option_1, option_2, option_3, option_4, category, difficulty) VALUES
-('Do czego służyło to narzędzie?', 'https://via.placeholder.com/600x400?text=Sierp', 'Do żniw zboża', 'Do orki', 'Do żniw zboża', 'Do dojenia krów', NULL, 'narzędzia', 'easy'),
-('Do czego służyło to narzędzie?', 'https://via.placeholder.com/600x400?text=Pług', 'Do orki pola', 'Do orki pola', 'Do siewu', 'Do młócki', NULL, 'narzędzia', 'easy'),
-('Do czego służyło to narzędzie?', 'https://via.placeholder.com/600x400?text=Wialnia', 'Do przesiewania ziarna', 'Do przesiewania ziarna', 'Do koszenia trawy', 'Do robienia masła', NULL, 'narzędzia', 'medium'),
-('Do czego służyło to narzędzie?', 'https://via.placeholder.com/600x400?text=Cep', 'Do młócki zboża', 'Do kopania', 'Do młócki zboża', 'Do czesania wełny', NULL, 'narzędzia', 'medium'),
-('Do czego służyło to narzędzie?', 'https://via.placeholder.com/600x400?text=Trepy', 'Do czesania lnu', 'Do strzyżenia owiec', 'Do czesania lnu', 'Do prasowania', NULL, 'narzędzia', 'hard'),
-('Do czego służyło to narzędzie?', 'https://via.placeholder.com/600x400?text=Kołowrotek', 'Do przędzenia nici', 'Do młócenia', 'Do przędzenia nici', 'Do tkania', NULL, 'narzędzia', 'medium'),
-('Do czego służyło to narzędzie?', 'https://via.placeholder.com/600x400?text=Masielnica', 'Do robienia masła', 'Do robienia masła', 'Do dojenia', 'Do prania', NULL, 'narzędzia', 'easy'),
-('Do czego służyło to narzędzie?', 'https://via.placeholder.com/600x400?text=Kosa', 'Do koszenia trawy i zboża', 'Do orki', 'Do sadzenia', 'Do koszenia trawy i zboża', NULL, 'narzędzia', 'easy'),
-('Do czego służyło to narzędzie?', 'https://via.placeholder.com/600x400?text=Grabie', 'Do grabienia siana', 'Do kopania', 'Do grabienia siana', 'Do sadzenia', NULL, 'narzędzia', 'easy'),
-('Do czego służyło to narzędzie?', 'https://via.placeholder.com/600x400?text=Widły', 'Do przerzucania siana', 'Do przerzucania siana', 'Do orki', 'Do kopania', NULL, 'narzędzia', 'easy');
+('Waarvoor werd dit werktuig gebruikt?', 'https://via.placeholder.com/600x400?text=Sikkel', 'Voor het oogsten van graan', 'Voor het ploegen', 'Voor het oogsten van graan', 'Voor het melken van koeien', NULL, 'gereedschap', 'easy'),
+('Waarvoor werd dit werktuig gebruikt?', 'https://via.placeholder.com/600x400?text=Ploeg', 'Voor het ploegen van de grond', 'Voor het ploegen van de grond', 'Voor het zaaien', 'Voor het dorsen', NULL, 'gereedschap', 'easy'),
+('Waarvoor werd dit werktuig gebruikt?', 'https://via.placeholder.com/600x400?text=Wan', 'Voor het wannen van graan', 'Voor het wannen van graan', 'Voor het maaien van gras', 'Voor het maken van boter', NULL, 'gereedschap', 'medium'),
+('Waarvoor werd dit werktuig gebruikt?', 'https://via.placeholder.com/600x400?text=Dorsvlegel', 'Voor het dorsen van graan', 'Voor het graven', 'Voor het dorsen van graan', 'Voor het kammen van wol', NULL, 'gereedschap', 'medium'),
+('Waarvoor werd dit werktuig gebruikt?', 'https://via.placeholder.com/600x400?text=Hekel', 'Voor het hekelen van vlas', 'Voor het scheren van schapen', 'Voor het hekelen van vlas', 'Voor het strijken', NULL, 'gereedschap', 'hard'),
+('Waarvoor werd dit werktuig gebruikt?', 'https://via.placeholder.com/600x400?text=Spinnewiel', 'Voor het spinnen van wol', 'Voor het dorsen', 'Voor het spinnen van wol', 'Voor het weven', NULL, 'gereedschap', 'medium'),
+('Waarvoor werd dit werktuig gebruikt?', 'https://via.placeholder.com/600x400?text=Botervat', 'Voor het maken van boter', 'Voor het maken van boter', 'Voor het melken', 'Voor het wassen', NULL, 'gereedschap', 'easy'),
+('Waarvoor werd dit werktuig gebruikt?', 'https://via.placeholder.com/600x400?text=Zeis', 'Voor het maaien van gras en graan', 'Voor het ploegen', 'Voor het planten', 'Voor het maaien van gras en graan', NULL, 'gereedschap', 'easy'),
+('Waarvoor werd dit werktuig gebruikt?', 'https://via.placeholder.com/600x400?text=Hark', 'Voor het harken van hooi', 'Voor het graven', 'Voor het harken van hooi', 'Voor het planten', NULL, 'gereedschap', 'easy'),
+('Waarvoor werd dit werktuig gebruikt?', 'https://via.placeholder.com/600x400?text=Hooivork', 'Voor het verplaatsen van hooi', 'Voor het verplaatsen van hooi', 'Voor het ploegen', 'Voor het graven', NULL, 'gereedschap', 'easy');
 
