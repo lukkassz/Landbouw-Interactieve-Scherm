@@ -12,7 +12,7 @@
 
 import React, { useState, useCallback, useEffect, useMemo, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { X, RotateCcw, Trophy, Lightbulb, Zap, Brain } from "lucide-react"
+import { X, RotateCcw, Trophy, Lightbulb, Zap, Brain, HelpCircle } from "lucide-react"
 import {
   splitImageIntoPieces,
   createImagePreview,
@@ -540,19 +540,30 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
                     </div>
 
                     {/* Hint Button */}
-                      <motion.button
-                        className={`px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-colors ${
-                          hintsRemaining > 0 && !isWon
-                            ? "bg-white/20 hover:bg-white/30 text-white animate-pulse"
-                            : "bg-white/10 text-white/50 cursor-not-allowed"
-                        }`}
-                        onClick={useHint}
+                    <motion.button
+                      className={`px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-colors ${
+                        hintsRemaining > 0 && !isWon
+                          ? "bg-white/20 hover:bg-white/30 text-white animate-pulse"
+                          : "bg-white/10 text-white/50 cursor-not-allowed"
+                      }`}
+                      onClick={useHint}
                       disabled={hintsRemaining <= 0 || isWon}
                       whileHover={hintsRemaining > 0 ? { scale: 1.05 } : {}}
                       whileTap={hintsRemaining > 0 ? { scale: 0.95 } : {}}
                     >
                       <Lightbulb size={20} />
                       <span>{hintsRemaining}</span>
+                    </motion.button>
+
+                    {/* Help Button */}
+                    <motion.button
+                      className="p-2 rounded-xl bg-white/20 hover:bg-white/30 text-white transition-colors"
+                      onClick={() => setShowInstructions(true)}
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      title="Help"
+                    >
+                      <HelpCircle size={24} />
                     </motion.button>
 
                     {/* Change Difficulty Button */}
@@ -791,11 +802,19 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
                     className={`px-12 py-4 rounded-2xl font-bold text-xl shadow-lg mt-4 ${
                       difficulty === "easy" ? styles.buttonEasy : styles.buttonHard
                     } text-white`}
-                    onClick={beginGame}
+                    onClick={() => {
+                        // If game already started (has moves), just close instructions. 
+                        // Otherwise start new game.
+                        if (moves > 0) {
+                            setShowInstructions(false)
+                        } else {
+                            beginGame()
+                        }
+                    }}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    Start Spel
+                    {moves > 0 ? "Verder Spelen" : "Start Spel"}
                   </motion.button>
                 </div>
               ) : isWon ? (
