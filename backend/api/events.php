@@ -94,12 +94,12 @@ try {
             $event['game_type'] = (string)$event['game_type'];
         } else {
             // Legacy fallback logic - only if game_type is not set or is 'none'
-            if ($event['has_puzzle'] && $hasPuzzleImage) {
-                $event['game_type'] = 'puzzle';
-            } elseif ($event['has_puzzle']) {
-                $event['game_type'] = 'memory';
-            } else {
-                $event['game_type'] = 'none';
+        if ($event['has_puzzle'] && $hasPuzzleImage) {
+            $event['game_type'] = 'puzzle';
+        } elseif ($event['has_puzzle']) {
+            $event['game_type'] = 'memory';
+        } else {
+            $event['game_type'] = 'none';
             }
         }
 

@@ -1,5 +1,5 @@
 /**
- * ToolQuizGame Component - "Co to za narzędzie?"
+ * ToolQuizGame Component - "Wat is dit werktuig?"
  * 
  * Educational quiz game about agricultural tools and equipment.
  * Players guess the purpose of historical farming tools from images.
@@ -217,7 +217,7 @@ const ToolQuizGame = ({ isOpen, onClose, variant = "museum", eventId = null }) =
               <div className="flex items-center gap-3">
                 <HelpCircle size={32} className="text-white" />
                 <h2 className={`text-2xl lg:text-3xl font-bold ${styles.headerText}`}>
-                  {variant === "newspaper" ? "CO TO ZA NARZĘDZIE?" : "Co to za narzędzie?"}
+                  {variant === "newspaper" ? "WAT IS DIT WERKTUIG?" : "Wat is dit werktuig?"}
                 </h2>
               </div>
 
@@ -312,7 +312,7 @@ const ToolQuizGame = ({ isOpen, onClose, variant = "museum", eventId = null }) =
 
                   {/* Question Text */}
                   <h3 className={`text-2xl lg:text-3xl font-bold text-center ${styles.textPrimary}`}>
-                    {currentQuestion.question || "Do czego służyło to narzędzie?"}
+                    {currentQuestion.question || "Waarvoor werd dit werktuig gebruikt?"}
                   </h3>
 
                   {/* Answer Options */}
