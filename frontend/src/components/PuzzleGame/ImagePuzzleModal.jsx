@@ -193,6 +193,8 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
   // Instructions state
   const [showInstructions, setShowInstructions] = useState(false)
 
+  const [showLeaderboard, setShowLeaderboard] = useState(false)
+
   // Check if tile is in correct position
   const isTileCorrect = useCallback((tile, index) => {
     if (tile === null) return false
@@ -817,6 +819,95 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
                     {moves > 0 ? "Verder Spelen" : "Start Spel"}
                   </motion.button>
                 </div>
+              ) : showLeaderboard ? (
+                /* Leaderboard View (Full Screen) */
+                <div className="flex flex-col items-center justify-center h-full p-6 w-full">
+                    <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl p-6 border border-[#a7b8b4]/30 flex flex-col h-full max-h-[600px]">
+                      <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-2xl font-bold text-[#440f0f] flex items-center gap-3">
+                          <Trophy size={32} className="text-[#c9a300]" />
+                          Beste Scores ({difficulty === "easy" ? "Makkelijk" : "Moeilijk"})
+                        </h3>
+                        <button 
+                            onClick={() => setShowLeaderboard(false)}
+                            className="p-2 hover:bg-gray-100 rounded-full"
+                        >
+                            <X size={24} className="text-gray-500" />
+                        </button>
+                      </div>
+
+                      <div className="flex-1 overflow-y-auto pr-2 space-y-3 custom-scrollbar">
+                        {loadingScores ? (
+                          <div className="text-center py-12 text-[#657575] text-lg">
+                            Scores laden...
+                          </div>
+                        ) : currentScores.length === 0 ? (
+                          <div className="text-center py-12 text-[#657575] text-lg">
+                            Nog geen scores voor dit niveau.
+                          </div>
+                        ) : (
+                          currentScores.slice(0, 50).map((score, index) => (
+                            <div
+                              key={index}
+                              className={`flex items-center justify-between p-4 rounded-xl transition-transform hover:scale-[1.01] ${
+                                index === 0
+                                  ? "bg-yellow-50 border-2 border-yellow-200 shadow-sm"
+                                  : index === 1
+                                  ? "bg-gray-50 border-2 border-gray-200 shadow-sm"
+                                  : index === 2
+                                  ? "bg-orange-50 border-2 border-orange-200 shadow-sm"
+                                  : index % 2 === 0 ? "bg-gray-50" : "bg-white"
+                              } ${score.rank === savedRank ? "ring-2 ring-green-500 bg-green-50" : ""}`}
+                            >
+                              <div className="flex items-center gap-4">
+                                <div className={`w-10 h-10 flex items-center justify-center rounded-full font-bold text-lg ${
+                                    index === 0 ? "bg-yellow-100 text-yellow-600" :
+                                    index === 1 ? "bg-gray-200 text-gray-600" :
+                                    index === 2 ? "bg-orange-100 text-orange-600" :
+                                    "bg-gray-100 text-gray-500"
+                                }`}>
+                                    {index + 1}
+                                </div>
+                                <span className="font-bold text-lg text-[#440f0f]">
+                                  {score.player_name}
+                                </span>
+                              </div>
+                              <span className={`font-bold text-lg ${
+                                  index < 3 ? "text-[#c9a300]" : "text-[#657575]"
+                              }`}>
+                                {score.moves} zetten
+                              </span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+
+                      <div className="mt-6 pt-6 border-t border-gray-100 flex justify-center gap-4">
+                        <motion.button
+                            className="px-8 py-3 bg-gradient-to-r from-[#c9a300] to-[#a68600] text-white rounded-xl font-bold shadow-lg"
+                            onClick={() => {
+                                setShowLeaderboard(false);
+                                resetGame();
+                            }}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                        >
+                            Nieuw Spel
+                        </motion.button>
+                        <motion.button
+                            className="px-8 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold"
+                            onClick={() => {
+                                setShowLeaderboard(false);
+                                changeDifficulty();
+                            }}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                        >
+                            Ander Niveau
+                        </motion.button>
+                      </div>
+                    </div>
+                </div>
               ) : isWon ? (
                 /* Win Screen */
                 <motion.div
@@ -853,10 +944,35 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
                   </p>
 
                   {savedRank ? (
-                    <div className="text-center">
-                      <p className="text-2xl text-green-600 font-bold mb-4">
+                    <div className="text-center w-full flex flex-col items-center">
+                      <p className="text-2xl text-green-600 font-bold mb-6 animate-bounce">
                         🎉 Je staat op plaats #{savedRank}!
                       </p>
+                      
+                      <div className="flex gap-4">
+                        <motion.button
+                          className="px-6 py-3 bg-gradient-to-r from-[#c9a300] to-[#a68600] text-white rounded-2xl font-bold shadow-lg"
+                          onClick={resetGame}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          Opnieuw
+                        </motion.button>
+                        
+                        <motion.button
+                          className="px-6 py-3 bg-white border-2 border-[#c9a300] text-[#c9a300] rounded-2xl font-bold shadow-lg flex items-center gap-2"
+                          onClick={() => {
+                            setShowLeaderboard(true);
+                            // Refresh scores to ensure new score is visible
+                            fetchScores();
+                          }}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          <Trophy size={20} />
+                          Bekijk Scores
+                        </motion.button>
+                      </div>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center gap-4">
@@ -872,24 +988,26 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
                     </div>
                   )}
 
-                  <div className="flex gap-4 mt-4">
-                    <motion.button
-                      className="px-6 py-3 bg-gradient-to-r from-[#c9a300] to-[#a68600] text-white rounded-2xl font-bold shadow-lg"
-                      onClick={resetGame}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      Opnieuw
-                    </motion.button>
-                    <motion.button
-                      className="px-6 py-3 bg-gradient-to-r from-gray-400 to-gray-500 text-white rounded-2xl font-bold shadow-lg"
-                      onClick={changeDifficulty}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      Terug
-                    </motion.button>
-                  </div>
+                  {!savedRank && (
+                    <div className="flex gap-4 mt-4">
+                        <motion.button
+                        className="px-6 py-3 bg-gradient-to-r from-[#c9a300] to-[#a68600] text-white rounded-2xl font-bold shadow-lg"
+                        onClick={resetGame}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        >
+                        Opnieuw
+                        </motion.button>
+                        <motion.button
+                        className="px-6 py-3 bg-gradient-to-r from-gray-400 to-gray-500 text-white rounded-2xl font-bold shadow-lg"
+                        onClick={changeDifficulty}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        >
+                        Terug
+                        </motion.button>
+                    </div>
+                  )}
                 </motion.div>
               ) : (
                 /* Game Board */
