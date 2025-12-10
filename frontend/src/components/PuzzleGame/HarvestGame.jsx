@@ -399,7 +399,7 @@ const HarvestGame = ({ isOpen, onClose, variant = "museum" }) => {
           onClick={e => e.target === e.currentTarget && onClose()}
         >
           <motion.div
-            className={`relative ${styles.modalBg} rounded-3xl shadow-2xl w-[95vw] max-w-4xl max-h-[90vh] flex flex-col overflow-hidden`}
+            className={`relative ${styles.modalBg} rounded-3xl shadow-2xl w-[95vw] max-w-4xl h-[85vh] flex flex-col overflow-hidden`}
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
