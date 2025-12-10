@@ -775,6 +775,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <div class="desc">Vang de items</div>
                         </div>
                     </label>
+                    <label class="radio-card">
+                        <input type="radio" name="game_type" value="quiz" <?= $gameType === 'quiz' ? 'checked' : '' ?> onchange="updateGameType()">
+                        <div class="radio-card-content">
+                            <div class="icon">❓</div>
+                            <div class="title">Quiz</div>
+                            <div class="desc">Herken het werktuig</div>
+                        </div>
+                    </label>
                 </div>
                 
                 <div id="puzzle-upload" class="puzzle-upload <?= $gameType === 'puzzle' ? 'show' : '' ?>">
