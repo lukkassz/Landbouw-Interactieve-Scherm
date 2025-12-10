@@ -877,7 +877,7 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
                 <div className="flex flex-col lg:flex-row gap-6 items-start justify-center">
                   {/* Preview - always visible */}
                   {imagePreview && (
-                    <div className="flex-shrink-0">
+                    <div className="flex-shrink-0 flex flex-col gap-4">
                       <div className="p-3 bg-white rounded-2xl shadow-lg border-2 border-[#c9a300]">
                         <img
                           src={imagePreview}
@@ -886,6 +886,19 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
                         />
                         <p className="text-center text-sm text-[#657575] mt-2 font-bold uppercase tracking-wide">
                           Origineel
+                        </p>
+                      </div>
+
+                      {/* Always visible instruction card */}
+                      <div className="bg-[#fff9e6] p-4 rounded-xl border border-[#ffe082] max-w-[300px]">
+                        <h4 className="font-bold text-[#b45309] mb-2 flex items-center gap-2">
+                          <Lightbulb size={18} />
+                          Hoe te spelen:
+                        </h4>
+                        <p className="text-sm text-[#8c6b1f] leading-relaxed">
+                          {difficulty === "easy" 
+                            ? "Tik op twee stukjes om ze van plaats te wisselen en de puzzel op te lossen."
+                            : "Schuif de stukjes naar de lege plek om de afbeelding compleet te maken."}
                         </p>
                       </div>
                     </div>
