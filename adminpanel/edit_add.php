@@ -167,6 +167,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
+            // Save quiz questions
+            if ($gameType === 'quiz') {
+                mysqli_query($conn, "DELETE FROM quiz_questions WHERE event_id = $currentEventId");
+                if (isset($_POST['quiz_questions']) && is_array($_POST['quiz_questions'])) {
+                    foreach ($_POST['quiz_questions'] as $index => $question) {
+                        if (!empty($question['question']) && !empty($question['image_url']) && !empty($question['correct_answer'])) {
+                            $qQuestion = mysqli_real_escape_string($conn, $question['question']);
+                            $qImageUrl = mysqli_real_escape_string($conn, $question['image_url']);
+                            $qOption1 = mysqli_real_escape_string($conn, $question['option_1'] ?? '');
+                            $qOption2 = mysqli_real_escape_string($conn, $question['option_2'] ?? '');
+                            $qOption3 = mysqli_real_escape_string($conn, $question['option_3'] ?? '');
+                            $qOption4 = mysqli_real_escape_string($conn, $question['option_4'] ?? '');
+                            $qDifficulty = mysqli_real_escape_string($conn, $question['difficulty'] ?? 'medium');
+                            
+                            // Determine correct answer based on selection
+                            $correctAnswerIndex = intval($question['correct_answer']);
+                            $correctAnswerText = '';
+                            switch ($correctAnswerIndex) {
+                                case 1: $correctAnswerText = $qOption1; break;
+                                case 2: $correctAnswerText = $qOption2; break;
+                                case 3: $correctAnswerText = $qOption3; break;
+                                case 4: $correctAnswerText = $qOption4; break;
+                            }
+                            
+                            if (!empty($correctAnswerText)) {
+                                mysqli_query($conn, "INSERT INTO quiz_questions (event_id, question, image_url, correct_answer, option_1, option_2, option_3, option_4, difficulty) 
+                                    VALUES ($currentEventId, '$qQuestion', '$qImageUrl', '$correctAnswerText', '$qOption1', '$qOption2', '$qOption3', " . ($qOption4 ? "'$qOption4'" : "NULL") . ", '$qDifficulty')");
+                            }
+                        }
+                    }
+                }
+            }
+
             // Handle media uploads
             if (isset($_FILES['new_media']) && is_array($_FILES['new_media']['name'])) {
                 $mediaDir = __DIR__ . '/uploads/event_media/';
@@ -645,6 +678,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             display: block;
         }
 
+        .quiz-questions {
+            display: none;
+            margin-top: 16px;
+        }
+
+        .quiz-questions.show {
+            display: block;
+        }
+
+        .quiz-item {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #3b82f6;
+        }
+
         .current-image {
             display: flex;
             align-items: center;
@@ -878,16 +927,96 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div id="puzzle-upload" class="puzzle-upload <?= $gameType === 'puzzle' ? 'show' : '' ?>">
                     <label>Upload puzzel afbeelding</label>
                     <input type="file" name="puzzle_image" accept="image/*" style="margin-top:8px;">
-
+                    
                     <?php if (!empty($event['puzzle_image_url'])): ?>
-                        <div class="current-image">
-                            <img src="uploads/<?= htmlspecialchars($event['puzzle_image_url']) ?>" alt="">
-                            <div>
-                                <strong>Huidige afbeelding</strong><br>
-                                <small><?= htmlspecialchars($event['puzzle_image_url']) ?></small>
-                            </div>
+                    <div class="current-image">
+                        <img src="uploads/<?= htmlspecialchars($event['puzzle_image_url']) ?>" alt="">
+                        <div>
+                            <strong>Huidige afbeelding</strong><br>
+                            <small><?= htmlspecialchars($event['puzzle_image_url']) ?></small>
                         </div>
+                    </div>
                     <?php endif; ?>
+                </div>
+
+                <div id="quiz-questions" class="quiz-questions <?= $gameType === 'quiz' ? 'show' : '' ?>">
+                    <div id="quiz-container">
+                        <?php
+                        // Fetch existing quiz questions for this event
+                        $quizQuestions = [];
+                        if ($isEdit) {
+                            $quizQuery = mysqli_query($conn, "SELECT * FROM quiz_questions WHERE event_id = $eventId ORDER BY id ASC");
+                            while ($row = mysqli_fetch_assoc($quizQuery)) {
+                                $quizQuestions[] = $row;
+                            }
+                        }
+                        
+                        if (empty($quizQuestions)) {
+                            $quizQuestions = [['id' => '', 'question' => '', 'image_url' => '', 'correct_answer' => '', 'option_1' => '', 'option_2' => '', 'option_3' => '', 'option_4' => '', 'difficulty' => 'medium']];
+                        }
+                        
+                        foreach ($quizQuestions as $idx => $question):
+                        ?>
+                            <div class="repeater-item quiz-item">
+                                <button type="button" class="remove-btn" onclick="this.parentElement.remove()">Verwijderen</button>
+                                <input type="hidden" name="quiz_questions[<?= $idx ?>][id]" value="<?= htmlspecialchars($question['id']) ?>">
+                                
+                                <div class="form-group">
+                                    <label>Vraag</label>
+                                    <input type="text" name="quiz_questions[<?= $idx ?>][question]" value="<?= htmlspecialchars($question['question']) ?>" placeholder="Waarvoor werd dit werktuig gebruikt?">
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Afbeelding URL</label>
+                                    <input type="text" name="quiz_questions[<?= $idx ?>][image_url]" value="<?= htmlspecialchars($question['image_url']) ?>" placeholder="https://...">
+                                    <small style="color:#64748b;display:block;margin-top:4px;">Direct link naar afbeelding of upload via media library</small>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group" style="flex:1;">
+                                        <label>Antwoord 1</label>
+                                        <input type="text" name="quiz_questions[<?= $idx ?>][option_1]" value="<?= htmlspecialchars($question['option_1']) ?>" placeholder="Eerste optie">
+                                    </div>
+                                    <div class="form-group" style="flex:1;">
+                                        <label>Antwoord 2</label>
+                                        <input type="text" name="quiz_questions[<?= $idx ?>][option_2]" value="<?= htmlspecialchars($question['option_2']) ?>" placeholder="Tweede optie">
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group" style="flex:1;">
+                                        <label>Antwoord 3</label>
+                                        <input type="text" name="quiz_questions[<?= $idx ?>][option_3]" value="<?= htmlspecialchars($question['option_3']) ?>" placeholder="Derde optie">
+                                    </div>
+                                    <div class="form-group" style="flex:1;">
+                                        <label>Antwoord 4 (optioneel)</label>
+                                        <input type="text" name="quiz_questions[<?= $idx ?>][option_4]" value="<?= htmlspecialchars($question['option_4']) ?>" placeholder="Vierde optie (optioneel)">
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Juiste antwoord</label>
+                                    <select name="quiz_questions[<?= $idx ?>][correct_answer]" required>
+                                        <option value="">Kies het juiste antwoord</option>
+                                        <option value="1" <?= $question['correct_answer'] === $question['option_1'] ? 'selected' : '' ?>>Antwoord 1</option>
+                                        <option value="2" <?= $question['correct_answer'] === $question['option_2'] ? 'selected' : '' ?>>Antwoord 2</option>
+                                        <option value="3" <?= $question['correct_answer'] === $question['option_3'] ? 'selected' : '' ?>>Antwoord 3</option>
+                                        <option value="4" <?= !empty($question['option_4']) && $question['correct_answer'] === $question['option_4'] ? 'selected' : '' ?>>Antwoord 4</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Moeilijkheid</label>
+                                    <select name="quiz_questions[<?= $idx ?>][difficulty]">
+                                        <option value="easy" <?= $question['difficulty'] === 'easy' ? 'selected' : '' ?>>Makkelijk</option>
+                                        <option value="medium" <?= $question['difficulty'] === 'medium' ? 'selected' : '' ?>>Normaal</option>
+                                        <option value="hard" <?= $question['difficulty'] === 'hard' ? 'selected' : '' ?>>Moeilijk</option>
+                                    </select>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <button type="button" class="add-btn" onclick="addQuizQuestion()">+ Vraag toevoegen</button>
                 </div>
             </div>
         </div>
@@ -955,8 +1084,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         function updateGameType() {
             const puzzleUpload = document.getElementById('puzzle-upload');
+            const quizQuestions = document.getElementById('quiz-questions');
             const selectedType = document.querySelector('input[name="game_type"]:checked').value;
             puzzleUpload.classList.toggle('show', selectedType === 'puzzle');
+            quizQuestions.classList.toggle('show', selectedType === 'quiz');
+        }
+
+        function addQuizQuestion() {
+            const container = document.getElementById('quiz-container');
+            const index = container.children.length;
+            const html = `
+                <div class="repeater-item quiz-item">
+                    <button type="button" class="remove-btn" onclick="this.parentElement.remove()">Verwijderen</button>
+                    <input type="hidden" name="quiz_questions[${index}][id]" value="">
+                    
+                    <div class="form-group">
+                        <label>Vraag</label>
+                        <input type="text" name="quiz_questions[${index}][question]" placeholder="Waarvoor werd dit werktuig gebruikt?">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Afbeelding URL</label>
+                        <input type="text" name="quiz_questions[${index}][image_url]" placeholder="https://...">
+                        <small style="color:#64748b;display:block;margin-top:4px;">Direct link naar afbeelding of upload via media library</small>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group" style="flex:1;">
+                            <label>Antwoord 1</label>
+                            <input type="text" name="quiz_questions[${index}][option_1]" placeholder="Eerste optie">
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <label>Antwoord 2</label>
+                            <input type="text" name="quiz_questions[${index}][option_2]" placeholder="Tweede optie">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group" style="flex:1;">
+                            <label>Antwoord 3</label>
+                            <input type="text" name="quiz_questions[${index}][option_3]" placeholder="Derde optie">
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <label>Antwoord 4 (optioneel)</label>
+                            <input type="text" name="quiz_questions[${index}][option_4]" placeholder="Vierde optie (optioneel)">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Juiste antwoord</label>
+                        <select name="quiz_questions[${index}][correct_answer]" required>
+                            <option value="">Kies het juiste antwoord</option>
+                            <option value="1">Antwoord 1</option>
+                            <option value="2">Antwoord 2</option>
+                            <option value="3">Antwoord 3</option>
+                            <option value="4">Antwoord 4</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Moeilijkheid</label>
+                        <select name="quiz_questions[${index}][difficulty]">
+                            <option value="easy">Makkelijk</option>
+                            <option value="medium" selected>Normaal</option>
+                            <option value="hard">Moeilijk</option>
+                        </select>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', html);
         }
 
         function updateFileList(input) {
