@@ -169,63 +169,97 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Save quiz questions
             if ($gameType === 'quiz') {
-                // Debug logging
-                error_log("Quiz game type detected");
-                error_log("Quiz difficulty: " . print_r($_POST['quiz_difficulty'] ?? 'NOT SET', true));
-                error_log("Quiz questions: " . print_r($_POST['quiz_questions'] ?? 'NOT SET', true));
-                
-                mysqli_query($conn, "DELETE FROM quiz_questions WHERE event_id = $currentEventId");
+                $debug = [];
+                $debug[] = "Start opslaan quiz...";
+
+                // 1. DELETE OLD QUESTIONS
+                if (mysqli_query($conn, "DELETE FROM quiz_questions WHERE event_id = $currentEventId")) {
+                    $debug[] = "Oude vragen verwijderd.";
+                } else {
+                    $debug[] = "FOUT bij verwijderen oude vragen: " . mysqli_error($conn);
+                }
+
                 $quizDifficulty = mysqli_real_escape_string($conn, $_POST['quiz_difficulty'] ?? 'easy');
+                $debug[] = "Moeilijkheid: $quizDifficulty";
+
                 if (isset($_POST['quiz_questions']) && is_array($_POST['quiz_questions'])) {
+                    $debug[] = "Aantal vragen ontvangen: " . count($_POST['quiz_questions']);
+
                     foreach ($_POST['quiz_questions'] as $index => $question) {
-                        error_log("Processing question $index: " . print_r($question, true));
-                        if (!empty($question['question']) && !empty($question['image_url']) && !empty($question['correct_answer'])) {
-                            $qQuestion = mysqli_real_escape_string($conn, $question['question']);
-                            $qImageUrl = mysqli_real_escape_string($conn, $question['image_url']);
-                            $qOption1 = mysqli_real_escape_string($conn, $question['option_1'] ?? '');
-                            $qOption2 = mysqli_real_escape_string($conn, $question['option_2'] ?? '');
-                            $qOption3 = mysqli_real_escape_string($conn, $question['option_3'] ?? '');
-                            $qOption4 = mysqli_real_escape_string($conn, $question['option_4'] ?? '');
+                        // Debug raw data
+                        $debug[] = "Vraag $index data: " . print_r($question, true);
 
-                            // Determine correct answer based on selection
-                            $correctAnswerIndex = intval($question['correct_answer']);
-                            $correctAnswerText = '';
-                            switch ($correctAnswerIndex) {
-                                case 1:
-                                    $correctAnswerText = $qOption1;
-                                    break;
-                                case 2:
-                                    $correctAnswerText = $qOption2;
-                                    break;
-                                case 3:
-                                    $correctAnswerText = $qOption3;
-                                    break;
-                                case 4:
-                                    $correctAnswerText = $qOption4;
-                                    break;
-                            }
+                        if (empty($question['question']) || empty($question['image_url']) || empty($question['correct_answer'])) {
+                            $missing = [];
+                            if(empty($question['question'])) $missing[] = 'question';
+                            if(empty($question['image_url'])) $missing[] = 'image_url';
+                            if(empty($question['correct_answer'])) $missing[] = 'correct_answer';
+                            $debug[] = "Vraag $index OVERSLAGEN: mist gegevens (" . implode(', ', $missing) . ")";
+                            continue;
+                        }
 
-                            if (!empty($correctAnswerText)) {
-                                $insertQuery = "INSERT INTO quiz_questions (event_id, question, image_url, correct_answer, option_1, option_2, option_3, option_4, difficulty) 
-                                    VALUES ($currentEventId, '$qQuestion', '$qImageUrl', '$correctAnswerText', '$qOption1', '$qOption2', '$qOption3', " . ($qOption4 ? "'$qOption4'" : "NULL") . ", '$quizDifficulty')";
-                                error_log("Executing insert: " . $insertQuery);
-                                $result = mysqli_query($conn, $insertQuery);
-                                if (!$result) {
-                                    error_log("MySQL Error: " . mysqli_error($conn));
-                                } else {
-                                    error_log("Question saved successfully!");
-                                }
-                            } else {
-                                error_log("Skipped question - empty correct answer");
-                            }
+                        $qQuestion = mysqli_real_escape_string($conn, $question['question']);
+                        $qImageUrl = mysqli_real_escape_string($conn, $question['image_url']);
+                        $qOption1 = mysqli_real_escape_string($conn, $question['option_1'] ?? '');
+                        $qOption2 = mysqli_real_escape_string($conn, $question['option_2'] ?? '');
+                        $qOption3 = mysqli_real_escape_string($conn, $question['option_3'] ?? '');
+                        $qOption4 = mysqli_real_escape_string($conn, $question['option_4'] ?? '');
+
+                        // Determine correct answer based on selection (USE RAW VALUES from POST)
+                        $rawOption1 = $question['option_1'] ?? '';
+                        $rawOption2 = $question['option_2'] ?? '';
+                        $rawOption3 = $question['option_3'] ?? '';
+                        $rawOption4 = $question['option_4'] ?? '';
+
+                        $correctAnswerIndex = intval($question['correct_answer']);
+                        $correctAnswerText = '';
+                        switch ($correctAnswerIndex) {
+                            case 1:
+                                $correctAnswerText = $rawOption1;
+                                break;
+                            case 2:
+                                $correctAnswerText = $rawOption2;
+                                break;
+                            case 3:
+                                $correctAnswerText = $rawOption3;
+                                break;
+                            case 4:
+                                $correctAnswerText = $rawOption4;
+                                break;
+                        }
+
+                        if (empty($correctAnswerText)) {
+                            $debug[] = "Vraag $index OVERSLAGEN: Juiste antwoord tekst is leeg (Index: $correctAnswerIndex)";
+                            continue;
+                        }
+
+                        $correctAnswerEscaped = mysqli_real_escape_string($conn, $correctAnswerText);
+
+                        $insertQuery = "INSERT INTO quiz_questions (event_id, question, image_url, correct_answer, option_1, option_2, option_3, option_4, difficulty) 
+                            VALUES ($currentEventId, '$qQuestion', '$qImageUrl', '$correctAnswerEscaped', '$qOption1', '$qOption2', '$qOption3', " . ($qOption4 ? "'$qOption4'" : "NULL") . ", '$quizDifficulty')";
+
+                        if (mysqli_query($conn, $insertQuery)) {
+                            $debug[] = "Vraag $index opgeslagen! (ID: " . mysqli_insert_id($conn) . ")";
+                        } else {
+                            $debug[] = "SQL FOUT vraag $index: " . mysqli_error($conn);
                         }
                     }
                 } else {
-                    error_log("No quiz_questions array found in POST");
+                    $debug[] = "Geen vragen gevonden in POST data.";
                 }
-            }
 
-            // Handle media uploads
+                // STOP EVERYTHING AND SHOW DEBUG INFO
+                echo "<div style='background:#f8f9fa;padding:20px;font-family:monospace;border:2px solid #333;margin:20px;'>";
+                echo "<h3>DEBUG LOG - QUIZ OPSLAAN</h3>";
+                echo "<ul>";
+                foreach ($debug as $line) {
+                    echo "<li>" . htmlspecialchars($line) . "</li>";
+                }
+                echo "</ul>";
+                echo "<a href='index.php' style='display:inline-block;padding:10px 20px;background:blue;color:white;text-decoration:none;'>Terug naar overzicht</a>";
+                echo "</div>";
+                exit; // Stop execution to see debug
+            }
             if (isset($_FILES['new_media']) && is_array($_FILES['new_media']['name'])) {
                 $mediaDir = __DIR__ . '/uploads/event_media/';
                 if (!file_exists($mediaDir)) mkdir($mediaDir, 0755, true);
@@ -970,12 +1004,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             }
                         }
                     }
-                    
+
                     if (empty($quizQuestions)) {
                         $quizQuestions = [['id' => '', 'question' => '', 'image_url' => '', 'correct_answer' => '', 'option_1' => '', 'option_2' => '', 'option_3' => '', 'option_4' => '', 'difficulty' => '']];
                     }
                     ?>
-                    
+
                     <!-- Debug info -->
                     <div style="background:#fff3cd;padding:12px;border-radius:8px;margin-bottom:16px;border:1px solid #ffc107;">
                         <strong>Debug Info:</strong><br>
@@ -984,7 +1018,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         - Game type: <?= $gameType ?><br>
                         - Event ID: <?= $eventId ?? 'nieuw' ?>
                     </div>
-                    
+
                     <div class="form-group">
                         <label>Selecteer niveau</label>
                         <div class="radio-group-horizontal" style="display:flex;gap:16px;margin-top:8px;">
