@@ -189,17 +189,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         // Debug raw data
                         $debug[] = "Vraag $index data: " . print_r($question, true);
 
-                        if (empty($question['question']) || empty($question['image_url']) || empty($question['correct_answer'])) {
+                        if (empty($question['question']) || empty($question['correct_answer'])) {
                             $missing = [];
-                            if(empty($question['question'])) $missing[] = 'question';
-                            if(empty($question['image_url'])) $missing[] = 'image_url';
-                            if(empty($question['correct_answer'])) $missing[] = 'correct_answer';
+                            if (empty($question['question'])) $missing[] = 'question';
+                            // if (empty($question['image_url'])) $missing[] = 'image_url';
+                            if (empty($question['correct_answer'])) $missing[] = 'correct_answer';
                             $debug[] = "Vraag $index OVERSLAGEN: mist gegevens (" . implode(', ', $missing) . ")";
                             continue;
                         }
 
                         $qQuestion = mysqli_real_escape_string($conn, $question['question']);
-                        $qImageUrl = mysqli_real_escape_string($conn, $question['image_url']);
+                        $qImageUrl = !empty($question['image_url']) ? mysqli_real_escape_string($conn, $question['image_url']) : '';
                         $qOption1 = mysqli_real_escape_string($conn, $question['option_1'] ?? '');
                         $qOption2 = mysqli_real_escape_string($conn, $question['option_2'] ?? '');
                         $qOption3 = mysqli_real_escape_string($conn, $question['option_3'] ?? '');

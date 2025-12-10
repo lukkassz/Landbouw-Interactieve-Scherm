@@ -24,7 +24,8 @@ import {
 // import backgroundTimelineVideo from "../../assets/video/5197931-uhd_3840_2160_30fps.mp4"
 
 // Farm Background (Neutral)
-const BACKGROUND_IMAGE_URL = "https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=2832&auto=format&fit=crop"
+const BACKGROUND_IMAGE_URL =
+  "https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=2832&auto=format&fit=crop"
 
 // Helper function to get border color based on category
 const getCategoryBorderColor = category => {
@@ -1027,7 +1028,8 @@ const Timeline = () => {
                                                   className={`${
                                                     period.gameType === "puzzle"
                                                       ? "bg-[#c9a300]"
-                                                      : period.gameType === "quiz"
+                                                      : period.gameType ===
+                                                        "quiz"
                                                       ? "bg-[#3b82f6]"
                                                       : "bg-[#22c55e]"
                                                   } text-white px-4 py-2 rounded-bl-2xl shadow-md flex items-center gap-2 transform transition-transform group-hover:scale-105`}

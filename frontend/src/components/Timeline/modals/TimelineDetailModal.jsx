@@ -30,7 +30,7 @@ import landbouwIcon from "../../../assets/icons/landbouw-model.png"
 
 const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
   const playSound = useSound()
-  
+
   // Debug: Log eventData to see what we receive
   useEffect(() => {
     if (eventData) {
@@ -39,11 +39,11 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
         gameType: eventData.gameType,
         game_type: eventData.game_type,
         has_puzzle: eventData.has_puzzle,
-        fullData: eventData
+        fullData: eventData,
       })
     }
   }, [eventData])
-  
+
   const [activeMedia, setActiveMedia] = useState("image")
   const [selectedGalleryImage, setSelectedGalleryImage] = useState(null)
   const [isImagePuzzleModalOpen, setIsImagePuzzleModalOpen] = useState(false)
@@ -1238,9 +1238,10 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
                     {/* Game Button */}
                     <div className="mt-8 pt-4">
                       {/* Debug: Show game type */}
-                      {process.env.NODE_ENV === 'development' && (
+                      {process.env.NODE_ENV === "development" && (
                         <div className="text-xs text-gray-400 mb-2">
-                          Debug: gameType={eventData?.gameType}, game_type={eventData?.game_type}
+                          Debug: gameType={eventData?.gameType}, game_type=
+                          {eventData?.game_type}
                         </div>
                       )}
                       {(eventData?.gameType === "puzzle" ||
