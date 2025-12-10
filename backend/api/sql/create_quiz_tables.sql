@@ -28,16 +28,3 @@ CREATE TABLE IF NOT EXISTS quiz_scores (
     INDEX idx_score (score DESC, played_at DESC)
 );
 
--- Enkele voorbeeldvragen toevoegen
-INSERT INTO quiz_questions (question, image_url, correct_answer, option_1, option_2, option_3, option_4, category, difficulty) VALUES
-('Waarvoor werd dit werktuig gebruikt?', 'https://via.placeholder.com/600x400?text=Sikkel', 'Voor het oogsten van graan', 'Voor het ploegen', 'Voor het oogsten van graan', 'Voor het melken van koeien', NULL, 'gereedschap', 'easy'),
-('Waarvoor werd dit werktuig gebruikt?', 'https://via.placeholder.com/600x400?text=Ploeg', 'Voor het ploegen van de grond', 'Voor het ploegen van de grond', 'Voor het zaaien', 'Voor het dorsen', NULL, 'gereedschap', 'easy'),
-('Waarvoor werd dit werktuig gebruikt?', 'https://via.placeholder.com/600x400?text=Wan', 'Voor het wannen van graan', 'Voor het wannen van graan', 'Voor het maaien van gras', 'Voor het maken van boter', NULL, 'gereedschap', 'medium'),
-('Waarvoor werd dit werktuig gebruikt?', 'https://via.placeholder.com/600x400?text=Dorsvlegel', 'Voor het dorsen van graan', 'Voor het graven', 'Voor het dorsen van graan', 'Voor het kammen van wol', NULL, 'gereedschap', 'medium'),
-('Waarvoor werd dit werktuig gebruikt?', 'https://via.placeholder.com/600x400?text=Hekel', 'Voor het hekelen van vlas', 'Voor het scheren van schapen', 'Voor het hekelen van vlas', 'Voor het strijken', NULL, 'gereedschap', 'hard'),
-('Waarvoor werd dit werktuig gebruikt?', 'https://via.placeholder.com/600x400?text=Spinnewiel', 'Voor het spinnen van wol', 'Voor het dorsen', 'Voor het spinnen van wol', 'Voor het weven', NULL, 'gereedschap', 'medium'),
-('Waarvoor werd dit werktuig gebruikt?', 'https://via.placeholder.com/600x400?text=Botervat', 'Voor het maken van boter', 'Voor het maken van boter', 'Voor het melken', 'Voor het wassen', NULL, 'gereedschap', 'easy'),
-('Waarvoor werd dit werktuig gebruikt?', 'https://via.placeholder.com/600x400?text=Zeis', 'Voor het maaien van gras en graan', 'Voor het ploegen', 'Voor het planten', 'Voor het maaien van gras en graan', NULL, 'gereedschap', 'easy'),
-('Waarvoor werd dit werktuig gebruikt?', 'https://via.placeholder.com/600x400?text=Hark', 'Voor het harken van hooi', 'Voor het graven', 'Voor het harken van hooi', 'Voor het planten', NULL, 'gereedschap', 'easy'),
-('Waarvoor werd dit werktuig gebruikt?', 'https://via.placeholder.com/600x400?text=Hooivork', 'Voor het verplaatsen van hooi', 'Voor het verplaatsen van hooi', 'Voor het ploegen', 'Voor het graven', NULL, 'gereedschap', 'easy');
-
