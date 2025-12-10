@@ -198,11 +198,11 @@ const HarvestGame = ({ isOpen, onClose, variant = "museum" }) => {
       if (!isRunning) return
       
       const deltaTime = currentTime - lastTime
-      lastTime = currentTime
       
       // Update game at ~60fps (every ~16ms)
       if (deltaTime >= 16) {
         updateGame()
+        lastTime = currentTime
       }
       
       animationFrameRef.current = requestAnimationFrame(gameLoop)
@@ -584,20 +584,18 @@ const HarvestGame = ({ isOpen, onClose, variant = "museum" }) => {
                   >
                     {/* Falling Items */}
                     {fallingItems.map(item => (
-                      <motion.div
+                      <div
                         key={item.id}
                         className="absolute text-5xl select-none pointer-events-none z-10"
                         style={{
                           left: `${item.x}%`,
                           top: `${item.y}%`,
                           transform: "translate(-50%, -50%)",
+                          transition: "none" // Ensure no CSS transitions interfere
                         }}
-                        initial={{ opacity: 0, scale: 0.5 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.5 }}
                       >
                         {item.emoji}
-                      </motion.div>
+                      </div>
                     ))}
 
                     {/* Basket */}
