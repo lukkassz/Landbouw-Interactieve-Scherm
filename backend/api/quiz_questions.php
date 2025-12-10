@@ -33,6 +33,18 @@ if (!$db) {
 // GET Request - Fetch questions
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     try {
+        // Check if table exists
+        $checkTable = $db->query("SHOW TABLES LIKE 'quiz_questions'");
+        if ($checkTable->rowCount() === 0) {
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Table quiz_questions does not exist. Please run create_quiz_tables.sql',
+                'questions' => []
+            ]);
+            exit();
+        }
+        
         $event_id = isset($_GET['event_id']) ? intval($_GET['event_id']) : null;
         
         // Build query
@@ -87,7 +99,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         http_response_code(500);
         echo json_encode([
             'success' => false,
-            'message' => 'Database error: ' . $e->getMessage()
+            'message' => 'Database error: ' . $e->getMessage(),
+            'error_code' => $e->getCode(),
+            'sql_state' => $e->errorInfo[0] ?? null
+        ]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Error: ' . $e->getMessage()
         ]);
     }
 } else {

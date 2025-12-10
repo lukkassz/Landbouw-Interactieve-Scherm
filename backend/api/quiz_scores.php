@@ -34,6 +34,18 @@ if (!$db) {
 // GET Request - Fetch Leaderboard
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     try {
+        // Check if table exists
+        $checkTable = $db->query("SHOW TABLES LIKE 'quiz_scores'");
+        if ($checkTable->rowCount() === 0) {
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Table quiz_scores does not exist. Please run create_quiz_tables.sql',
+                'scores' => []
+            ]);
+            exit();
+        }
+        
         $limit = isset($_GET['limit']) ? intval($_GET['limit']) : 50;
         
         $query = "SELECT player_name, score, total_questions, percentage, played_at 
