@@ -1027,8 +1027,6 @@ const Timeline = () => {
                                                   className={`${
                                                     period.gameType === "puzzle"
                                                       ? "bg-[#c9a300]"
-                                                      : period.gameType === "harvest"
-                                                      ? "bg-[#22c55e]"
                                                       : period.gameType === "quiz"
                                                       ? "bg-[#3b82f6]"
                                                       : "bg-[#22c55e]"
@@ -1042,9 +1040,6 @@ const Timeline = () => {
                                                     {period.gameType ===
                                                     "puzzle"
                                                       ? "Puzzle"
-                                                      : period.gameType ===
-                                                        "harvest"
-                                                      ? "Oogst"
                                                       : period.gameType ===
                                                         "quiz"
                                                       ? "Quiz"

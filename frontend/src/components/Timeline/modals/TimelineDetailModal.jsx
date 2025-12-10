@@ -18,7 +18,6 @@ import { useNavigate } from "react-router-dom"
 import { getGalleryData } from "../../../config/timelineGalleries"
 import ImagePuzzleModal from "../../PuzzleGame/ImagePuzzleModal"
 import MemoryGame from "../../PuzzleGame/MemoryGame"
-import HarvestGame from "../../PuzzleGame/HarvestGame"
 import ToolQuizGame from "../../PuzzleGame/ToolQuizGame"
 import LeeuwardenMap from "../content/LeeuwardenMap"
 import MiniTimeline from "../ui/MiniTimeline"
@@ -49,7 +48,6 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
   const [selectedGalleryImage, setSelectedGalleryImage] = useState(null)
   const [isImagePuzzleModalOpen, setIsImagePuzzleModalOpen] = useState(false)
   const [isMemoryGameModalOpen, setIsMemoryGameModalOpen] = useState(false)
-  const [isHarvestGameModalOpen, setIsHarvestGameModalOpen] = useState(false)
   const [isToolQuizGameModalOpen, setIsToolQuizGameModalOpen] = useState(false)
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0)
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0)
@@ -489,10 +487,6 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
     playSound()
     setIsMemoryGameModalOpen(true)
   }
-  const handleHarvestGame = () => {
-    playSound()
-    setIsHarvestGameModalOpen(true)
-  }
   const handleToolQuizGame = () => {
     playSound()
     setIsToolQuizGameModalOpen(true)
@@ -503,10 +497,6 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
   )
   const handleCloseMemoryGameModal = React.useCallback(
     () => setIsMemoryGameModalOpen(false),
-    []
-  )
-  const handleCloseHarvestGameModal = React.useCallback(
-    () => setIsHarvestGameModalOpen(false),
     []
   )
   const handleCloseToolQuizGameModal = React.useCallback(
@@ -1276,17 +1266,6 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
                           <Brain size={24} /> Speel Memory
                         </motion.button>
                       )}
-                      {(eventData?.gameType === "harvest" ||
-                        eventData?.game_type === "harvest") && (
-                        <motion.button
-                          className={`w-full py-4 rounded-xl font-bold font-bold font-heading flex items-center justify-center gap-3 shadow-lg ${theme.buttonPrimary}`}
-                          onClick={handleHarvestGame}
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          🧺 Speel Oogst Tijd
-                        </motion.button>
-                      )}
                       {(eventData?.gameType === "quiz" ||
                         eventData?.game_type === "quiz") && (
                         <motion.button
@@ -1332,13 +1311,6 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
         eventCategory={eventData?.category || null}
         eventIcon={eventData?.icon || null}
         eventYear={eventData?.year || null}
-      />
-      <HarvestGame
-        isOpen={isHarvestGameModalOpen}
-        onClose={handleCloseHarvestGameModal}
-        variant={
-          isLandbouw ? "landbouw" : isMaatschappelijk ? "newspaper" : "museum"
-        }
       />
       <ToolQuizGame
         isOpen={isToolQuizGameModalOpen}

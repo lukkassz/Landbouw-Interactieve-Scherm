@@ -170,6 +170,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Save quiz questions
             if ($gameType === 'quiz') {
                 mysqli_query($conn, "DELETE FROM quiz_questions WHERE event_id = $currentEventId");
+                $quizDifficulty = mysqli_real_escape_string($conn, $_POST['quiz_difficulty'] ?? 'easy');
                 if (isset($_POST['quiz_questions']) && is_array($_POST['quiz_questions'])) {
                     foreach ($_POST['quiz_questions'] as $index => $question) {
                         if (!empty($question['question']) && !empty($question['image_url']) && !empty($question['correct_answer'])) {
@@ -179,21 +180,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $qOption2 = mysqli_real_escape_string($conn, $question['option_2'] ?? '');
                             $qOption3 = mysqli_real_escape_string($conn, $question['option_3'] ?? '');
                             $qOption4 = mysqli_real_escape_string($conn, $question['option_4'] ?? '');
-                            $qDifficulty = mysqli_real_escape_string($conn, $question['difficulty'] ?? 'medium');
-                            
+
                             // Determine correct answer based on selection
                             $correctAnswerIndex = intval($question['correct_answer']);
                             $correctAnswerText = '';
                             switch ($correctAnswerIndex) {
-                                case 1: $correctAnswerText = $qOption1; break;
-                                case 2: $correctAnswerText = $qOption2; break;
-                                case 3: $correctAnswerText = $qOption3; break;
-                                case 4: $correctAnswerText = $qOption4; break;
+                                case 1:
+                                    $correctAnswerText = $qOption1;
+                                    break;
+                                case 2:
+                                    $correctAnswerText = $qOption2;
+                                    break;
+                                case 3:
+                                    $correctAnswerText = $qOption3;
+                                    break;
+                                case 4:
+                                    $correctAnswerText = $qOption4;
+                                    break;
                             }
-                            
+
                             if (!empty($correctAnswerText)) {
                                 mysqli_query($conn, "INSERT INTO quiz_questions (event_id, question, image_url, correct_answer, option_1, option_2, option_3, option_4, difficulty) 
-                                    VALUES ($currentEventId, '$qQuestion', '$qImageUrl', '$correctAnswerText', '$qOption1', '$qOption2', '$qOption3', " . ($qOption4 ? "'$qOption4'" : "NULL") . ", '$qDifficulty')");
+                                    VALUES ($currentEventId, '$qQuestion', '$qImageUrl', '$correctAnswerText', '$qOption1', '$qOption2', '$qOption3', " . ($qOption4 ? "'$qOption4'" : "NULL") . ", '$quizDifficulty')");
                             }
                         }
                     }
@@ -907,14 +915,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                     </label>
                     <label class="radio-card">
-                        <input type="radio" name="game_type" value="harvest" <?= $gameType === 'harvest' ? 'checked' : '' ?> onchange="updateGameType()">
-                        <div class="radio-card-content">
-                            <div class="icon">🧺</div>
-                            <div class="title">Oogst Tijd</div>
-                            <div class="desc">Vang de items</div>
-                        </div>
-                    </label>
-                    <label class="radio-card">
                         <input type="radio" name="game_type" value="quiz" <?= $gameType === 'quiz' ? 'checked' : '' ?> onchange="updateGameType()">
                         <div class="radio-card-content">
                             <div class="icon">❓</div>
@@ -927,20 +927,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div id="puzzle-upload" class="puzzle-upload <?= $gameType === 'puzzle' ? 'show' : '' ?>">
                     <label>Upload puzzel afbeelding</label>
                     <input type="file" name="puzzle_image" accept="image/*" style="margin-top:8px;">
-                    
+
                     <?php if (!empty($event['puzzle_image_url'])): ?>
-                    <div class="current-image">
-                        <img src="uploads/<?= htmlspecialchars($event['puzzle_image_url']) ?>" alt="">
-                        <div>
-                            <strong>Huidige afbeelding</strong><br>
-                            <small><?= htmlspecialchars($event['puzzle_image_url']) ?></small>
+                        <div class="current-image">
+                            <img src="uploads/<?= htmlspecialchars($event['puzzle_image_url']) ?>" alt="">
+                            <div>
+                                <strong>Huidige afbeelding</strong><br>
+                                <small><?= htmlspecialchars($event['puzzle_image_url']) ?></small>
+                            </div>
                         </div>
-                    </div>
                     <?php endif; ?>
                 </div>
 
                 <div id="quiz-questions" class="quiz-questions <?= $gameType === 'quiz' ? 'show' : '' ?>">
-                    <div id="quiz-container">
+                    <div class="form-group">
+                        <label>Selecteer niveau</label>
+                        <div class="radio-group-horizontal" style="display:flex;gap:16px;margin-top:8px;">
+                            <label class="radio-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                <input type="radio" name="quiz_difficulty" value="easy" <?= isset($event['quiz_difficulty']) && $event['quiz_difficulty'] === 'easy' ? 'checked' : '' ?> onchange="toggleQuizForm()">
+                                <span>Makkelijk</span>
+                            </label>
+                            <label class="radio-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                <input type="radio" name="quiz_difficulty" value="hard" <?= isset($event['quiz_difficulty']) && $event['quiz_difficulty'] === 'hard' ? 'checked' : '' ?> onchange="toggleQuizForm()">
+                                <span>Moeilijk</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="quiz-form" style="display:none;margin-top:24px;">
+                        <div id="quiz-container">
                         <?php
                         // Fetch existing quiz questions for this event
                         $quizQuestions = [];
@@ -950,17 +965,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $quizQuestions[] = $row;
                             }
                         }
-                        
+
                         if (empty($quizQuestions)) {
                             $quizQuestions = [['id' => '', 'question' => '', 'image_url' => '', 'correct_answer' => '', 'option_1' => '', 'option_2' => '', 'option_3' => '', 'option_4' => '', 'difficulty' => 'medium']];
                         }
-                        
+
                         foreach ($quizQuestions as $idx => $question):
                         ?>
                             <div class="repeater-item quiz-item">
                                 <button type="button" class="remove-btn" onclick="this.parentElement.remove()">Verwijderen</button>
                                 <input type="hidden" name="quiz_questions[<?= $idx ?>][id]" value="<?= htmlspecialchars($question['id']) ?>">
-                                
+
                                 <div class="form-group">
                                     <label>Vraag</label>
                                     <input type="text" name="quiz_questions[<?= $idx ?>][question]" value="<?= htmlspecialchars($question['question']) ?>" placeholder="Waarvoor werd dit werktuig gebruikt?">
@@ -1004,19 +1019,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <option value="4" <?= !empty($question['option_4']) && $question['correct_answer'] === $question['option_4'] ? 'selected' : '' ?>>Antwoord 4</option>
                                     </select>
                                 </div>
-
-                                <div class="form-group">
-                                    <label>Moeilijkheid</label>
-                                    <select name="quiz_questions[<?= $idx ?>][difficulty]">
-                                        <option value="easy" <?= $question['difficulty'] === 'easy' ? 'selected' : '' ?>>Makkelijk</option>
-                                        <option value="medium" <?= $question['difficulty'] === 'medium' ? 'selected' : '' ?>>Normaal</option>
-                                        <option value="hard" <?= $question['difficulty'] === 'hard' ? 'selected' : '' ?>>Moeilijk</option>
-                                    </select>
-                                </div>
                             </div>
                         <?php endforeach; ?>
                     </div>
                     <button type="button" class="add-btn" onclick="addQuizQuestion()">+ Vraag toevoegen</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1088,6 +1095,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             const selectedType = document.querySelector('input[name="game_type"]:checked').value;
             puzzleUpload.classList.toggle('show', selectedType === 'puzzle');
             quizQuestions.classList.toggle('show', selectedType === 'quiz');
+            
+            // Reset quiz form when switching game type
+            if (selectedType !== 'quiz') {
+                document.getElementById('quiz-form').style.display = 'none';
+            } else {
+                toggleQuizForm();
+            }
+        }
+
+        function toggleQuizForm() {
+            const quizForm = document.getElementById('quiz-form');
+            const selectedDifficulty = document.querySelector('input[name="quiz_difficulty"]:checked');
+            quizForm.style.display = selectedDifficulty ? 'block' : 'none';
         }
 
         function addQuizQuestion() {
@@ -1139,15 +1159,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <option value="2">Antwoord 2</option>
                             <option value="3">Antwoord 3</option>
                             <option value="4">Antwoord 4</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Moeilijkheid</label>
-                        <select name="quiz_questions[${index}][difficulty]">
-                            <option value="easy">Makkelijk</option>
-                            <option value="medium" selected>Normaal</option>
-                            <option value="hard">Moeilijk</option>
                         </select>
                     </div>
                 </div>
