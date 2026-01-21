@@ -23,7 +23,10 @@ const IdleScreen = ({ onActivate }) => {
       })
       // Start playing when component mounts
       video.play().catch(err => {
-        console.error("Error playing video:", err)
+        // Ignore AbortError which happens when component unmounts or browser blocks autoplay
+        if (err.name !== "AbortError") {
+          console.error("Error playing video:", err)
+        }
       })
     }
   }, [])

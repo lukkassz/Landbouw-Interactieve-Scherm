@@ -477,11 +477,20 @@ $result = mysqli_query($conn, $query);
                         </td>
                         <td>
                             <?php 
+                            // Check database game_type first, then fallback to legacy logic
                             $gameType = 'Geen';
-                            if ($row['has_puzzle'] && !empty($row['puzzle_image_url'])) {
-                                $gameType = 'Puzzle';
-                            } elseif ($row['has_puzzle']) {
-                                $gameType = 'Memory';
+                            $dbGameType = $row['game_type'] ?? null;
+                            
+                            if (!empty($dbGameType) && $dbGameType !== 'none') {
+                                // Use database value (puzzle, memory, quiz, harvest, etc.)
+                                $gameType = ucfirst($dbGameType);
+                            } else {
+                                // Legacy fallback logic
+                                if ($row['has_puzzle'] && !empty($row['puzzle_image_url'])) {
+                                    $gameType = 'Puzzle';
+                                } elseif ($row['has_puzzle']) {
+                                    $gameType = 'Memory';
+                                }
                             }
                             ?>
                             <?php if ($gameType !== 'Geen'): ?>

@@ -102,6 +102,29 @@ npm run build
 
 Output staat in `frontend/dist/`
 
+### Lokale Installatie voor Museum (Kiosk)
+
+Voor lokale installatie op een museum kiosk, zie:
+- **Snel Start**: `docs/LOCAL_SETUP_QUICK_START.md`
+- **Volledige Gids**: `docs/LOCAL_DEPLOYMENT.md`
+- **Samenvatting**: `docs/LOCAL_DEPLOYMENT_SUMMARY.md`
+
+**Aanbevolen Setup:**
+- Aplicatie lokaal (XAMPP/LAMP) + Admin Panel op schoolserver
+- Kiosk werkt zonder internet
+- Beheer mogelijk vanaf elke locatie (school, thuis, kantoor)
+- Zie: `docs/SCHOOL_SERVER_SETUP.md` voor installatie op schoolserver
+
+**Build voor lokale installatie:**
+```bash
+cd frontend
+VITE_API_URL=http://localhost/timeline/backend/api npm run build
+```
+
+Of gebruik de scripts:
+- Windows: `scripts/build-local.bat`
+- Linux/Mac: `scripts/build-local.sh`
+
 ## 🎨 Thema's
 
 Het project heeft twee thema's:

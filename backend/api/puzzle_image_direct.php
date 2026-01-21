@@ -19,7 +19,7 @@ if (!$filename) {
     http_response_code(400);
     echo json_encode([
         "success" => false,
-        "message" => "Filename is required",
+        "message" => "Bestandsnaam is verplicht",
         "usage" => "Add ?filename=1763627546_xdddd.jpg to the URL"
     ]);
     exit;
@@ -33,16 +33,20 @@ $host = $_SERVER['HTTP_HOST'];
 $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
 $basePath = '';
 
-// Extract base path from script name (more reliable)
-// Script is at: /museumproject/landbouwmuseum/timeline/backend/api/puzzle_image_direct.php
-// We need: /museumproject/landbouwmuseum/timeline/adminpanel
+// Extract base path from script name (same logic as event_media_direct.php)
+// Script is at: /path/backend/api/puzzle_image_direct.php -> we need /path/adminpanel
+$requestUri = $_SERVER['REQUEST_URI'] ?? '';
 if (preg_match('#^(/.*?)/backend/api#', $scriptName, $pathMatches)) {
-    // If backend is directly in timeline, add adminpanel
     $basePath = $pathMatches[1] . '/adminpanel';
 } elseif (preg_match('#^(/.*?)/adminpanel/backend/api#', $scriptName, $pathMatches)) {
     $basePath = $pathMatches[1] . '/adminpanel';
+} elseif (preg_match('#^(/.*?)/backend/api#', $requestUri, $pathMatches)) {
+    $basePath = $pathMatches[1] . '/adminpanel';
+} elseif (preg_match('#^/backend/api#', $scriptName) || preg_match('#^/backend/api#', $requestUri)) {
+    // Project at document root: /backend/api/ and /adminpanel/ are siblings
+    $basePath = '/adminpanel';
 } else {
-    // Default fallback
+    // Fallback for production (e.g. school server)
     $basePath = '/museumproject/landbouwmuseum/timeline/adminpanel';
 }
 

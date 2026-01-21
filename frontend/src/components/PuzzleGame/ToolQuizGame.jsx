@@ -1,5 +1,5 @@
 /**
- * ToolQuizGame Component - "Wat is dit werktuig?"
+ * ToolQuizGame Component
  * 
  * Educational quiz game about agricultural tools and equipment.
  * Players guess the purpose of historical farming tools from images.
@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { X, RotateCcw, Trophy, CheckCircle2, XCircle, HelpCircle } from "lucide-react"
+import { X, Trophy, CheckCircle2, XCircle, HelpCircle, ChevronRight, ArrowLeft } from "lucide-react"
 import { getTheme } from "../../config/themes"
 import { useSound } from "../../hooks/useSound"
 import { api } from "../../services/api"
@@ -19,11 +19,13 @@ const ToolQuizGame = ({ isOpen, onClose, variant = "museum", eventId = null }) =
 
   // Game state
   const [gameState, setGameState] = useState("menu") // menu, playing, answer, gameOver
-  const [questions, setQuestions] = useState([])
+  const [allQuestions, setAllQuestions] = useState([]) // Store all fetched questions
+  const [questions, setQuestions] = useState([]) // Questions for current game
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [selectedAnswer, setSelectedAnswer] = useState(null)
   const [isCorrect, setIsCorrect] = useState(false)
   const [score, setScore] = useState(0)
+  const [difficulty, setDifficulty] = useState("easy") // easy, hard
   const [answeredQuestions, setAnsweredQuestions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -36,7 +38,10 @@ const ToolQuizGame = ({ isOpen, onClose, variant = "museum", eventId = null }) =
 
   // Theme styles
   const styles = useMemo(() => {
-    switch (variant) {
+    // Normalize variant to ensure matching works
+    const normalizedVariant = (variant || "museum").toLowerCase()
+    
+    switch (normalizedVariant) {
       case "landbouw":
         return {
           modalBg: "bg-[#f3eeda]",
@@ -44,36 +49,36 @@ const ToolQuizGame = ({ isOpen, onClose, variant = "museum", eventId = null }) =
           headerText: "text-[#f3eeda]",
           textPrimary: "text-[#3a2d20]",
           textSecondary: "text-[#6b5a45]",
-          buttonPrimary: "bg-[#7c8f38] hover:bg-[#66752e] text-white",
-          buttonCorrect: "bg-green-600 hover:bg-green-700 text-white",
-          buttonWrong: "bg-red-600 hover:bg-red-700 text-white",
-          buttonOption: "bg-[#e6dfc8] hover:bg-[#d1c7a7] text-[#3a2d20] border-2 border-[#d1c7a7]",
+          buttonPrimary: "bg-[#7c8f38] hover:bg-[#66752e] text-white shadow-md hover:shadow-lg",
+          buttonCorrect: "bg-green-600 text-white border-2 border-green-700 shadow-md",
+          buttonWrong: "bg-red-600 text-white border-2 border-red-700 shadow-md",
+          buttonOption: "bg-[#e6dfc8] hover:bg-[#d1c7a7] text-[#3a2d20] border-2 border-[#d1c7a7] hover:border-[#b8ae91]",
         }
       case "newspaper":
       case "maatschappelijk":
         return {
           modalBg: "bg-[#f0f0f0]",
           headerBg: "bg-[#1a1a1a]",
-          headerText: "text-[#f0f0f0] font-serif uppercase",
+          headerText: "text-[#f0f0f0] font-serif uppercase tracking-wider",
           textPrimary: "text-black font-serif",
           textSecondary: "text-gray-600 font-serif",
-          buttonPrimary: "bg-[#1a1a1a] hover:bg-black text-white",
-          buttonCorrect: "bg-green-700 hover:bg-green-800 text-white",
-          buttonWrong: "bg-red-700 hover:bg-red-800 text-white",
-          buttonOption: "bg-white hover:bg-gray-100 text-black border-2 border-black",
+          buttonPrimary: "bg-[#1a1a1a] hover:bg-black text-white shadow-md hover:shadow-lg",
+          buttonCorrect: "bg-green-700 text-white border-2 border-green-800 shadow-md",
+          buttonWrong: "bg-red-700 text-white border-2 border-red-800 shadow-md",
+          buttonOption: "bg-white hover:bg-gray-100 text-black border-2 border-gray-300 hover:border-black",
         }
       case "museum":
       default:
         return {
-          modalBg: "bg-[#f3f2e9]",
-          headerBg: "bg-gradient-to-r from-[#c9a300] to-[#a68600]",
-          headerText: "text-white font-heading",
-          textPrimary: "text-[#440f0f]",
-          textSecondary: "text-[#657575]",
-          buttonPrimary: "bg-gradient-to-br from-[#c9a300] to-[#a68600] hover:from-[#b89300] hover:to-[#8a6d00] text-white",
-          buttonCorrect: "bg-gradient-to-br from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white",
-          buttonWrong: "bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white",
-          buttonOption: "bg-white hover:bg-[#f9f7f0] text-[#440f0f] border-2 border-[#a7b8b4]/30",
+          modalBg: "bg-[#f3f2e9]", // Linen (MUSEUM_COLORS.linen)
+          headerBg: "bg-[#440f0f]", // Maroon (MUSEUM_COLORS.maroon) - More premium than gold
+          headerText: "text-[#f3f2e9] font-heading tracking-wide", // Linen text
+          textPrimary: "text-[#440f0f] font-heading", // Maroon text
+          textSecondary: "text-[#657575] font-body", // Slate text
+          buttonPrimary: "bg-gradient-to-br from-[#c9a300] to-[#ae5514] hover:from-[#b48a0f] hover:to-[#89350a] text-white shadow-md hover:shadow-lg border border-[#c9a300]/20", // Gold -> Terracotta
+          buttonCorrect: "bg-green-600 text-white border-2 border-green-700 shadow-md", // Standard Green for clarity
+          buttonWrong: "bg-red-600 text-white border-2 border-red-700 shadow-md", // Standard Red for clarity
+          buttonOption: "bg-white hover:bg-[#f3f2e9] text-[#440f0f] border-2 border-[#a7b8b4]/30 hover:border-[#c9a300] shadow-sm hover:shadow-md font-body",
         }
     }
   }, [variant])
@@ -89,9 +94,7 @@ const ToolQuizGame = ({ isOpen, onClose, variant = "museum", eventId = null }) =
     try {
       const result = await api.getQuizQuestions(eventId)
       if (result.success && result.questions && result.questions.length > 0) {
-        // Shuffle questions for variety
-        const shuffled = [...result.questions].sort(() => Math.random() - 0.5)
-        setQuestions(shuffled.slice(0, 10)) // Take 10 random questions
+        setAllQuestions(result.questions)
       } else {
         setError("Geen vragen beschikbaar")
       }
@@ -127,13 +130,35 @@ const ToolQuizGame = ({ isOpen, onClose, variant = "museum", eventId = null }) =
   }, [isOpen, fetchQuestions, fetchScores])
 
   // Start game
-  const startGame = useCallback(() => {
+  const startGame = useCallback((selectedDifficulty) => {
+    setDifficulty(selectedDifficulty)
+    
+    // Filter questions by difficulty
+    const filtered = allQuestions.filter(q => {
+      if (selectedDifficulty === 'easy') {
+        return !q.difficulty || q.difficulty === 'easy'
+      }
+      return q.difficulty === 'hard'
+    })
+
+    // Fallback if not enough questions for selected difficulty
+    let gameQuestions = filtered
+    if (filtered.length < 5) {
+        // If hard has too few, mix in some easy ones or vice versa to ensure playable game
+        // For now, just use what we have or fallback to all if empty
+        if (filtered.length === 0) gameQuestions = allQuestions
+    }
+
+    // Shuffle and slice
+    const shuffled = [...gameQuestions].sort(() => Math.random() - 0.5)
+    setQuestions(shuffled.slice(0, 10))
+
     setGameState("playing")
     setCurrentQuestionIndex(0)
     setScore(0)
     setAnsweredQuestions([])
     setSelectedAnswer(null)
-  }, [])
+  }, [allQuestions])
 
   // Handle answer selection
   const handleAnswerSelect = useCallback((answer) => {
@@ -199,124 +224,220 @@ const ToolQuizGame = ({ isOpen, onClose, variant = "museum", eventId = null }) =
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={e => e.target === e.currentTarget && onClose()}
         >
           <motion.div
-            className={`relative ${styles.modalBg} rounded-3xl shadow-2xl w-[95vw] max-w-5xl h-[90vh] flex flex-col overflow-hidden`}
-            initial={{ scale: 0.9, y: 20 }}
+            className={`relative ${styles.modalBg} rounded-3xl shadow-2xl w-full max-w-7xl h-full max-h-[90vh] flex flex-col overflow-hidden`}
+            initial={{ scale: 0.95, y: 20 }}
             animate={{ scale: 1, y: 0 }}
-            exit={{ scale: 0.9, y: 20 }}
+            exit={{ scale: 0.95, y: 20 }}
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
-            <div className={`flex items-center justify-between p-5 ${styles.headerBg} shadow-md`}>
+            <div className={`flex items-center justify-between px-6 py-4 ${styles.headerBg} shadow-md z-10 shrink-0`}>
               <div className="flex items-center gap-3">
-                <HelpCircle size={32} className="text-white" />
-                <h2 className={`text-2xl lg:text-3xl font-bold ${styles.headerText}`}>
-                  {variant === "newspaper" ? "WAT IS DIT WERKTUIG?" : "Wat is dit werktuig?"}
+                {(gameState === "playing" || gameState === "answer") ? (
+                    <button 
+                        onClick={resetGame}
+                        className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors text-white"
+                        title="Terug naar menu"
+                    >
+                        <ArrowLeft size={24} />
+                    </button>
+                ) : (
+                    <div className="bg-white/20 p-2 rounded-full">
+                        <HelpCircle size={24} className="text-white" />
+                    </div>
+                )}
+                <h2 className={`text-xl md:text-2xl font-bold ${styles.headerText}`}>
+                  {variant === "newspaper" ? "QUIZ" : "Kennisquiz"}
                 </h2>
               </div>
 
               {(gameState === "playing" || gameState === "answer") && (
-                <div className="flex items-center gap-4 text-white">
-                  <div className="bg-white/20 px-4 py-2 rounded-xl">
-                    <span className="text-sm opacity-80">Pytanie:</span>
-                    <span className="ml-2 font-bold">{currentQuestionIndex + 1}/{totalQuestions}</span>
+                <div className="flex items-center gap-3 text-white">
+                  <div className="bg-black/20 px-4 py-1.5 rounded-full backdrop-blur-sm border border-white/10">
+                    <span className="text-sm font-medium opacity-90">Vraag</span>
+                    <span className="ml-2 font-bold text-white">{currentQuestionIndex + 1}/{totalQuestions}</span>
                   </div>
-                  <div className="bg-white/20 px-4 py-2 rounded-xl">
-                    <span className="text-sm opacity-80">Poprawne:</span>
-                    <span className="ml-2 font-bold text-green-300">{score}</span>
+                  <div className="hidden sm:flex bg-black/20 px-4 py-1.5 rounded-full backdrop-blur-sm border border-white/10">
+                    <span className="text-sm font-medium opacity-90">Score</span>
+                    <span className="ml-2 font-bold text-yellow-300">{score}</span>
                   </div>
                 </div>
               )}
 
               <button
                 onClick={onClose}
-                className="p-2 rounded-xl bg-white/20 hover:bg-white/30 text-white transition-colors"
+                className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
               >
-                <X size={28} />
+                <X size={24} />
               </button>
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-auto p-6 lg:p-8">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 scrollbar-hide flex flex-col h-full">
+              <style>{`
+                .scrollbar-hide::-webkit-scrollbar {
+                    display: none;
+                }
+                .scrollbar-hide {
+                    -ms-overflow-style: none;
+                    scrollbar-width: none;
+                }
+              `}</style>
               {loading ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="animate-spin w-16 h-16 border-4 border-[#c9a300] border-t-transparent rounded-full" />
+                <div className="flex flex-col items-center justify-center h-full gap-4">
+                  <div className="animate-spin w-12 h-12 border-4 border-[#c9a300] border-t-transparent rounded-full" />
+                  <p className="text-gray-500 font-medium">Vragen laden...</p>
                 </div>
               ) : error ? (
                 <div className="flex flex-col items-center justify-center h-full gap-4">
-                  <XCircle size={64} className="text-red-500" />
-                  <p className="text-xl text-red-500">{error}</p>
+                  <XCircle size={64} className="text-red-500 opacity-80" />
+                  <p className="text-xl text-red-500 font-medium">{error}</p>
                   <button onClick={onClose} className={`px-6 py-3 rounded-xl font-bold ${styles.buttonPrimary}`}>
                     Sluiten
                   </button>
                 </div>
               ) : gameState === "menu" ? (
                 /* Menu Screen */
-                <div className="flex flex-col items-center justify-center h-full gap-8">
-                  <div className="text-center max-w-2xl">
-                    <h3 className={`text-4xl lg:text-5xl font-bold mb-4 ${styles.textPrimary}`}>
+                <div className="flex flex-col items-center justify-center h-full gap-8 md:gap-12 py-8 px-4 relative">
+                  {/* Decorative background element for museum theme */}
+                  {variant === "museum" && (
+                    <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-5">
+                       <Trophy size={400} />
+                    </div>
+                  )}
+
+                  <div className="text-center max-w-3xl space-y-6 md:space-y-8 z-10">
+                    <h3 className={`text-3xl md:text-5xl lg:text-6xl font-bold ${styles.textPrimary} tracking-tight`}>
                       Test je kennis!
                     </h3>
-                    <p className={`text-xl ${styles.textSecondary}`}>
-                      Herken je deze oude landbouwwerktuigen? Kies het juiste antwoord uit 3 opties.
+                    <p className={`text-lg md:text-xl lg:text-2xl ${styles.textSecondary} leading-relaxed max-w-2xl mx-auto font-light`}>
+                      Weet jij alles over de geschiedenis van de landbouw? Doe mee en win een plek op het scorebord!
                     </p>
                   </div>
 
-                  <div className={`bg-white/50 p-6 rounded-2xl border-2 border-[#c9a300]/30`}>
-                    <div className="flex items-center gap-4 mb-3">
-                      <CheckCircle2 size={24} className="text-green-600" />
-                      <span className={`text-lg ${styles.textPrimary}`}>
-                        {totalQuestions} vragen
-                      </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 w-full max-w-2xl z-10">
+                    <div className={`bg-white p-6 md:p-8 rounded-2xl border-2 ${variant === 'museum' ? 'border-[#a7b8b4]/30' : 'border-[#c9a300]/20'} shadow-sm flex items-center gap-5 transition-transform hover:scale-105 duration-300`}>
+                      <div className={`p-4 rounded-full ${variant === 'museum' ? 'bg-[#f3f2e9]' : 'bg-green-100'}`}>
+                        <CheckCircle2 size={32} className={`${variant === 'museum' ? 'text-[#929d7c]' : 'text-green-600'}`} />
+                      </div>
+                      <div className="flex flex-col text-left">
+                        <span className={`text-2xl md:text-3xl font-bold ${styles.textPrimary}`}>
+                          {totalQuestions}
+                        </span>
+                        <span className={`text-sm md:text-base ${styles.textSecondary} uppercase tracking-wider font-semibold`}>
+                          Vragen
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <Trophy size={24} className="text-yellow-600" />
-                      <span className={`text-lg ${styles.textPrimary}`}>
-                        Punten voor elke goede antwoord
-                      </span>
+                    <div className={`bg-white p-6 md:p-8 rounded-2xl border-2 ${variant === 'museum' ? 'border-[#a7b8b4]/30' : 'border-[#c9a300]/20'} shadow-sm flex items-center gap-5 transition-transform hover:scale-105 duration-300`}>
+                      <div className={`p-4 rounded-full ${variant === 'museum' ? 'bg-[#f3f2e9]' : 'bg-yellow-100'}`}>
+                        <Trophy size={32} className={`${variant === 'museum' ? 'text-[#c9a300]' : 'text-yellow-600'}`} />
+                      </div>
+                      <div className="flex flex-col text-left">
+                        <span className={`text-2xl md:text-3xl font-bold ${styles.textPrimary}`}>
+                          Score
+                        </span>
+                        <span className={`text-sm md:text-base ${styles.textSecondary} uppercase tracking-wider font-semibold`}>
+                          Punten
+                        </span>
+                      </div>
                     </div>
                   </div>
 
-                  <motion.button
-                    className={`px-12 py-4 rounded-2xl font-bold text-xl shadow-lg ${styles.buttonPrimary}`}
-                    onClick={startGame}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    Start Quiz
-                  </motion.button>
+                  <div className="flex flex-col sm:flex-row gap-4 w-full max-w-2xl z-10 mt-4">
+                    <motion.button
+                      className={`group relative flex-1 px-6 py-5 rounded-2xl font-bold text-xl shadow-lg hover:shadow-xl transition-all bg-green-600 text-white hover:bg-green-700`}
+                      onClick={() => startGame('easy')}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <span className="flex flex-col items-center gap-1">
+                        <span className="flex items-center gap-2">
+                            Makkelijk
+                            <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                        </span>
+                        <span className="text-sm font-normal opacity-90">Voor beginners</span>
+                      </span>
+                    </motion.button>
+
+                    <motion.button
+                      className={`group relative flex-1 px-6 py-5 rounded-2xl font-bold text-xl shadow-lg hover:shadow-xl transition-all bg-red-600 text-white hover:bg-red-700`}
+                      onClick={() => startGame('hard')}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <span className="flex flex-col items-center gap-1">
+                        <span className="flex items-center gap-2">
+                            Moeilijk
+                            <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                        </span>
+                        <span className="text-sm font-normal opacity-90">Voor experts</span>
+                      </span>
+                    </motion.button>
+                  </div>
                 </div>
               ) : gameState === "playing" || gameState === "answer" ? (
                 /* Question Screen */
-                <div className="flex flex-col items-center h-full gap-6">
-                  {/* Question Image */}
-                  <div className="w-full max-w-2xl aspect-video bg-white rounded-2xl shadow-lg overflow-hidden border-4 border-[#c9a300]/20">
-                    {currentQuestion.image_url ? (
-                      <img
-                        src={currentQuestion.image_url}
-                        alt="Narzędzie"
-                        className="w-full h-full object-contain bg-gray-50"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                        <HelpCircle size={80} className="text-gray-300" />
-                      </div>
-                    )}
+                <div className="flex flex-col items-center w-full max-w-5xl mx-auto h-full">
+                  {/* Question Image Container - Responsive Height */}
+                  <div className="w-full relative group mb-4 rounded-2xl overflow-hidden shadow-md border-2 border-white/50 bg-gray-50 flex-shrink-1 min-h-0">
+                     <div className="w-full h-48 md:h-64 lg:h-72 max-h-[35vh] relative flex items-center justify-center overflow-hidden bg-gray-100">
+                      {currentQuestion.image_url ? (
+                        <>
+                            {/* Blurred Background for fill */}
+                            <div 
+                                className="absolute inset-0 bg-cover bg-center blur-xl opacity-40 scale-110 transition-transform duration-700 group-hover:scale-125"
+                                style={{ backgroundImage: `url(${currentQuestion.image_url})` }}
+                            />
+                            {/* Overlay to dampen background */}
+                            <div className="absolute inset-0 bg-black/5" />
+                            
+                            {/* Main Image */}
+                            <img
+                              src={currentQuestion.image_url}
+                              alt="Quiz vraag"
+                              className="relative z-10 max-w-full max-h-full object-contain p-4 transition-transform duration-500 group-hover:scale-105 drop-shadow-xl"
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.parentElement.querySelector('.image-error-fallback').style.display = 'flex';
+                              }}
+                            />
+                            {/* Fallback if image fails to load */}
+                            <div className="image-error-fallback absolute inset-0 hidden flex-col items-center justify-center gap-3 text-gray-300 z-0">
+                               <HelpCircle size={64} className="opacity-50" />
+                               <span className="text-sm font-medium">Afbeelding niet geladen</span>
+                            </div>
+                        </>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center gap-3 text-gray-300 h-full w-full">
+                           <HelpCircle size={64} className="opacity-50" />
+                           <span className="text-sm font-medium">Geen afbeelding</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Badge */}
+                    <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full shadow-sm border border-gray-200 text-xs font-bold text-gray-600 uppercase tracking-wide z-20">
+                      Vraag {currentQuestionIndex + 1}
+                    </div>
                   </div>
 
                   {/* Question Text */}
-                  <h3 className={`text-2xl lg:text-3xl font-bold text-center ${styles.textPrimary}`}>
-                    {currentQuestion.question || "Waarvoor werd dit werktuig gebruikt?"}
-                  </h3>
+                  <div className="w-full text-center mb-6 flex-shrink-0">
+                    <h3 className={`text-lg md:text-2xl lg:text-3xl font-bold leading-tight ${styles.textPrimary}`}>
+                      {currentQuestion.question}
+                    </h3>
+                  </div>
 
                   {/* Answer Options */}
-                  <div className="grid grid-cols-1 gap-4 w-full max-w-2xl">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full mb-6 flex-grow overflow-y-auto scrollbar-hide min-h-[100px]">
                     {[
                       currentQuestion.option_1,
                       currentQuestion.option_2,
@@ -328,36 +449,38 @@ const ToolQuizGame = ({ isOpen, onClose, variant = "museum", eventId = null }) =
                       const showFeedback = gameState === "answer"
 
                       let buttonStyle = styles.buttonOption
+                      let icon = <div className="w-8 h-8 rounded-full border-2 border-current opacity-30 flex items-center justify-center font-bold text-sm">{String.fromCharCode(65 + index)}</div>
+                      
                       if (showFeedback) {
                         if (isSelected && isCorrect) {
                           buttonStyle = styles.buttonCorrect
+                          icon = <CheckCircle2 size={28} className="text-white" />
                         } else if (isSelected && !isCorrect) {
                           buttonStyle = styles.buttonWrong
+                          icon = <XCircle size={28} className="text-white" />
                         } else if (isCorrectAnswer) {
                           buttonStyle = styles.buttonCorrect
+                          icon = <CheckCircle2 size={28} className="text-white" />
                         }
+                      } else if (isSelected) {
+                        buttonStyle = "bg-[#c9a300] text-white border-2 border-[#b89300]"
+                        icon = <div className="w-8 h-8 rounded-full bg-white text-[#c9a300] flex items-center justify-center font-bold text-sm">✓</div>
                       }
 
                       return (
                         <motion.button
                           key={index}
-                          className={`px-6 py-4 rounded-xl font-bold text-lg shadow-md transition-all ${buttonStyle} ${
-                            gameState === "answer" ? "cursor-default" : ""
-                          }`}
+                          className={`relative p-4 rounded-xl font-bold text-lg text-left transition-all ${buttonStyle} ${
+                            gameState === "answer" ? "cursor-default opacity-90" : "active:scale-[0.98]"
+                          } flex items-center gap-4 group min-h-[80px]`}
                           onClick={() => handleAnswerSelect(option)}
                           disabled={gameState === "answer"}
-                          whileHover={gameState === "playing" ? { scale: 1.02, x: 5 } : {}}
-                          whileTap={gameState === "playing" ? { scale: 0.98 } : {}}
+                          whileHover={gameState === "playing" ? { y: -2, boxShadow: "0 4px 12px rgba(0,0,0,0.1)" } : {}}
                         >
-                          <div className="flex items-center justify-between">
-                            <span>{option}</span>
-                            {showFeedback && isCorrectAnswer && (
-                              <CheckCircle2 size={24} className="text-white" />
-                            )}
-                            {showFeedback && isSelected && !isCorrect && (
-                              <XCircle size={24} className="text-white" />
-                            )}
+                          <div className="shrink-0">
+                            {icon}
                           </div>
+                          <span className="leading-snug flex-1">{option}</span>
                         </motion.button>
                       )
                     })}
@@ -365,50 +488,69 @@ const ToolQuizGame = ({ isOpen, onClose, variant = "museum", eventId = null }) =
 
                   {/* Next Button */}
                   {gameState === "answer" && (
-                    <motion.button
-                      className={`px-8 py-3 rounded-xl font-bold text-lg shadow-lg ${styles.buttonPrimary} mt-4`}
-                      onClick={nextQuestion}
+                    <motion.div 
+                      className="flex justify-center w-full pb-4 flex-shrink-0"
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
                     >
-                      {isLastQuestion ? "Bekijk Resultaten" : "Volgende Vraag"}
-                    </motion.button>
+                      <button
+                        className={`px-10 py-4 rounded-2xl font-bold text-xl shadow-lg hover:shadow-xl transition-all ${styles.buttonPrimary} flex items-center gap-3`}
+                        onClick={nextQuestion}
+                      >
+                        {isLastQuestion ? "Bekijk Resultaten" : "Volgende Vraag"}
+                        <ChevronRight />
+                      </button>
+                    </motion.div>
                   )}
                 </div>
               ) : gameState === "gameOver" ? (
                 /* Game Over Screen */
-                <div className="flex flex-col items-center justify-center h-full gap-6">
+                <div className="flex flex-col items-center justify-center h-full gap-8 py-8">
                   <motion.div
                     initial={{ scale: 0, rotate: -180 }}
                     animate={{ scale: 1, rotate: 0 }}
                     transition={{ type: "spring", stiffness: 200 }}
+                    className="relative"
                   >
-                    <Trophy size={100} className="text-[#c9a300]" />
+                    <div className="absolute inset-0 bg-yellow-400 blur-3xl opacity-20 rounded-full"></div>
+                    <Trophy size={120} className="text-[#c9a300] relative z-10 drop-shadow-sm" />
                   </motion.div>
 
-                  <h3 className={`text-4xl lg:text-5xl font-bold ${styles.textPrimary}`}>
-                    Quiz Voltooid!
-                  </h3>
+                  <div className="text-center space-y-2">
+                    <h3 className={`text-4xl lg:text-5xl font-bold ${styles.textPrimary}`}>
+                      Quiz Voltooid!
+                    </h3>
+                    <p className={`text-xl ${styles.textSecondary}`}>
+                      Bedankt voor het spelen
+                    </p>
+                  </div>
 
-                  <div className="text-center">
-                    <p className={`text-2xl ${styles.textSecondary} mb-2`}>
-                      Je score:
+                  <div className="bg-white p-8 rounded-3xl border-2 border-[#c9a300]/20 shadow-lg text-center min-w-[300px]">
+                    <p className={`text-lg uppercase tracking-widest text-gray-400 font-bold mb-2`}>
+                      Je score
                     </p>
-                    <p className="text-6xl font-bold text-[#c9a300]">
-                      {score}/{totalQuestions}
-                    </p>
-                    <p className={`text-xl mt-2 ${styles.textSecondary}`}>
-                      {score === totalQuestions ? "Perfect! 🎉" : 
+                    <div className="flex items-center justify-center gap-2 mb-4">
+                        <span className="text-7xl font-black text-[#c9a300]">{score}</span>
+                        <span className="text-4xl font-bold text-gray-300">/{totalQuestions}</span>
+                    </div>
+                    <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden mb-4">
+                        <motion.div 
+                            className="h-full bg-[#c9a300]" 
+                            initial={{ width: 0 }}
+                            animate={{ width: `${(score / totalQuestions) * 100}%` }}
+                            transition={{ delay: 0.5, duration: 1 }}
+                        />
+                    </div>
+                    <p className={`text-lg font-medium ${styles.textPrimary}`}>
+                      {score === totalQuestions ? "Perfect! Een echte expert! 🎉" : 
                        score >= totalQuestions * 0.7 ? "Geweldig gedaan! 👏" :
                        score >= totalQuestions * 0.5 ? "Goed geprobeerd! 👍" :
-                       "Probeer het nog eens! 💪"}
+                       "Volgende keer beter! 💪"}
                     </p>
                   </div>
 
                   {savedRank ? (
-                    <div className="text-center">
+                    <div className="text-center animate-fade-in">
                       <p className="text-2xl text-green-600 font-bold mb-4">
                         Je staat op plaats #{savedRank}!
                       </p>
@@ -424,25 +566,24 @@ const ToolQuizGame = ({ isOpen, onClose, variant = "museum", eventId = null }) =
                       </div>
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center gap-4">
+                    <div className="flex flex-col items-center gap-4 w-full max-w-sm">
                       <motion.button
-                        className={`px-8 py-4 rounded-2xl font-bold text-lg shadow-lg ${styles.buttonCorrect}`}
+                        className={`w-full px-8 py-4 rounded-2xl font-bold text-lg shadow-lg ${styles.buttonCorrect} flex items-center justify-center gap-2`}
                         onClick={() => setShowKeyboard(true)}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
                       >
+                        <CheckCircle2 size={20} />
                         Score Opslaan
                       </motion.button>
-                      <div className="flex gap-4">
-                        <motion.button
-                          className={`px-6 py-3 rounded-xl font-bold ${styles.buttonPrimary}`}
-                          onClick={resetGame}
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                        >
-                          Opnieuw Spelen
-                        </motion.button>
-                      </div>
+                      <motion.button
+                        className={`w-full px-6 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-100 transition-colors`}
+                        onClick={resetGame}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        Niet opslaan, opnieuw spelen
+                      </motion.button>
                     </div>
                   )}
                 </div>
@@ -466,4 +607,3 @@ const ToolQuizGame = ({ isOpen, onClose, variant = "museum", eventId = null }) =
 }
 
 export default ToolQuizGame
-

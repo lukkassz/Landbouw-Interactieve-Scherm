@@ -16,7 +16,11 @@ export const useSound = (enabled = true) => {
     if (typeof window !== "undefined" && enabled) {
       audioRef.current = new Audio(buttonClickSound)
       audioRef.current.volume = 0.3 // Set volume to 30% to avoid being too loud
-      audioRef.current.preload = "auto"
+      audioRef.current.preload = "metadata"
+      // Add error listener to catch loading errors silently
+      audioRef.current.addEventListener("error", (e) => {
+        console.debug("Audio load error:", e)
+      })
     }
 
     return () => {

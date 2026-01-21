@@ -9,16 +9,7 @@
   html {
     font-family: 'Montserrat', sans-serif;
     scroll-behavior: smooth;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    /* Prevent overscroll bounce on touch devices */
-    overscroll-behavior: none;
-    overscroll-behavior-y: none;
-    overscroll-behavior-x: none;
-    /* Allow scrolling but prevent bounce */
-    height: 100%;
     width: 100%;
-    overflow-y: auto;
     overflow-x: hidden;
   }
 
@@ -48,16 +39,10 @@
     scrollbar-width: none;
     -ms-overflow-style: none;
     font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
-    /* Optimize for touch interfaces */
-    touch-action: pan-y;
+    touch-action: pan-y pan-x;
     -webkit-tap-highlight-color: transparent;
     user-select: none;
-    /* Prevent pull-to-refresh and overscroll */
-    overscroll-behavior: none;
-    overscroll-behavior-y: none;
-    overscroll-behavior-x: none;
     -webkit-overflow-scrolling: touch;
-    /* Allow scrolling but prevent bounce */
     width: 100%;
     min-height: 100%;
     position: relative;
@@ -72,38 +57,24 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Root container - allow scrolling but prevent bounce */
+  /* Root – don't block scroll, allow growth */
   #root {
     width: 100%;
     min-height: 100%;
-    overflow-y: auto;
-    overflow-x: hidden;
-    overscroll-behavior: none;
-    overscroll-behavior-y: none;
-    overscroll-behavior-x: none;
     position: relative;
   }
 
-  /* App container - allow scrolling but prevent bounce */
+  /* App – j.w. */
   .App {
     width: 100%;
     min-height: 100%;
-    overflow-y: auto;
-    overflow-x: hidden;
-    overscroll-behavior: none;
-    overscroll-behavior-y: none;
-    overscroll-behavior-x: none;
     position: relative;
   }
 
-  /* Main content area */
+  /* main – scrolling only when content is taller; without overflow-y: hidden */
   main {
     width: 100%;
-    height: 100%;
-    overflow: hidden;
-    overscroll-behavior: none;
-    overscroll-behavior-y: none;
-    overscroll-behavior-x: none;
+    min-height: 100%;
     position: relative;
   }
 }

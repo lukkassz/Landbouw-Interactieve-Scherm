@@ -46,7 +46,7 @@ const MemoryGamePage = () => {
     >
       {/* Back Button */}
       <motion.button
-        className="fixed top-6 left-6 z-50 flex items-center space-x-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white px-4 py-2 rounded-xl border border-white/20 shadow-lg"
+        className="fixed top-6 left-6 z-50 flex items-center space-x-2 btn-secondary"
         onClick={handleBackToTimeline}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}

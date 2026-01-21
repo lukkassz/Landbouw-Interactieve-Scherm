@@ -25,7 +25,7 @@ if (!$db) {
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'message' => 'Database connection failed'
+        'message' => 'Databaseverbinding mislukt'
     ]);
     exit();
 }
@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             http_response_code(500);
             echo json_encode([
                 'success' => false,
-                'message' => 'Table quiz_questions does not exist. Please run create_quiz_tables.sql',
+                'message' => 'Tabel quiz_questions bestaat niet. Voer create_quiz_tables.sql uit.',
                 'questions' => []
             ]);
             exit();
@@ -69,19 +69,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         
         $stmt->execute();
         $questions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Base URL for uploaded quiz images (adminpanel/uploads/)
+        $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+        $requestUri = $_SERVER['REQUEST_URI'] ?? '';
+        $basePath = '/adminpanel';
+        if (preg_match('#^(/.*?)/backend/api#', $scriptName, $m)) {
+            $basePath = $m[1] . '/adminpanel';
+        } elseif (preg_match('#^(/.*?)/backend/api#', $requestUri, $m)) {
+            $basePath = $m[1] . '/adminpanel';
+        } elseif (preg_match('#^/backend/api#', $scriptName) || preg_match('#^/backend/api#', $requestUri)) {
+            $basePath = '/adminpanel';
+        }
+        $uploadsBase = $protocol . '://' . $host . $basePath . '/uploads/';
         
-        // Shuffle options for each question
+        // Shuffle options and resolve image_url for each question
         foreach ($questions as &$question) {
+            if (!empty($question['image_url']) && strpos($question['image_url'], 'http') !== 0) {
+                $question['image_url'] = $uploadsBase . ltrim($question['image_url'], '/');
+            }
             $options = array_filter([
                 $question['option_1'],
                 $question['option_2'],
                 $question['option_3'],
                 $question['option_4']
             ]);
-            
             shuffle($options);
-            
-            // Reassign shuffled options
             $question['option_1'] = $options[0] ?? '';
             $question['option_2'] = $options[1] ?? '';
             $question['option_3'] = $options[2] ?? '';
@@ -114,7 +129,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     http_response_code(405);
     echo json_encode([
         'success' => false,
-        'message' => 'Method not allowed'
+        'message' => 'Methode niet toegestaan'
     ]);
 }
 ?>

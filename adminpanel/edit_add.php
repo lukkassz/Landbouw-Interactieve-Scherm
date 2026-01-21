@@ -1,8 +1,7 @@
 <?php
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
-ini_set('upload_max_filesize', '100M');
-ini_set('post_max_size', '100M');
+// upload_max_filesize and post_max_size do NOT work via ini_set (they are applied before the script). See .htaccess / .user.ini.
 ini_set('max_execution_time', '300');
 ini_set('memory_limit', '256M');
 
@@ -84,6 +83,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Game settings
     $gameType = $_POST['game_type'] ?? 'none';
     $has_puzzle = ($gameType === 'puzzle' || $gameType === 'memory') ? 1 : 0;
+
+    // Start with existing puzzle_image_url (preserve it if no new upload)
     $puzzle_image_url = $event['puzzle_image_url'] ?? '';
 
     // For harvest game, we don't need has_puzzle or puzzle_image_url
@@ -92,25 +93,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $puzzle_image_url = '';
     }
 
-    // Handle puzzle image upload
+    // Handle puzzle image upload - only if user actually selected a new file
     if ($gameType === 'puzzle' && isset($_FILES['puzzle_image']) && $_FILES['puzzle_image']['error'] === UPLOAD_ERR_OK) {
         $uploadDir = __DIR__ . '/uploads/';
-        if (!file_exists($uploadDir)) mkdir($uploadDir, 0755, true);
+        if (!file_exists($uploadDir)) {
+            if (!mkdir($uploadDir, 0755, true)) {
+                $error = "Kon upload map niet aanmaken: $uploadDir";
+            }
+        }
 
         $fileName = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '', $_FILES['puzzle_image']['name']);
         $targetPath = $uploadDir . $fileName;
 
         if (move_uploaded_file($_FILES['puzzle_image']['tmp_name'], $targetPath)) {
             $puzzle_image_url = $fileName;
+        } else {
+            $error = "Fout bij uploaden puzzel afbeelding naar: $targetPath";
         }
+    } elseif ($gameType === 'puzzle' && isset($_FILES['puzzle_image']) && $_FILES['puzzle_image']['error'] !== UPLOAD_ERR_NO_FILE) {
+        $c = (int)$_FILES['puzzle_image']['error'];
+        $maxUp = ini_get('upload_max_filesize') ?: '?';
+        $uploadErrors = [
+            1 => "Bestand te groot. De server staat maximaal $maxUp toe. Gebruik een kleinere afbeelding (bijv. 800×800 px, onder 2 MB) of neem contact op met de ict-beheerder om de limiet te verhogen.",
+            2 => "Bestand te groot voor dit formulier. Gebruik een kleinere afbeelding (bijv. 800×800 px) of neem contact op met de ict-beheerder.",
+            3 => "Bestand alleen gedeeltelijk geüpload. Probeer opnieuw of neem contact op met de ict-beheerder.",
+            4 => "Geen bestand geselecteerd.",
+            6 => "Probleem op de server: tijdelijke map ontbreekt. Neem contact op met de ict-beheerder.",
+            7 => "Bestand kon niet op de server worden opgeslagen. Neem contact op met de ict-beheerder (rechten map uploads).",
+            8 => "Upload geblokkeerd door serverinstelling. Neem contact op met de ict-beheerder.",
+        ];
+        $error = 'Puzzelafbeelding: ' . ($uploadErrors[$c] ?? "Onbekende fout. Neem contact op met de ict-beheerder. (Code: $c)");
     }
 
+    // Only clear puzzle_image_url if switching away from puzzle type
     if ($gameType !== 'puzzle') {
         $puzzle_image_url = '';
     }
 
     // Validation
-    if (empty($year) || empty($title) || empty($description)) {
+    if (!empty($error)) {
+        // Error already set (e.g. from upload), do not proceed
+    } elseif (empty($year) || empty($title) || empty($description)) {
         $error = "Vul alle verplichte velden in.";
     } elseif (!preg_match('/^\d{4}(-\d{4})?$/', $year)) {
         $error = "Ongeldig jaar formaat. Gebruik: 1950 of 1900-1910";
@@ -169,41 +192,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Save quiz questions
             if ($gameType === 'quiz') {
-                $debug = [];
-                $debug[] = "Start opslaan quiz...";
-
-                // 1. DELETE OLD QUESTIONS
-                if (mysqli_query($conn, "DELETE FROM quiz_questions WHERE event_id = $currentEventId")) {
-                    $debug[] = "Oude vragen verwijderd.";
-                } else {
-                    $debug[] = "FOUT bij verwijderen oude vragen: " . mysqli_error($conn);
+                mysqli_query($conn, "DELETE FROM quiz_questions WHERE event_id = $currentEventId");
+                $quizUploadDir = rtrim(str_replace('\\', '/', __DIR__), '/') . '/uploads/quiz/';
+                if (!is_dir($quizUploadDir)) {
+                    if (!@mkdir($quizUploadDir, 0755, true)) {
+                        $error = "Kon map uploads/quiz niet aanmaken. Controleer rechten.";
+                    }
                 }
 
-                $quizDifficulty = mysqli_real_escape_string($conn, $_POST['quiz_difficulty'] ?? 'easy');
-                $debug[] = "Moeilijkheid: $quizDifficulty";
-
                 if (isset($_POST['quiz_questions']) && is_array($_POST['quiz_questions'])) {
-                    $debug[] = "Aantal vragen ontvangen: " . count($_POST['quiz_questions']);
-
+                    $hasQuizFiles = isset($_FILES['quiz_image']['error']) && is_array($_FILES['quiz_image']['error']);
                     foreach ($_POST['quiz_questions'] as $index => $question) {
-                        // Debug raw data
-                        $debug[] = "Vraag $index data: " . print_r($question, true);
-
                         if (empty($question['question']) || empty($question['correct_answer'])) {
-                            $missing = [];
-                            if (empty($question['question'])) $missing[] = 'question';
-                            // if (empty($question['image_url'])) $missing[] = 'image_url';
-                            if (empty($question['correct_answer'])) $missing[] = 'correct_answer';
-                            $debug[] = "Vraag $index OVERSLAGEN: mist gegevens (" . implode(', ', $missing) . ")";
                             continue;
                         }
 
                         $qQuestion = mysqli_real_escape_string($conn, $question['question']);
-                        $qImageUrl = !empty($question['image_url']) ? mysqli_real_escape_string($conn, $question['image_url']) : '';
+                        $qImageUrl = '';
+                        $idx = is_numeric($index) ? (int)$index : $index;
+                        if ($hasQuizFiles && isset($_FILES['quiz_image']['error'][$idx]) && (int)$_FILES['quiz_image']['error'][$idx] === UPLOAD_ERR_OK) {
+                            $tmp = $_FILES['quiz_image']['tmp_name'][$idx] ?? '';
+                            $name = $_FILES['quiz_image']['name'][$idx] ?? '';
+                            if ($tmp && $name && is_uploaded_file($tmp)) {
+                                $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+                                if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true)) {
+                                    $safe = time() . '_' . $idx . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '', basename($name));
+                                    $target = $quizUploadDir . $safe;
+                                    if (move_uploaded_file($tmp, $target)) {
+                                        $qImageUrl = mysqli_real_escape_string($conn, 'quiz/' . $safe);
+                                    } else {
+                                        if (empty($error)) $error = "Kon quizafbeelding niet opslaan (maprechten?). Probeer een kleinere afbeelding.";
+                                    }
+                                }
+                            }
+                        }
+                        if ($qImageUrl === '' && !empty(trim($question['image_url'] ?? ''))) {
+                            $qImageUrl = mysqli_real_escape_string($conn, trim($question['image_url']));
+                        }
                         $qOption1 = mysqli_real_escape_string($conn, $question['option_1'] ?? '');
                         $qOption2 = mysqli_real_escape_string($conn, $question['option_2'] ?? '');
                         $qOption3 = mysqli_real_escape_string($conn, $question['option_3'] ?? '');
                         $qOption4 = mysqli_real_escape_string($conn, $question['option_4'] ?? '');
+
+                        // Get difficulty from question data, fallback to form selection
+                        $qDifficulty = !empty($question['difficulty'])
+                            ? mysqli_real_escape_string($conn, $question['difficulty'])
+                            : mysqli_real_escape_string($conn, $_POST['quiz_difficulty'] ?? 'easy');
 
                         // Determine correct answer based on selection (USE RAW VALUES from POST)
                         $rawOption1 = $question['option_1'] ?? '';
@@ -229,51 +263,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
 
                         if (empty($correctAnswerText)) {
-                            $debug[] = "Vraag $index OVERSLAGEN: Juiste antwoord tekst is leeg (Index: $correctAnswerIndex)";
                             continue;
                         }
 
                         $correctAnswerEscaped = mysqli_real_escape_string($conn, $correctAnswerText);
 
                         $insertQuery = "INSERT INTO quiz_questions (event_id, question, image_url, correct_answer, option_1, option_2, option_3, option_4, difficulty) 
-                            VALUES ($currentEventId, '$qQuestion', '$qImageUrl', '$correctAnswerEscaped', '$qOption1', '$qOption2', '$qOption3', " . ($qOption4 ? "'$qOption4'" : "NULL") . ", '$quizDifficulty')";
+                            VALUES ($currentEventId, '$qQuestion', '$qImageUrl', '$correctAnswerEscaped', '$qOption1', '$qOption2', '$qOption3', " . ($qOption4 ? "'$qOption4'" : "NULL") . ", '$qDifficulty')";
 
-                        if (mysqli_query($conn, $insertQuery)) {
-                            $debug[] = "Vraag $index opgeslagen! (ID: " . mysqli_insert_id($conn) . ")";
-                        } else {
-                            $debug[] = "SQL FOUT vraag $index: " . mysqli_error($conn);
-                        }
+                        mysqli_query($conn, $insertQuery);
                     }
-                } else {
-                    $debug[] = "Geen vragen gevonden in POST data.";
                 }
-
-                // STOP EVERYTHING AND SHOW DEBUG INFO
-                echo "<div style='background:#f8f9fa;padding:20px;font-family:monospace;border:2px solid #333;margin:20px;'>";
-                echo "<h3>DEBUG LOG - QUIZ OPSLAAN</h3>";
-                echo "<ul>";
-                foreach ($debug as $line) {
-                    echo "<li>" . htmlspecialchars($line) . "</li>";
-                }
-                echo "</ul>";
-                echo "<a href='index.php' style='display:inline-block;padding:10px 20px;background:blue;color:white;text-decoration:none;'>Terug naar overzicht</a>";
-                echo "</div>";
-                exit; // Stop execution to see debug
             }
-            if (isset($_FILES['new_media']) && is_array($_FILES['new_media']['name'])) {
+            // Process new photos
+            if (isset($_FILES['new_photos']) && is_array($_FILES['new_photos']['name'])) {
                 $mediaDir = __DIR__ . '/uploads/event_media/';
                 if (!file_exists($mediaDir)) mkdir($mediaDir, 0755, true);
 
-                foreach ($_FILES['new_media']['name'] as $idx => $fileName) {
-                    if ($_FILES['new_media']['error'][$idx] === UPLOAD_ERR_OK && !empty($fileName)) {
-                        $fileType = $_FILES['new_media']['type'][$idx];
-                        $cleanName = time() . '_' . $idx . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '', $fileName);
+                foreach ($_FILES['new_photos']['name'] as $idx => $fileName) {
+                    if ($_FILES['new_photos']['error'][$idx] === UPLOAD_ERR_OK && !empty($fileName)) {
+                        // Ensure it's an image
+                        $fileType = $_FILES['new_photos']['type'][$idx];
+                        if (strpos($fileType, 'image') === false) continue;
+
+                        $cleanName = time() . '_img_' . $idx . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '', $fileName);
                         $targetPath = $mediaDir . $cleanName;
 
-                        if (move_uploaded_file($_FILES['new_media']['tmp_name'][$idx], $targetPath)) {
-                            $mediaType = (strpos($fileType, 'video') !== false) ? 'video' : 'image';
-                            $caption = mysqli_real_escape_string($conn, $_POST['new_media_caption'][$idx] ?? '');
-                            mysqli_query($conn, "INSERT INTO event_media (event_id, media_type, file_url, caption, display_order) VALUES ($currentEventId, '$mediaType', '$cleanName', '$caption', 999)");
+                        if (move_uploaded_file($_FILES['new_photos']['tmp_name'][$idx], $targetPath)) {
+                            $caption = mysqli_real_escape_string($conn, $_POST['new_photos_caption'][$idx] ?? '');
+                            mysqli_query($conn, "INSERT INTO event_media (event_id, media_type, file_url, caption, display_order) VALUES ($currentEventId, 'image', '$cleanName', '$caption', 999)");
+                        }
+                    }
+                }
+            }
+
+            // Process new videos
+            if (isset($_FILES['new_videos']) && is_array($_FILES['new_videos']['name'])) {
+                $mediaDir = __DIR__ . '/uploads/event_media/';
+                if (!file_exists($mediaDir)) mkdir($mediaDir, 0755, true);
+
+                foreach ($_FILES['new_videos']['name'] as $idx => $fileName) {
+                    if ($_FILES['new_videos']['error'][$idx] === UPLOAD_ERR_OK && !empty($fileName)) {
+                        // Ensure it's a video
+                        $fileType = $_FILES['new_videos']['type'][$idx];
+                        if (strpos($fileType, 'video') === false) continue;
+
+                        $cleanName = time() . '_vid_' . $idx . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '', $fileName);
+                        $targetPath = $mediaDir . $cleanName;
+
+                        if (move_uploaded_file($_FILES['new_videos']['tmp_name'][$idx], $targetPath)) {
+                            $caption = mysqli_real_escape_string($conn, $_POST['new_videos_caption'][$idx] ?? '');
+                            mysqli_query($conn, "INSERT INTO event_media (event_id, media_type, file_url, caption, display_order) VALUES ($currentEventId, 'video', '$cleanName', '$caption', 999)");
                         }
                     }
                 }
@@ -286,7 +326,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
-            // Update media captions
+            // Update media captions (existing media)
             if (isset($_POST['media_caption']) && is_array($_POST['media_caption'])) {
                 foreach ($_POST['media_caption'] as $mediaId => $caption) {
                     $caption = mysqli_real_escape_string($conn, $caption);
@@ -294,8 +334,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
-            header("Location: index.php?success=Event succesvol opgeslagen");
-            exit;
+            // Update has_video based on actual content
+            $videoCountResult = mysqli_query($conn, "SELECT COUNT(*) as count FROM event_media WHERE event_id = $currentEventId AND media_type = 'video'");
+            $videoCountRow = mysqli_fetch_assoc($videoCountResult);
+            $has_video = ($videoCountRow['count'] > 0) ? 1 : 0;
+
+            // Ensure column exists
+            $checkColumn = mysqli_query($conn, "SHOW COLUMNS FROM timeline_events LIKE 'has_video'");
+            if (mysqli_num_rows($checkColumn) == 0) {
+                mysqli_query($conn, "ALTER TABLE timeline_events ADD COLUMN has_video BOOLEAN DEFAULT FALSE");
+            }
+            mysqli_query($conn, "UPDATE timeline_events SET has_video = $has_video WHERE id = $currentEventId");
+
+            // Stay on edit page with success message instead of redirecting
+            $success = "Event succesvol opgeslagen";
+
+            // CRITICAL FIX: Ensure we are in edit mode for the (possibly new) event
+            $isEdit = true;
+            $eventId = $currentEventId;
+
+            // Reload event data to show updated information (ALWAYS reload after save)
+            $result = mysqli_query($conn, "SELECT * FROM timeline_events WHERE id = $eventId");
+            if ($result && mysqli_num_rows($result) > 0) {
+                $event = mysqli_fetch_assoc($result);
+            }
+
+            // Reload media
+            $eventMedia = [];
+            $mediaResult = mysqli_query($conn, "SELECT * FROM event_media WHERE event_id = $eventId ORDER BY display_order ASC");
+            while ($mediaResult && $row = mysqli_fetch_assoc($mediaResult)) {
+                $eventMedia[] = $row;
+            }
+
+            // Reload sections
+            $eventSections = [];
+            $sectionsResult = mysqli_query($conn, "SELECT * FROM event_sections WHERE event_id = $eventId ORDER BY section_order ASC");
+            while ($sectionsResult && $row = mysqli_fetch_assoc($sectionsResult)) {
+                $eventSections[] = $row;
+            }
+
+            // Reload key moments
+            $eventKeyMoments = [];
+            $momentsResult = mysqli_query($conn, "SELECT * FROM event_key_moments WHERE event_id = $eventId ORDER BY display_order ASC");
+            while ($momentsResult && $row = mysqli_fetch_assoc($momentsResult)) {
+                $eventKeyMoments[] = $row;
+            }
+
+            // Update gameType based on reloaded data to ensure UI matches DB
+            $gameType = $event['game_type'] ?? 'none';
+            if ($gameType === 'none' || empty($gameType)) {
+                // Legacy fallback logic
+                if ($event['has_puzzle'] && !empty($event['puzzle_image_url'])) {
+                    $gameType = 'puzzle';
+                } elseif ($event['has_puzzle']) {
+                    $gameType = 'memory';
+                }
+            }
         } else {
             $error = "Database fout: " . mysqli_error($conn);
         }
@@ -770,6 +864,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             object-fit: cover;
             border-radius: 6px;
         }
+
+        /* Radio button for correct answer selection in quiz questions */
+        .correct-dot-label { cursor: pointer; flex-shrink: 0; display: inline-flex; align-items: center; }
+        .correct-dot-label input { position: absolute; opacity: 0; width: 0; height: 0; }
+        .correct-dot { display: inline-block; width: 22px; height: 22px; border-radius: 50%; border: 2px solid #94a3b8; transition: background 0.2s, border-color 0.2s; }
+        .correct-dot-label input:checked + .correct-dot { background: #22c55e; border-color: #22c55e; }
+        .quiz-answer-row { display: flex; align-items: center; gap: 10px; }
+
+        /* Media Tabs */
+        .media-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; }
+        .media-tab { padding: 10px 20px; cursor: pointer; font-weight: 600; color: #64748b; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s; }
+        .media-tab:hover { color: #334155; }
+        .media-tab.active { color: #2563eb; border-bottom-color: #2563eb; }
+        .media-content { display: none; }
+        .media-content.active { display: block; }
     </style>
 </head>
 
@@ -787,6 +896,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php if ($error): ?>
             <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
         <?php endif; ?>
+        <?php if ($success): ?>
+            <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
+        <?php endif; ?>
 
         <!-- Basic Info -->
         <div class="card">
@@ -797,7 +909,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="form-row">
                     <div class="form-group">
                         <label>Jaar <span class="required">*</span> <span class="hint">(bijv. 1950 of 1900-1910)</span></label>
-                        <input type="text" name="year" value="<?= htmlspecialchars($event['year']) ?>" required pattern="^\d{4}(-\d{4})?$">
+                        <input type="text" name="year" value="<?= htmlspecialchars($event['year']) ?>" required pattern="^\d{4}(-\d{4})?$" autocomplete="off">
                     </div>
                     <div class="form-group">
                         <label>Categorie</label>
@@ -811,12 +923,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <div class="form-group">
                     <label>Titel <span class="required">*</span></label>
-                    <input type="text" name="title" value="<?= htmlspecialchars($event['title']) ?>" required>
+                    <input type="text" name="title" value="<?= htmlspecialchars($event['title']) ?>" required autocomplete="off">
                 </div>
 
                 <div class="form-group">
                     <label>Beschrijving <span class="required">*</span></label>
-                    <textarea name="description" required><?= htmlspecialchars($event['description']) ?></textarea>
+                    <textarea name="description" required autocomplete="off"><?= htmlspecialchars($event['description']) ?></textarea>
                 </div>
 
                 <div class="form-group">
@@ -836,37 +948,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <!-- Media -->
         <div class="card">
             <div class="card-header">
-                <h2>🖼️ Media (foto's & video's)</h2>
+                <h2>🖼️ Media</h2>
             </div>
             <div class="card-body">
-                <?php if (!empty($eventMedia)): ?>
-                    <div class="media-grid">
-                        <?php foreach ($eventMedia as $media): ?>
-                            <div class="media-item">
-                                <?php if ($media['media_type'] === 'video'): ?>
+                <?php
+                $images = [];
+                $videos = [];
+                if (!empty($eventMedia)) {
+                    foreach ($eventMedia as $media) {
+                        if ($media['media_type'] === 'video') $videos[] = $media;
+                        else $images[] = $media;
+                    }
+                }
+                ?>
+
+                <div class="media-tabs">
+                    <div class="media-tab active" data-tab="photos" onclick="switchMediaTab('photos')">Foto's</div>
+                    <div class="media-tab" data-tab="videos" onclick="switchMediaTab('videos')">Video's</div>
+                </div>
+
+                <!-- Photos Tab -->
+                <div id="media-photos" class="media-content active">
+                    <?php if (!empty($images)): ?>
+                        <div class="media-grid">
+                            <?php foreach ($images as $media): ?>
+                                <div class="media-item">
+                                    <img src="uploads/event_media/<?= htmlspecialchars($media['file_url']) ?>" alt="">
+                                    <div class="overlay">
+                                        <input type="text" class="caption-input" name="media_caption[<?= $media['id'] ?>]" value="<?= htmlspecialchars($media['caption'] ?? '') ?>" placeholder="Bijschrift">
+                                        <label style="color:white;font-size:12px;display:flex;align-items:center;gap:4px;">
+                                            <input type="checkbox" name="delete_media[]" value="<?= $media['id'] ?>"> Verwijderen
+                                        </label>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <div class="upload-area" onclick="document.getElementById('upload-photos').click()">
+                        <input type="file" id="upload-photos" name="new_photos[]" multiple accept="image/*" style="display:none" onchange="updateFileList(this, 'file-list-photos', 'new_photos_caption')">
+                        <div class="icon">📷</div>
+                        <div class="text">Klik om foto's te uploaden<br><small>JPG, PNG, GIF</small></div>
+                    </div>
+                    <div id="file-list-photos" style="margin-top:12px;font-size:13px;color:#64748b;"></div>
+                </div>
+
+                <!-- Videos Tab -->
+                <div id="media-videos" class="media-content">
+                    <?php if (!empty($videos)): ?>
+                        <div class="media-grid">
+                            <?php foreach ($videos as $media): ?>
+                                <div class="media-item">
                                     <video src="uploads/event_media/<?= htmlspecialchars($media['file_url']) ?>"></video>
                                     <div class="media-placeholder" style="position:absolute;inset:0;display:flex;">🎬</div>
-                                <?php else: ?>
-                                    <img src="uploads/event_media/<?= htmlspecialchars($media['file_url']) ?>" alt="">
-                                <?php endif; ?>
-                                <div class="overlay">
-                                    <input type="text" class="caption-input" name="media_caption[<?= $media['id'] ?>]" value="<?= htmlspecialchars($media['caption'] ?? '') ?>" placeholder="Bijschrift">
-                                    <label style="color:white;font-size:12px;display:flex;align-items:center;gap:4px;">
-                                        <input type="checkbox" name="delete_media[]" value="<?= $media['id'] ?>"> Verwijderen
-                                    </label>
+                                    <div class="overlay">
+                                        <input type="text" class="caption-input" name="media_caption[<?= $media['id'] ?>]" value="<?= htmlspecialchars($media['caption'] ?? '') ?>" placeholder="Bijschrift">
+                                        <label style="color:white;font-size:12px;display:flex;align-items:center;gap:4px;">
+                                            <input type="checkbox" name="delete_media[]" value="<?= $media['id'] ?>"> Verwijderen
+                                        </label>
+                                    </div>
                                 </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
 
-                <div class="upload-area" onclick="document.getElementById('media-upload').click()">
-                    <input type="file" id="media-upload" name="new_media[]" multiple accept="image/*,video/*" onchange="updateFileList(this)">
-                    <div class="icon">📁</div>
-                    <div class="text">Klik om bestanden te uploaden<br><small>Foto's (JPG, PNG) of Video's (MP4)</small></div>
+                    <div class="upload-area" onclick="document.getElementById('upload-videos').click()">
+                        <input type="file" id="upload-videos" name="new_videos[]" multiple accept="video/*" style="display:none" onchange="updateFileList(this, 'file-list-videos', 'new_videos_caption')">
+                        <div class="icon">🎬</div>
+                        <div class="text">Klik om video's te uploaden<br><small>MP4, WEBM</small></div>
+                    </div>
+                    <div id="file-list-videos" style="margin-top:12px;font-size:13px;color:#64748b;"></div>
                 </div>
-                <div id="file-list" style="margin-top:12px;font-size:13px;color:#64748b;"></div>
-                <div id="caption-inputs"></div>
             </div>
         </div>
 
@@ -977,7 +1129,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <div id="puzzle-upload" class="puzzle-upload <?= $gameType === 'puzzle' ? 'show' : '' ?>">
                     <label>Upload puzzel afbeelding</label>
-                    <input type="file" name="puzzle_image" accept="image/*" style="margin-top:8px;">
+                    <div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;">
+                        <input type="file" id="puzzle_image_input" name="puzzle_image" accept="image/*" style="position:absolute;opacity:0;width:0.1px;height:0.1px;overflow:hidden" onchange="var n=document.getElementById('puzzle_file_name');n.textContent=this.files.length?this.files[0].name:'Geen bestand gekozen';">
+                        <button type="button" onclick="document.getElementById('puzzle_image_input').click()" style="padding:8px 16px;background:#475569;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">Kies bestand</button>
+                        <span id="puzzle_file_name" style="color:#64748b;font-size:14px;">Geen bestand gekozen</span>
+                    </div>
 
                     <?php if (!empty($event['puzzle_image_url'])): ?>
                         <div class="current-image">
@@ -1008,16 +1164,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (empty($quizQuestions)) {
                         $quizQuestions = [['id' => '', 'question' => '', 'image_url' => '', 'correct_answer' => '', 'option_1' => '', 'option_2' => '', 'option_3' => '', 'option_4' => '', 'difficulty' => '']];
                     }
-                    ?>
 
-                    <!-- Debug info -->
-                    <div style="background:#fff3cd;padding:12px;border-radius:8px;margin-bottom:16px;border:1px solid #ffc107;">
-                        <strong>Debug Info:</strong><br>
-                        - Gevonden vragen: <?= count($quizQuestions) ?><br>
-                        - Huidige niveau: <?= !empty($currentQuizDifficulty) ? $currentQuizDifficulty : 'NIET INGESTELD' ?><br>
-                        - Game type: <?= $gameType ?><br>
-                        - Event ID: <?= $eventId ?? 'nieuw' ?>
-                    </div>
+                    // Separate questions by difficulty
+                    $easyQuestions = [];
+                    $hardQuestions = [];
+                    foreach ($quizQuestions as $q) {
+                        if (empty($q['difficulty']) || $q['difficulty'] === 'easy') {
+                            $easyQuestions[] = $q;
+                        } else {
+                            $hardQuestions[] = $q;
+                        }
+                    }
+                    ?>
 
                     <div class="form-group">
                         <label>Selecteer niveau</label>
@@ -1035,57 +1193,152 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     <div id="quiz-form" style="<?= !empty($currentQuizDifficulty) ? '' : 'display:none;' ?>margin-top:24px;">
                         <div id="quiz-container">
-                            <?php foreach ($quizQuestions as $idx => $question):
-                            ?>
-                                <div class="repeater-item quiz-item">
-                                    <button type="button" class="remove-btn" onclick="this.parentElement.remove()">Verwijderen</button>
-                                    <input type="hidden" name="quiz_questions[<?= $idx ?>][id]" value="<?= htmlspecialchars($question['id']) ?>">
+                            <!-- Easy questions -->
+                            <div id="quiz-easy" class="quiz-difficulty-group" style="<?= $currentQuizDifficulty === 'hard' ? 'display:none;' : '' ?>">
+                                <?php foreach ($easyQuestions as $idx => $question): ?>
+                                    <div class="repeater-item quiz-item" data-difficulty="easy">
+                                        <button type="button" class="remove-btn" onclick="this.parentElement.remove()">Verwijderen</button>
+                                        <input type="hidden" name="quiz_questions[<?= $idx ?>][id]" value="<?= htmlspecialchars($question['id']) ?>">
+                                        <input type="hidden" name="quiz_questions[<?= $idx ?>][difficulty]" value="easy">
 
-                                    <div class="form-group">
-                                        <label>Vraag</label>
-                                        <input type="text" name="quiz_questions[<?= $idx ?>][question]" value="<?= htmlspecialchars($question['question']) ?>" placeholder="Waarvoor werd dit werktuig gebruikt?">
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label>Afbeelding URL</label>
-                                        <input type="text" name="quiz_questions[<?= $idx ?>][image_url]" value="<?= htmlspecialchars($question['image_url']) ?>" placeholder="https://...">
-                                        <small style="color:#64748b;display:block;margin-top:4px;">Direct link naar afbeelding of upload via media library</small>
-                                    </div>
-
-                                    <div class="form-row">
-                                        <div class="form-group" style="flex:1;">
-                                            <label>Antwoord 1</label>
-                                            <input type="text" name="quiz_questions[<?= $idx ?>][option_1]" value="<?= htmlspecialchars($question['option_1']) ?>" placeholder="Eerste optie">
+                                        <div class="form-group">
+                                            <label>Vraag</label>
+                                            <input type="text" name="quiz_questions[<?= $idx ?>][question]" value="<?= htmlspecialchars($question['question']) ?>" placeholder="Waarvoor werd dit werktuig gebruikt?" autocomplete="off">
                                         </div>
-                                        <div class="form-group" style="flex:1;">
-                                            <label>Antwoord 2</label>
-                                            <input type="text" name="quiz_questions[<?= $idx ?>][option_2]" value="<?= htmlspecialchars($question['option_2']) ?>" placeholder="Tweede optie">
-                                        </div>
-                                    </div>
 
-                                    <div class="form-row">
-                                        <div class="form-group" style="flex:1;">
-                                            <label>Antwoord 3</label>
-                                            <input type="text" name="quiz_questions[<?= $idx ?>][option_3]" value="<?= htmlspecialchars($question['option_3']) ?>" placeholder="Derde optie">
+                                        <div class="form-group">
+                                            <label>Afbeelding</label>
+                                            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                                                <input type="file" name="quiz_image[<?= $idx ?>]" accept="image/*" style="position:absolute;opacity:0;width:0.1px;height:0.1px;overflow:hidden" onchange="var n=this.closest('.form-group').querySelector('.quiz-file-name');if(n)n.textContent=this.files.length?this.files[0].name:'Geen bestand gekozen';">
+                                                <button type="button" onclick="this.previousElementSibling.click()" style="padding:6px 14px;background:#475569;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">Kies bestand</button>
+                                                <span class="quiz-file-name" style="color:#64748b;font-size:14px;">Geen bestand gekozen</span>
+                                            </div>
+                                            <input type="hidden" name="quiz_questions[<?= $idx ?>][image_url]" value="<?= htmlspecialchars($question['image_url']) ?>">
                                         </div>
-                                        <div class="form-group" style="flex:1;">
-                                            <label>Antwoord 4 (optioneel)</label>
-                                            <input type="text" name="quiz_questions[<?= $idx ?>][option_4]" value="<?= htmlspecialchars($question['option_4']) ?>" placeholder="Vierde optie (optioneel)">
-                                        </div>
-                                    </div>
 
-                                    <div class="form-group">
-                                        <label>Juiste antwoord</label>
-                                        <select name="quiz_questions[<?= $idx ?>][correct_answer]" required>
-                                            <option value="">Kies het juiste antwoord</option>
-                                            <option value="1" <?= $question['correct_answer'] === $question['option_1'] ? 'selected' : '' ?>>Antwoord 1</option>
-                                            <option value="2" <?= $question['correct_answer'] === $question['option_2'] ? 'selected' : '' ?>>Antwoord 2</option>
-                                            <option value="3" <?= $question['correct_answer'] === $question['option_3'] ? 'selected' : '' ?>>Antwoord 3</option>
-                                            <option value="4" <?= !empty($question['option_4']) && $question['correct_answer'] === $question['option_4'] ? 'selected' : '' ?>>Antwoord 4</option>
-                                        </select>
+                                        <div class="form-row">
+                                            <div class="form-group quiz-answer-row" style="flex:1;">
+                                                <label class="correct-dot-label" title="Klik om als juiste antwoord te markeren">
+                                                    <input type="radio" name="quiz_questions[<?= $idx ?>][correct_answer]" value="1" <?= $question['correct_answer'] === $question['option_1'] ? 'checked' : '' ?> required>
+                                                    <span class="correct-dot"></span>
+                                                </label>
+                                                <div style="flex:1;">
+                                                    <label>Antwoord 1</label>
+                                                    <input type="text" name="quiz_questions[<?= $idx ?>][option_1]" value="<?= htmlspecialchars($question['option_1']) ?>" placeholder="Eerste optie" autocomplete="off">
+                                                </div>
+                                            </div>
+                                            <div class="form-group quiz-answer-row" style="flex:1;">
+                                                <label class="correct-dot-label" title="Klik om als juiste antwoord te markeren">
+                                                    <input type="radio" name="quiz_questions[<?= $idx ?>][correct_answer]" value="2" <?= $question['correct_answer'] === $question['option_2'] ? 'checked' : '' ?>>
+                                                    <span class="correct-dot"></span>
+                                                </label>
+                                                <div style="flex:1;">
+                                                    <label>Antwoord 2</label>
+                                                    <input type="text" name="quiz_questions[<?= $idx ?>][option_2]" value="<?= htmlspecialchars($question['option_2']) ?>" placeholder="Tweede optie" autocomplete="off">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="form-row">
+                                            <div class="form-group quiz-answer-row" style="flex:1;">
+                                                <label class="correct-dot-label" title="Klik om als juiste antwoord te markeren">
+                                                    <input type="radio" name="quiz_questions[<?= $idx ?>][correct_answer]" value="3" <?= $question['correct_answer'] === $question['option_3'] ? 'checked' : '' ?>>
+                                                    <span class="correct-dot"></span>
+                                                </label>
+                                                <div style="flex:1;">
+                                                    <label>Antwoord 3</label>
+                                                    <input type="text" name="quiz_questions[<?= $idx ?>][option_3]" value="<?= htmlspecialchars($question['option_3']) ?>" placeholder="Derde optie" autocomplete="off">
+                                                </div>
+                                            </div>
+                                            <div class="form-group quiz-answer-row" style="flex:1;">
+                                                <label class="correct-dot-label" title="Klik om als juiste antwoord te markeren">
+                                                    <input type="radio" name="quiz_questions[<?= $idx ?>][correct_answer]" value="4" <?= !empty($question['option_4']) && $question['correct_answer'] === $question['option_4'] ? 'checked' : '' ?>>
+                                                    <span class="correct-dot"></span>
+                                                </label>
+                                                <div style="flex:1;">
+                                                    <label>Antwoord 4 (optioneel)</label>
+                                                    <input type="text" name="quiz_questions[<?= $idx ?>][option_4]" value="<?= htmlspecialchars($question['option_4']) ?>" placeholder="Vierde optie (optioneel)" autocomplete="off">
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            <?php endforeach; ?>
+                                <?php endforeach; ?>
+                            </div>
+
+                            <!-- Hard questions -->
+                            <div id="quiz-hard" class="quiz-difficulty-group" style="<?= $currentQuizDifficulty === 'easy' ? 'display:none;' : '' ?>">
+                                <?php
+                                $hardIndexOffset = count($easyQuestions);
+                                foreach ($hardQuestions as $idx => $question):
+                                ?>
+                                    <div class="repeater-item quiz-item" data-difficulty="hard">
+                                        <button type="button" class="remove-btn" onclick="this.parentElement.remove()">Verwijderen</button>
+                                        <input type="hidden" name="quiz_questions[<?= $hardIndexOffset + $idx ?>][id]" value="<?= htmlspecialchars($question['id']) ?>">
+                                        <input type="hidden" name="quiz_questions[<?= $hardIndexOffset + $idx ?>][difficulty]" value="hard">
+
+                                        <div class="form-group">
+                                            <label>Vraag</label>
+                                            <input type="text" name="quiz_questions[<?= $hardIndexOffset + $idx ?>][question]" value="<?= htmlspecialchars($question['question']) ?>" placeholder="Waarvoor werd dit werktuig gebruikt?" autocomplete="off">
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label>Afbeelding</label>
+                                            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                                                <input type="file" name="quiz_image[<?= $hardIndexOffset + $idx ?>]" accept="image/*" style="position:absolute;opacity:0;width:0.1px;height:0.1px;overflow:hidden" onchange="var n=this.closest('.form-group').querySelector('.quiz-file-name');if(n)n.textContent=this.files.length?this.files[0].name:'Geen bestand gekozen';">
+                                                <button type="button" onclick="this.previousElementSibling.click()" style="padding:6px 14px;background:#475569;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">Kies bestand</button>
+                                                <span class="quiz-file-name" style="color:#64748b;font-size:14px;">Geen bestand gekozen</span>
+                                            </div>
+                                            <input type="hidden" name="quiz_questions[<?= $hardIndexOffset + $idx ?>][image_url]" value="<?= htmlspecialchars($question['image_url']) ?>">
+                                        </div>
+
+                                        <div class="form-row">
+                                            <div class="form-group quiz-answer-row" style="flex:1;">
+                                                <label class="correct-dot-label" title="Klik om als juiste antwoord te markeren">
+                                                    <input type="radio" name="quiz_questions[<?= $hardIndexOffset + $idx ?>][correct_answer]" value="1" <?= $question['correct_answer'] === $question['option_1'] ? 'checked' : '' ?> required>
+                                                    <span class="correct-dot"></span>
+                                                </label>
+                                                <div style="flex:1;">
+                                                    <label>Antwoord 1</label>
+                                                    <input type="text" name="quiz_questions[<?= $hardIndexOffset + $idx ?>][option_1]" value="<?= htmlspecialchars($question['option_1']) ?>" placeholder="Eerste optie" autocomplete="off">
+                                                </div>
+                                            </div>
+                                            <div class="form-group quiz-answer-row" style="flex:1;">
+                                                <label class="correct-dot-label" title="Klik om als juiste antwoord te markeren">
+                                                    <input type="radio" name="quiz_questions[<?= $hardIndexOffset + $idx ?>][correct_answer]" value="2" <?= $question['correct_answer'] === $question['option_2'] ? 'checked' : '' ?>>
+                                                    <span class="correct-dot"></span>
+                                                </label>
+                                                <div style="flex:1;">
+                                                    <label>Antwoord 2</label>
+                                                    <input type="text" name="quiz_questions[<?= $hardIndexOffset + $idx ?>][option_2]" value="<?= htmlspecialchars($question['option_2']) ?>" placeholder="Tweede optie" autocomplete="off">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="form-row">
+                                            <div class="form-group quiz-answer-row" style="flex:1;">
+                                                <label class="correct-dot-label" title="Klik om als juiste antwoord te markeren">
+                                                    <input type="radio" name="quiz_questions[<?= $hardIndexOffset + $idx ?>][correct_answer]" value="3" <?= $question['correct_answer'] === $question['option_3'] ? 'checked' : '' ?>>
+                                                    <span class="correct-dot"></span>
+                                                </label>
+                                                <div style="flex:1;">
+                                                    <label>Antwoord 3</label>
+                                                    <input type="text" name="quiz_questions[<?= $hardIndexOffset + $idx ?>][option_3]" value="<?= htmlspecialchars($question['option_3']) ?>" placeholder="Derde optie" autocomplete="off">
+                                                </div>
+                                            </div>
+                                            <div class="form-group quiz-answer-row" style="flex:1;">
+                                                <label class="correct-dot-label" title="Klik om als juiste antwoord te markeren">
+                                                    <input type="radio" name="quiz_questions[<?= $hardIndexOffset + $idx ?>][correct_answer]" value="4" <?= !empty($question['option_4']) && $question['correct_answer'] === $question['option_4'] ? 'checked' : '' ?>>
+                                                    <span class="correct-dot"></span>
+                                                </label>
+                                                <div style="flex:1;">
+                                                    <label>Antwoord 4 (optioneel)</label>
+                                                    <input type="text" name="quiz_questions[<?= $hardIndexOffset + $idx ?>][option_4]" value="<?= htmlspecialchars($question['option_4']) ?>" placeholder="Vierde optie (optioneel)" autocomplete="off">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
                         </div>
                         <button type="button" class="add-btn" onclick="addQuizQuestion()">+ Vraag toevoegen</button>
                     </div>
@@ -1172,95 +1425,176 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         function toggleQuizForm() {
             const quizForm = document.getElementById('quiz-form');
             const selectedDifficulty = document.querySelector('input[name="quiz_difficulty"]:checked');
-            quizForm.style.display = selectedDifficulty ? 'block' : 'none';
+
+            if (!selectedDifficulty) {
+                quizForm.style.display = 'none';
+                return;
+            }
+
+            quizForm.style.display = 'block';
+
+            // Show/hide questions based on difficulty
+            const easyGroup = document.getElementById('quiz-easy');
+            const hardGroup = document.getElementById('quiz-hard');
+
+            if (selectedDifficulty.value === 'easy') {
+                if (easyGroup) easyGroup.style.display = 'block';
+                if (hardGroup) hardGroup.style.display = 'none';
+            } else if (selectedDifficulty.value === 'hard') {
+                if (easyGroup) easyGroup.style.display = 'none';
+                if (hardGroup) hardGroup.style.display = 'block';
+            }
         }
 
         // Initialize quiz form visibility on page load
         document.addEventListener('DOMContentLoaded', function() {
             toggleQuizForm();
+
+            // Set custom validation messages in Dutch
+            const form = document.querySelector('form');
+            if (form) {
+                form.addEventListener('invalid', function(e) {
+                    const element = e.target;
+                    if (element.tagName === 'SELECT' && element.hasAttribute('required')) {
+                        element.setCustomValidity('Selecteer het juiste antwoord uit de lijst');
+                    } else {
+                        element.setCustomValidity('');
+                    }
+                }, true);
+
+                form.addEventListener('input', function(e) {
+                    e.target.setCustomValidity('');
+                });
+            }
         });
 
         function addQuizQuestion() {
-            const container = document.getElementById('quiz-container');
-            const index = container.children.length;
+            const selectedDifficulty = document.querySelector('input[name="quiz_difficulty"]:checked');
+            if (!selectedDifficulty) {
+                alert('Selecteer eerst een niveau (Makkelijk of Moeilijk)');
+                return;
+            }
+
+            const difficulty = selectedDifficulty.value;
+            const container = difficulty === 'easy' ?
+                document.getElementById('quiz-easy') :
+                document.getElementById('quiz-hard');
+
+            if (!container) {
+                alert('Kon container niet vinden');
+                return;
+            }
+
+            // Count existing questions in both groups to get correct index
+            const easyGroup = document.getElementById('quiz-easy');
+            const hardGroup = document.getElementById('quiz-hard');
+            const easyCount = easyGroup ? easyGroup.querySelectorAll('.quiz-item').length : 0;
+            const hardCount = hardGroup ? hardGroup.querySelectorAll('.quiz-item').length : 0;
+            const index = difficulty === 'easy' ? easyCount : easyCount + hardCount;
+
             const html = `
-                <div class="repeater-item quiz-item">
+                <div class="repeater-item quiz-item" data-difficulty="${difficulty}">
                     <button type="button" class="remove-btn" onclick="this.parentElement.remove()">Verwijderen</button>
                     <input type="hidden" name="quiz_questions[${index}][id]" value="">
+                    <input type="hidden" name="quiz_questions[${index}][difficulty]" value="${difficulty}">
                     
                     <div class="form-group">
                         <label>Vraag</label>
-                        <input type="text" name="quiz_questions[${index}][question]" placeholder="Waarvoor werd dit werktuig gebruikt?">
+                        <input type="text" name="quiz_questions[${index}][question]" placeholder="Waarvoor werd dit werktuig gebruikt?" autocomplete="off">
                     </div>
 
                     <div class="form-group">
-                        <label>Afbeelding URL</label>
-                        <input type="text" name="quiz_questions[${index}][image_url]" placeholder="https://...">
-                        <small style="color:#64748b;display:block;margin-top:4px;">Direct link naar afbeelding of upload via media library</small>
+                        <label>Afbeelding</label>
+                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                            <input type="file" name="quiz_image[${index}]" accept="image/*" style="position:absolute;opacity:0;width:0.1px;height:0.1px;overflow:hidden" onchange="var n=this.closest('.form-group').querySelector('.quiz-file-name');if(n)n.textContent=this.files.length?this.files[0].name:'Geen bestand gekozen';">
+                            <button type="button" onclick="this.previousElementSibling.click()" style="padding:6px 14px;background:#475569;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">Kies bestand</button>
+                            <span class="quiz-file-name" style="color:#64748b;font-size:14px;">Geen bestand gekozen</span>
+                        </div>
+                        <input type="hidden" name="quiz_questions[${index}][image_url]" value="">
                     </div>
 
                     <div class="form-row">
-                        <div class="form-group" style="flex:1;">
-                            <label>Antwoord 1</label>
-                            <input type="text" name="quiz_questions[${index}][option_1]" placeholder="Eerste optie">
+                        <div class="form-group quiz-answer-row" style="flex:1;">
+                            <label class="correct-dot-label" title="Klik om als juiste antwoord te markeren">
+                                <input type="radio" name="quiz_questions[${index}][correct_answer]" value="1" required>
+                                <span class="correct-dot"></span>
+                            </label>
+                            <div style="flex:1;">
+                                <label>Antwoord 1</label>
+                                <input type="text" name="quiz_questions[${index}][option_1]" placeholder="Eerste optie" autocomplete="off">
+                            </div>
                         </div>
-                        <div class="form-group" style="flex:1;">
-                            <label>Antwoord 2</label>
-                            <input type="text" name="quiz_questions[${index}][option_2]" placeholder="Tweede optie">
+                        <div class="form-group quiz-answer-row" style="flex:1;">
+                            <label class="correct-dot-label" title="Klik om als juiste antwoord te markeren">
+                                <input type="radio" name="quiz_questions[${index}][correct_answer]" value="2">
+                                <span class="correct-dot"></span>
+                            </label>
+                            <div style="flex:1;">
+                                <label>Antwoord 2</label>
+                                <input type="text" name="quiz_questions[${index}][option_2]" placeholder="Tweede optie" autocomplete="off">
+                            </div>
                         </div>
                     </div>
 
                     <div class="form-row">
-                        <div class="form-group" style="flex:1;">
-                            <label>Antwoord 3</label>
-                            <input type="text" name="quiz_questions[${index}][option_3]" placeholder="Derde optie">
+                        <div class="form-group quiz-answer-row" style="flex:1;">
+                            <label class="correct-dot-label" title="Klik om als juiste antwoord te markeren">
+                                <input type="radio" name="quiz_questions[${index}][correct_answer]" value="3">
+                                <span class="correct-dot"></span>
+                            </label>
+                            <div style="flex:1;">
+                                <label>Antwoord 3</label>
+                                <input type="text" name="quiz_questions[${index}][option_3]" placeholder="Derde optie" autocomplete="off">
+                            </div>
                         </div>
-                        <div class="form-group" style="flex:1;">
-                            <label>Antwoord 4 (optioneel)</label>
-                            <input type="text" name="quiz_questions[${index}][option_4]" placeholder="Vierde optie (optioneel)">
+                        <div class="form-group quiz-answer-row" style="flex:1;">
+                            <label class="correct-dot-label" title="Klik om als juiste antwoord te markeren">
+                                <input type="radio" name="quiz_questions[${index}][correct_answer]" value="4">
+                                <span class="correct-dot"></span>
+                            </label>
+                            <div style="flex:1;">
+                                <label>Antwoord 4 (optioneel)</label>
+                                <input type="text" name="quiz_questions[${index}][option_4]" placeholder="Vierde optie (optioneel)" autocomplete="off">
+                            </div>
                         </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Juiste antwoord</label>
-                        <select name="quiz_questions[${index}][correct_answer]" required>
-                            <option value="">Kies het juiste antwoord</option>
-                            <option value="1">Antwoord 1</option>
-                            <option value="2">Antwoord 2</option>
-                            <option value="3">Antwoord 3</option>
-                            <option value="4">Antwoord 4</option>
-                        </select>
                     </div>
                 </div>
             `;
             container.insertAdjacentHTML('beforeend', html);
         }
 
-        function updateFileList(input) {
-            const fileList = document.getElementById('file-list');
-            const captionInputs = document.getElementById('caption-inputs');
-
+        function updateFileList(input, targetListId = 'file-list', inputNamePrefix = 'new_media_caption') {
+            const list = document.getElementById(targetListId);
+            list.innerHTML = '';
+            
             if (input.files.length > 0) {
-                let html = '<strong>Geselecteerde bestanden:</strong><br>';
-                let captionHtml = '';
-
                 for (let i = 0; i < input.files.length; i++) {
-                    html += `• ${input.files[i].name}<br>`;
-                    captionHtml += `
-                        <div class="form-group" style="margin-top:8px;">
-                            <label>Bijschrift voor ${input.files[i].name}</label>
-                            <input type="text" name="new_media_caption[]" placeholder="Optioneel bijschrift">
-                        </div>
+                    const file = input.files[i];
+                    const div = document.createElement('div');
+                    div.style.marginBottom = '12px';
+                    div.innerHTML = `
+                        <div style="font-weight:500;margin-bottom:4px;">${file.name} (${(file.size/1024/1024).toFixed(2)} MB)</div>
+                        <input type="text" name="${inputNamePrefix}[${i}]" placeholder="Bijschrift voor ${file.name}" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;">
                     `;
+                    list.appendChild(div);
                 }
-
-                fileList.innerHTML = html;
-                captionInputs.innerHTML = captionHtml;
-            } else {
-                fileList.innerHTML = '';
-                captionInputs.innerHTML = '';
             }
         }
+
+        // Initialize on page load
+        function switchMediaTab(tabName) {
+            // Update tabs
+            document.querySelectorAll('.media-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.media-tab[data-tab="${tabName}"]`).classList.add('active');
+            
+            // Update content
+            document.querySelectorAll('.media-content').forEach(c => c.classList.remove('active'));
+            document.getElementById(`media-${tabName}`).classList.add('active');
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // toggleVideoUpload(); // Removed as we no longer use the checkbox
+        });
     </script>
 </body>
 

@@ -25,7 +25,7 @@ if ($db === null) {
     http_response_code(500);
     echo json_encode([
         "success" => false,
-        "message" => "Database connection failed"
+        "message" => "Databaseverbinding mislukt"
     ]);
     exit();
 }
@@ -65,7 +65,7 @@ try {
             http_response_code(405);
             echo json_encode([
                 "success" => false,
-                "message" => "Method not allowed"
+                "message" => "Methode niet toegestaan"
             ]);
             break;
     }
@@ -73,7 +73,7 @@ try {
     http_response_code(500);
     echo json_encode([
         "success" => false,
-        "message" => "Server error: " . $e->getMessage()
+        "message" => "Serverfout: " . $e->getMessage()
     ]);
 }
 
@@ -85,7 +85,7 @@ function handleGetEvent($db) {
         http_response_code(400);
         echo json_encode([
             "success" => false,
-            "message" => "Event ID is required"
+            "message" => "Event ID is verplicht"
         ]);
         return;
     }
@@ -219,7 +219,7 @@ function handleUpdateEvent($db) {
         http_response_code(400);
         echo json_encode([
             "success" => false,
-            "message" => "Event ID is required"
+            "message" => "Event ID is verplicht"
         ]);
         return;
     }
@@ -309,7 +309,7 @@ function handleDeleteEvent($db) {
         http_response_code(400);
         echo json_encode([
             "success" => false,
-            "message" => "Event ID is required"
+            "message" => "Event ID is verplicht"
         ]);
         return;
     }

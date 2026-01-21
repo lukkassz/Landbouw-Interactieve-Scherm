@@ -19,7 +19,7 @@ $url = isset($_GET['url']) ? $_GET['url'] : null;
 
 if (!$url) {
     http_response_code(400);
-    die('URL is required');
+    die('URL is verplicht');
 }
 
 // Basic security: ensure URL is valid and points to allowed domain (optional but recommended)
@@ -40,7 +40,7 @@ $content = @file_get_contents($url, false, $context);
 
 if ($content === false) {
     http_response_code(404);
-    die('Failed to fetch image');
+    die('Kon afbeelding niet ophalen');
 }
 
 // Determine content type

@@ -32,13 +32,13 @@ apiClient.interceptors.response.use(
   error => {
     console.error("Response error:", error)
     if (error.response?.status === 404) {
-      throw new Error("Resource not found")
+      throw new Error("Bron niet gevonden")
     } else if (error.response?.status === 500) {
-      throw new Error("Server error occurred")
+      throw new Error("Serverfout opgetreden")
     } else if (error.code === "ECONNREFUSED") {
-      throw new Error("Unable to connect to server")
+      throw new Error("Kan niet verbinden met server")
     }
-    throw new Error(error.response?.data?.message || "An error occurred")
+    throw new Error(error.response?.data?.message || "Er is een fout opgetreden")
   }
 )
 
@@ -60,7 +60,7 @@ export const api = {
           count: count,
         }
       }
-      throw new Error(response.data.message || "Failed to fetch events")
+      throw new Error(response.data.message || "Kon events niet ophalen")
     } catch (error) {
       // Log errors for debugging but don't spam console
       if (process.env.NODE_ENV === 'development') {
@@ -70,7 +70,7 @@ export const api = {
       // If it's a connection error, show helpful message
       if (error.code === "ECONNREFUSED" || error.message.includes("connect")) {
         throw new Error(
-          `Cannot connect to API at ${API_BASE_URL}. Make sure the backend server is running.`
+          `Kan niet verbinden met API op ${API_BASE_URL}. Zorg ervoor dat de backend server draait.`
         )
       }
 

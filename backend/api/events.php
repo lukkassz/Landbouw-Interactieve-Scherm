@@ -24,12 +24,16 @@ if ($db === null) {
     http_response_code(500);
     echo json_encode([
         "success" => false,
-        "message" => "Database connection failed"
+        "message" => "Databaseverbinding mislukt"
     ]);
     exit();
 }
 
 try {
+    // Check if has_video column exists
+    $checkColumn = $db->query("SHOW COLUMNS FROM timeline_events LIKE 'has_video'");
+    $hasVideoColumn = $checkColumn->rowCount() > 0;
+    
     // Prepare SQL query to get all events ordered by year
     $query = "SELECT
                 id,
@@ -50,7 +54,15 @@ try {
                 sort_order,
                 created_at,
                 updated_at,
-                is_active
+                is_active";
+    
+    // Add has_video only if column exists
+    if ($hasVideoColumn) {
+        $query .= ",
+                COALESCE(has_video, 0) as has_video";
+    }
+    
+    $query .= "
               FROM timeline_events
               WHERE is_active = 1
               ORDER BY sort_order ASC, year ASC";
@@ -61,6 +73,13 @@ try {
 
     // Fetch all results
     $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Add has_video = 0 if column doesn't exist
+    if (!$hasVideoColumn) {
+        foreach ($events as &$event) {
+            $event['has_video'] = 0;
+        }
+    }
 
     // Process each event
     foreach ($events as &$event) {

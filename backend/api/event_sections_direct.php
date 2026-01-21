@@ -24,7 +24,7 @@ if ($db === null) {
     http_response_code(500);
     echo json_encode([
         "success" => false,
-        "message" => "Database connection failed"
+        "message" => "Databaseverbinding mislukt"
     ]);
     exit();
 }
@@ -36,7 +36,7 @@ if (!$eventId) {
     http_response_code(400);
     echo json_encode([
         "success" => false,
-        "message" => "Event ID is required",
+        "message" => "Event ID is verplicht",
         "usage" => "Add ?event_id=1 to the URL"
     ]);
     exit;

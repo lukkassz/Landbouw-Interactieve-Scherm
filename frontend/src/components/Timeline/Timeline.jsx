@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from "react"
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Puzzle } from "lucide-react"
 import TimelineDetailModal from "./modals/TimelineDetailModal"
@@ -6,7 +6,6 @@ import MuseumHeadline from "./content/MuseumHeadline"
 import VirtualGuide from "./content/VirtualGuide"
 import StudentenwerkLogo from "../Common/StudentenwerkLogo"
 import IdleScreen from "./content/IdleScreen"
-import AnimatedAnimals from "./content/AnimatedAnimals"
 import { getTheme } from "../../config/themes"
 import { useTimeline } from "../../hooks/useTimeline"
 import { useSound } from "../../hooks/useSound"
@@ -20,6 +19,7 @@ import {
   extractYear as extractYearUtil,
   formatYearRange,
 } from "../../utils/timelineCalculations"
+import { throttle } from "../../utils/throttle"
 
 // import backgroundTimelineVideo from "../../assets/video/5197931-uhd_3840_2160_30fps.mp4"
 
@@ -168,8 +168,8 @@ const getGradientForEvent = event => {
   }
 }
 
-// Swipe Hint Component
-const SwipeHint = ({ visible }) => (
+// Swipe Hint Component - memoized for performance
+const SwipeHint = React.memo(({ visible }) => (
   <AnimatePresence>
     {visible && (
       <motion.div
@@ -202,10 +202,10 @@ const SwipeHint = ({ visible }) => (
       </motion.div>
     )}
   </AnimatePresence>
-)
+))
 
-// Era Background Component
-const EraBackground = ({ currentYear, theme }) => {
+// Era Background Component - memoized for performance
+const EraBackground = React.memo(({ currentYear, theme }) => {
   // Calculate decade (e.g., 1930, 1940)
   const decade = Math.floor(currentYear / 10) * 10
 
@@ -226,10 +226,10 @@ const EraBackground = ({ currentYear, theme }) => {
       </AnimatePresence>
     </div>
   )
-}
+})
 
-// Timeline Scrubber Component
-const TimelineScrubber = ({ scrollProgress, onScrub, theme }) => {
+// Timeline Scrubber Component - memoized for performance
+const TimelineScrubber = React.memo(({ scrollProgress, onScrub, theme }) => {
   const scrubberRef = useRef(null)
 
   const handleClick = e => {
@@ -280,7 +280,7 @@ const TimelineScrubber = ({ scrollProgress, onScrub, theme }) => {
       </div>
     </div>
   )
-}
+})
 
 const Timeline = () => {
   const theme = getTheme()
@@ -302,6 +302,10 @@ const Timeline = () => {
   // Idle screen state - start in idle mode
   const [isIdle, setIsIdle] = useState(true)
   const [showLoadingAnimation, setShowLoadingAnimation] = useState(false)
+
+  // Don't set overflow on body/html – overflow-y: auto with !important blocked
+  // scrolling until first click. TimelineDetailModal sets overflow: hidden
+  // on open and unset on close. Default visible allows scrolling.
 
   // Handle idle timeout (5 minutes)
   const handleIdle = useRef(() => {
@@ -455,8 +459,9 @@ const Timeline = () => {
     resetHintTimer()
   }
 
-  // Scroll Handler for Progress & Year Calculation
-  const handleScroll = () => {
+  // Scroll Handler for Progress & Year Calculation - throttled for performance
+  const handleScrollRef = useRef()
+  handleScrollRef.current = () => {
     if (!timelineRef.current) return
 
     const { scrollLeft, scrollWidth, clientWidth } = timelineRef.current
@@ -471,6 +476,19 @@ const Timeline = () => {
 
     resetHintTimer()
   }
+
+  const handleScroll = useCallback(
+    throttle(() => {
+      handleScrollRef.current()
+    }, 16), // ~60fps throttle
+    [minYear, maxYear]
+  )
+
+  // Wheel: vertical → page scrolling; horizontal → timeline scroll. Listener with { passive: false } so preventDefault works.
+  // Triggered when main timeline is visible (!loading && !error && !isIdle && !showLoadingAnimation).
+  // Wheel event listener removed to restore native scrolling behavior
+  // The previous implementation was blocking vertical scrolling and causing stuttering
+
 
   // Scrubber Handler
   const handleScrub = percentage => {
@@ -739,17 +757,11 @@ const Timeline = () => {
 
   return (
     <div
-      className="min-h-screen relative overflow-hidden pt-32"
-      style={{
-        overscrollBehavior: "none",
-        overscrollBehaviorY: "none",
-        overscrollBehaviorX: "none",
-        touchAction: "pan-x pan-y",
-        WebkitOverflowScrolling: "touch",
-      }}
+      className="min-h-screen relative overflow-x-hidden pt-32"
+      style={{ touchAction: "pan-x pan-y" }}
     >
       {/* Background Image (Farm/Neutral) */}
-      <div className="absolute inset-0 w-full h-full">
+      <div className="absolute inset-0 w-full h-full min-h-screen">
         <img
           src={BACKGROUND_IMAGE_URL}
           alt="Farm Background"
@@ -803,20 +815,19 @@ const Timeline = () => {
         />
       </div>
 
-      {/* Animated Animals - only on active timeline, not on idle screen */}
-      <AnimatedAnimals />
 
-      <div className="timeline-container py-8 md:py-16 relative w-full h-full z-10">
+      <section className="timeline-container py-8 md:py-16 relative w-full h-full z-10">
         {/* Timeline Container - no header, no indicators */}
-        <div className="relative pb-32 overflow-hidden">
+        <div className="relative pb-32">
           <motion.div
             ref={timelineRef}
-            className="overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing"
+            className="overflow-x-auto scrollbar-hide"
             style={{
               scrollbarWidth: "none",
               msOverflowStyle: "none",
               scrollBehavior: isDragging ? "auto" : "smooth",
               userSelect: "none",
+              touchAction: "pan-x pan-y",
             }}
             onScroll={handleScroll}
             onMouseDown={handleMouseDown}
@@ -843,12 +854,12 @@ const Timeline = () => {
                 ></div>
               </div>
               {timelineSections.map((section, sectionIndex) => (
-                <div
+                <section
                   key={section.markerYear}
                   className="flex flex-col items-start min-w-[500px] md:min-w-[600px] flex-shrink-0 relative pr-16 md:pr-24"
                 >
                   {/* Year Marker - Large, Yellow, No Background */}
-                  <div className="sticky left-0 top-0 z-20 mb-12">
+                  <div className="sticky left-0 top-0 z-20 mb-12 pointer-events-none">
                     <motion.span
                       className="text-7xl md:text-8xl font-bold block whitespace-nowrap pointer-events-none font-mono"
                       style={{
@@ -873,7 +884,7 @@ const Timeline = () => {
                   <div className="flex flex-row flex-wrap gap-8 md:gap-12 w-full py-5 relative z-10">
                     {section.events.length > 0 ? (
                       section.events.map((period, eventIndex) => (
-                        <motion.div
+                        <motion.article
                           key={period.id}
                           className="relative flex-shrink-0"
                           initial={{ opacity: 0, y: 100, scale: 0.8 }}
@@ -1090,14 +1101,14 @@ const Timeline = () => {
 
                                               {/* Title */}
                                               <div className="mb-6">
-                                                <h3
+                                                <h2
                                                   className="text-2xl font-bold leading-tight font-heading"
                                                   style={{
                                                     color: "#440f0f",
                                                   }}
                                                 >
                                                   {period.title}
-                                                </h3>
+                                                </h2>
                                                 <div
                                                   className="h-1 w-12 mt-4 rounded-full"
                                                   style={{
@@ -1158,14 +1169,14 @@ const Timeline = () => {
                               </motion.div>
                             </motion.div>
                           </div>
-                        </motion.div>
+                        </motion.article>
                       ))
                     ) : (
                       // Empty section - minimal space placeholder
                       <div className="w-24 h-48 opacity-0" />
                     )}
                   </div>
-                </div>
+                </section>
               ))}
             </motion.div>
 
@@ -1269,14 +1280,14 @@ const Timeline = () => {
 
                             {/* Title */}
                             <div className="mb-6">
-                              <h3
+                              <h2
                                 className="text-2xl font-bold leading-tight font-heading"
                                 style={{
                                   color: "#440f0f",
                                 }}
                               >
                                 {period.title}
-                              </h3>
+                              </h2>
                               <div
                                 className="h-1 w-12 mt-4 rounded-full"
                                 style={{
@@ -1329,7 +1340,7 @@ const Timeline = () => {
             )}
           </motion.div>
         </div>
-      </div>
+      </section>
 
       {/* Sliding detail panel disabled per request */}
 

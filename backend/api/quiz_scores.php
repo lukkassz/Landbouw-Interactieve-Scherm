@@ -26,7 +26,7 @@ if (!$db) {
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'message' => 'Database connection failed'
+        'message' => 'Databaseverbinding mislukt'
     ]);
     exit();
 }
@@ -40,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             http_response_code(500);
             echo json_encode([
                 'success' => false,
-                'message' => 'Table quiz_scores does not exist. Please run create_quiz_tables.sql',
+                'message' => 'Tabel quiz_scores bestaat niet. Voer create_quiz_tables.sql uit.',
                 'scores' => []
             ]);
             exit();
@@ -173,7 +173,7 @@ else {
     http_response_code(405);
     echo json_encode([
         'success' => false,
-        'message' => 'Method not allowed'
+        'message' => 'Methode niet toegestaan'
     ]);
 }
 ?>

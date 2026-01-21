@@ -25,7 +25,7 @@ $db = $database->getConnection();
 
 if ($db === null) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Database connection failed']);
+    echo json_encode(['success' => false, 'message' => 'Databaseverbinding mislukt']);
     exit;
 }
 
@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         ]);
     } catch (PDOException $e) {
         http_response_code(500);
-        echo json_encode(['success' => false, 'message' => 'Failed to fetch scores']);
+        echo json_encode(['success' => false, 'message' => 'Kon scores niet ophalen']);
     }
     exit;
 }
@@ -58,26 +58,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Validation
     if (empty($playerName)) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Player name is required']);
+        echo json_encode(['success' => false, 'message' => 'Spelersnaam is verplicht']);
         exit;
     }
     
     if (strlen($playerName) > 10) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Player name must be max 10 characters']);
+        echo json_encode(['success' => false, 'message' => 'Spelersnaam mag maximaal 10 tekens bevatten']);
         exit;
     }
     
     // Only allow alphanumeric and basic characters
     if (!preg_match('/^[a-zA-Z0-9_\-]+$/', $playerName)) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Player name can only contain letters, numbers, _ and -']);
+        echo json_encode(['success' => false, 'message' => 'Spelersnaam mag alleen letters, cijfers, _ en - bevatten']);
         exit;
     }
     
     if ($moves < 1) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Invalid moves count']);
+        echo json_encode(['success' => false, 'message' => 'Ongeldig aantal zetten']);
         exit;
     }
     
@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $checkStmt->execute([$playerName]);
         if ($checkStmt->fetch()) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'This name is already taken. Choose a different name.']);
+            echo json_encode(['success' => false, 'message' => 'Deze naam is al in gebruik. Kies een andere naam.']);
             exit;
         }
         
@@ -109,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$isBetter) {
                 echo json_encode([
                     'success' => false, 
-                    'message' => 'Your score is not in the top 10. Best score to beat: ' . $worst['moves'] . ' moves.'
+                    'message' => 'Je score staat niet in de top 10. Beste score om te verslaan: ' . $worst['moves'] . ' zetten.'
                 ]);
                 exit;
             }
@@ -139,18 +139,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         echo json_encode([
             'success' => true,
-            'message' => 'Score saved! You are #' . $rank . ' on the leaderboard!',
+            'message' => 'Score opgeslagen! Je staat op plaats #' . $rank . ' op het scorebord!',
             'rank' => $rank,
             'scores' => $scores
         ]);
         
     } catch (PDOException $e) {
         http_response_code(500);
-        echo json_encode(['success' => false, 'message' => 'Failed to save score: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => 'Kon score niet opslaan: ' . $e->getMessage()]);
     }
     exit;
 }
 
 http_response_code(405);
-echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+echo json_encode(['success' => false, 'message' => 'Methode niet toegestaan']);
 

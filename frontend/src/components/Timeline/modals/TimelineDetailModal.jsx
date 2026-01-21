@@ -24,6 +24,7 @@ import MiniTimeline from "../ui/MiniTimeline"
 import Breadcrumb from "../ui/Breadcrumb"
 import { useSound } from "../../../hooks/useSound"
 import { api } from "../../../services/api"
+import DynamicTitle from "../../SEO/DynamicTitle"
 
 // Import Landbouw Icon
 import landbouwIcon from "../../../assets/icons/landbouw-model.png"
@@ -55,6 +56,7 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
   const [videoVolume, setVideoVolume] = useState(1)
   const [isVideoMuted, setIsVideoMuted] = useState(false)
   const videoRef = React.useRef(null)
+  const scrollPositionRef = React.useRef(0)
   const [eventMedia, setEventMedia] = useState([])
   const [eventVideos, setEventVideos] = useState([])
   const [isLoadingMedia, setIsLoadingMedia] = useState(false)
@@ -368,8 +370,54 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
     return !isVideo
   })
 
+  // Normalize gallery images - ensure all items have src property
+  const normalizeGalleryImages = (images) => {
+    if (!images || images.length === 0) return []
+    return images.map(img => {
+      // If it's a string, convert to object with src
+      if (typeof img === 'string') {
+        return { src: img, caption: '', alt: '' }
+      }
+      // If it's an object, ensure it has src
+      if (img && typeof img === 'object') {
+        return {
+          src: img.src || img.url || img,
+          caption: img.caption || '',
+          alt: img.alt || img.caption || ''
+        }
+      }
+      return null
+    }).filter(Boolean) // Remove any null entries
+  }
+
+  const normalizedEventMedia = normalizeGalleryImages(filteredEventMedia)
+  const normalizedConfigImages = normalizeGalleryImages(configGalleryImages)
+  
   const galleryImages =
-    filteredEventMedia.length > 0 ? filteredEventMedia : configGalleryImages
+    normalizedEventMedia.length > 0 ? normalizedEventMedia : normalizedConfigImages
+
+  // Reset slide index when event changes or gallery images change
+  useEffect(() => {
+    if (isOpen && galleryImages.length > 0) {
+      setCurrentSlideIndex(0)
+    }
+  }, [isOpen, eventData?.id, galleryImages.length])
+
+  // Debug: Log gallery images to help diagnose missing images
+  useEffect(() => {
+    if (isOpen && eventData?.id) {
+      console.log("TimelineDetailModal - Gallery Debug:", {
+        eventId: eventData.id,
+        eventMediaCount: eventMedia.length,
+        filteredEventMediaCount: filteredEventMedia.length,
+        configGalleryImagesCount: configGalleryImages.length,
+        galleryImagesCount: galleryImages.length,
+        galleryImages: galleryImages,
+        activeMedia: activeMedia,
+        currentSlideIndex: currentSlideIndex,
+      })
+    }
+  }, [isOpen, eventData?.id, eventMedia, filteredEventMedia, configGalleryImages, galleryImages, activeMedia, currentSlideIndex])
 
   const getActiveYear = () => {
     if (!eventData?.year) return null
@@ -383,11 +431,87 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
     { label: eventData?.title || "Oprichting van het museum" },
   ]
 
+  // Prevent body scroll when modal is open
   useEffect(() => {
-    if (isOpen) document.body.style.overflow = "hidden"
-    else document.body.style.overflow = "unset"
-    return () => {
-      document.body.style.overflow = "unset"
+    if (isOpen) {
+      // Store current scroll position in ref so it's available in cleanup
+      scrollPositionRef.current = window.scrollY || window.pageYOffset || document.documentElement.scrollTop
+      
+      // Block scrolling on body
+      document.body.style.overflow = "hidden"
+      document.body.style.position = "fixed"
+      document.body.style.top = `-${scrollPositionRef.current}px`
+      document.body.style.width = "100%"
+      
+      // Also block scrolling on html element
+      document.documentElement.style.overflow = "hidden"
+      
+      // Prevent scroll events from propagating when scrolling outside modal
+      const preventScroll = (e) => {
+        const modal = document.querySelector('[data-modal="timeline-detail"]')
+        // Always prevent scroll when modal is open, except inside the modal itself
+        if (modal) {
+          const isInsideModal = modal.contains(e.target) || modal === e.target
+          // Allow scrolling inside modal content, but prevent on backdrop/background
+          if (!isInsideModal) {
+            e.preventDefault()
+            e.stopPropagation()
+            return false
+          }
+        } else {
+          // If modal element not found, prevent all scrolling
+          e.preventDefault()
+          e.stopPropagation()
+          return false
+        }
+      }
+      
+      // Add event listeners to prevent scrolling
+      window.addEventListener('wheel', preventScroll, { passive: false })
+      window.addEventListener('touchmove', preventScroll, { passive: false })
+      window.addEventListener('scroll', preventScroll, { passive: false })
+      
+      return () => {
+        // Remove event listeners
+        window.removeEventListener('wheel', preventScroll)
+        window.removeEventListener('touchmove', preventScroll)
+        window.removeEventListener('scroll', preventScroll)
+        
+        // Restore scrolling - use requestAnimationFrame to ensure smooth transition
+        requestAnimationFrame(() => {
+          // Restore body styles
+          document.body.style.overflow = "unset"
+          document.body.style.position = "unset"
+          document.body.style.top = "unset"
+          document.body.style.width = "unset"
+          document.documentElement.style.overflow = "unset"
+          
+          // Restore scroll position after a brief delay to allow modal animation to complete
+          requestAnimationFrame(() => {
+            window.scrollTo({
+              top: scrollPositionRef.current,
+              behavior: 'auto' // Use 'auto' instead of 'smooth' to avoid visible jump
+            })
+          })
+        })
+      }
+    } else {
+      // Cleanup when modal closes - restore immediately
+      requestAnimationFrame(() => {
+        document.body.style.overflow = "unset"
+        document.body.style.position = "unset"
+        document.body.style.top = "unset"
+        document.body.style.width = "unset"
+        document.documentElement.style.overflow = "unset"
+        
+        // Restore scroll position
+        requestAnimationFrame(() => {
+          window.scrollTo({
+            top: scrollPositionRef.current,
+            behavior: 'auto'
+          })
+        })
+      })
     }
   }, [isOpen])
 
@@ -642,37 +766,6 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
                 </div>
               </div>
 
-              {/* Video Pagination Indicator (All models) */}
-              {eventVideos.length > 1 && (
-                <div className="flex justify-center items-center gap-2 mt-2">
-                  {eventVideos.map((_, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => {
-                        setCurrentVideoIndex(idx)
-                        if (videoRef.current) {
-                          videoRef.current.pause()
-                          setIsVideoPlaying(false)
-                        }
-                      }}
-                      className={`transition-all duration-300 ${
-                        currentVideoIndex === idx
-                          ? isLandbouw
-                            ? "w-3 h-3 bg-[#7c8f38] rounded-full"
-                            : isMaatschappelijk
-                            ? "w-3 h-3 bg-black rounded-full"
-                            : "w-3 h-3 bg-[#5c4033] rounded-full"
-                          : isLandbouw
-                          ? "w-2 h-2 bg-[#7c8f38]/40 rounded-full hover:bg-[#7c8f38]/60"
-                          : isMaatschappelijk
-                          ? "w-2 h-2 bg-black/30 rounded-full"
-                          : "w-2 h-2 bg-[#8c7b75] rounded-full opacity-50 hover:opacity-75"
-                      }`}
-                      aria-label={`Go to video ${idx + 1}`}
-                    />
-                  ))}
-                </div>
-              )}
             </div>
           )
         }
@@ -706,17 +799,21 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
                   <motion.div
                     key={currentSlideIndex}
                     className="w-full h-full relative"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.4 }}
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.98 }}
+                    transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
                   >
                     {galleryImages[currentSlideIndex]?.src &&
                     !isVideoFile(galleryImages[currentSlideIndex].src) ? (
                       <img
-                        src={galleryImages[currentSlideIndex].src}
-                        alt={galleryImages[currentSlideIndex].caption}
+                        src={galleryImages[currentSlideIndex].src || galleryImages[currentSlideIndex]}
+                        alt={galleryImages[currentSlideIndex].caption || galleryImages[currentSlideIndex].alt || `Image ${currentSlideIndex + 1}`}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          console.error("Failed to load image:", galleryImages[currentSlideIndex]?.src || galleryImages[currentSlideIndex])
+                          e.target.style.display = 'none'
+                        }}
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
@@ -757,49 +854,38 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
               )}
             </div>
 
-            {/* Image Pagination Indicator (All models) */}
+            {/* Thumbnail Strip (All themes) */}
             {galleryImages.length > 1 && (
-              <div className="flex justify-center items-center gap-2 mt-4">
-                {galleryImages.map((_, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setCurrentSlideIndex(idx)}
-                    className={`transition-all duration-300 ${
-                      currentSlideIndex === idx
-                        ? isLandbouw
-                          ? "w-3 h-3 bg-[#7c8f38] rounded-full"
-                          : isMaatschappelijk
-                          ? "w-3 h-3 bg-black rounded-full"
-                          : "w-3 h-3 bg-[#5c4033] rounded-full"
-                        : isLandbouw
-                        ? "w-2 h-2 bg-[#7c8f38]/40 rounded-full hover:bg-[#7c8f38]/60"
-                        : isMaatschappelijk
-                        ? "w-2 h-2 bg-black/30 rounded-full"
-                        : "w-2 h-2 bg-[#8c7b75] rounded-full opacity-50 hover:opacity-75"
-                    }`}
-                    aria-label={`Go to image ${idx + 1}`}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Thumbnail Strip (Landbouw only) */}
-            {isLandbouw && galleryImages.length > 1 && (
-              <div className="h-24 bg-[#f3eeda] p-2 flex gap-2 overflow-x-auto items-center border-t border-[#d1c7a7]">
+              <div className={`h-24 p-2 flex gap-2 overflow-x-auto items-center scrollbar-hide ${
+                isLandbouw
+                  ? "bg-[#f3eeda] border-t border-[#d1c7a7]"
+                  : isMaatschappelijk
+                  ? "bg-[#f0f0f0] border-t border-black/20"
+                  : "bg-[#f7f5eb] border-t border-[#d1c7a7]/30"
+              }`}>
                 {galleryImages.map((img, idx) => (
                   <button
                     key={idx}
                     onClick={() => setCurrentSlideIndex(idx)}
                     className={`h-20 w-20 flex-shrink-0 rounded-md overflow-hidden border-2 transition-all ${
                       currentSlideIndex === idx
-                        ? "border-[#7c8f38] scale-105"
-                        : "border-transparent opacity-70 hover:opacity-100"
+                        ? isLandbouw
+                          ? "border-[#7c8f38] scale-105"
+                          : isMaatschappelijk
+                          ? "border-black scale-105"
+                          : "border-[#5c4033] scale-105"
+                        : isLandbouw
+                        ? "border-transparent opacity-70 hover:opacity-100"
+                        : isMaatschappelijk
+                        ? "border-gray-300 opacity-70 hover:opacity-100"
+                        : "border-[#d1c7a7] opacity-70 hover:opacity-100"
                     }`}
                   >
                     <img
-                      src={img.src}
-                      alt=""
+                      src={img.src || img}
+                      alt={img.alt || img.caption || `Thumbnail ${idx + 1}`}
                       className="w-full h-full object-cover"
+                      loading="lazy"
                     />
                   </button>
                 ))}
@@ -844,6 +930,14 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background-color: ${isLandbouw ? "#6d4520" : "#b8a696"};
         }
+        /* Hide scrollbar for thumbnail strip */
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
       `}</style>
 
       {isOpen && (
@@ -852,13 +946,14 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
+          transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
         >
           <motion.div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
             onClick={() => {
               playSound()
               onClose()
@@ -866,12 +961,18 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
           />
 
           {/* MAIN CARD */}
-          <motion.div
+          <motion.article
+            data-modal="timeline-detail"
             className={`relative w-full max-w-[95vw] xl:max-w-[90vw] h-[90vh] ${theme.bg} rounded-[2px] overflow-hidden flex flex-col`}
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            initial={{ opacity: 0, scale: 0.96, y: 30 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ type: "spring", damping: 30, stiffness: 300 }}
+            exit={{ opacity: 0, scale: 0.96, y: 30 }}
+            transition={{ 
+              type: "spring", 
+              damping: 25, 
+              stiffness: 200,
+              mass: 0.8
+            }}
             style={
               isMuseum
                 ? {
@@ -935,6 +1036,7 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
               }}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
+              aria-label="Sluit details"
             >
               <X size={20} />
             </motion.button>
@@ -956,7 +1058,7 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
               >
                 {/* Media Toggle Buttons (Top Left for Landbouw) */}
                 {isLandbouw && (
-                  <div className="flex justify-center gap-3 mb-6">
+                  <div className="flex justify-center gap-3 mb-6 mt-4 px-4">
                     <motion.button
                       className={`px-6 py-2 rounded-full font-bold font-heading flex items-center gap-2 transition-all text-sm ${
                         activeMedia === "image"
@@ -973,21 +1075,23 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
                       <ImageIcon size={18} /> FOTO'S
                     </motion.button>
 
-                    <motion.button
-                      className={`px-6 py-2 rounded-full font-bold font-heading flex items-center gap-2 transition-all text-sm ${
-                        activeMedia === "video"
-                          ? theme.buttonPrimary
-                          : "bg-[#5e4b35] text-[#f3eeda] opacity-50 hover:opacity-100"
-                      }`}
-                      onClick={() => {
-                        playSound()
-                        setActiveMedia("video")
-                      }}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <Video size={18} /> VIDEO
-                    </motion.button>
+                    {(eventVideos.length > 0 || eventData?.has_video) && (
+                      <motion.button
+                        className={`px-6 py-2 rounded-full font-bold font-heading flex items-center gap-2 transition-all text-sm ${
+                          activeMedia === "video"
+                            ? theme.buttonPrimary
+                            : "bg-[#5e4b35] text-[#f3eeda] opacity-50 hover:opacity-100"
+                        }`}
+                        onClick={() => {
+                          playSound()
+                          setActiveMedia("video")
+                        }}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <Video size={18} /> VIDEO
+                      </motion.button>
+                    )}
                   </div>
                 )}
 
@@ -1044,19 +1148,21 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
                           >
                             FOTO'S
                           </button>
-                          <button
-                            className={`px-3 py-1 text-[11px] font-bold uppercase tracking-widest border border-black transition-all ${
-                              activeMedia === "video"
-                                ? "bg-black text-white"
-                                : "bg-white text-black hover:bg-gray-100"
-                            }`}
-                            onClick={() => {
-                              playSound()
-                              setActiveMedia("video")
-                            }}
-                          >
-                            VIDEO
-                          </button>
+                          {(eventVideos.length > 0 || eventData?.has_video) && (
+                            <button
+                              className={`px-3 py-1 text-[11px] font-bold uppercase tracking-widest border border-black transition-all ${
+                                activeMedia === "video"
+                                  ? "bg-black text-white"
+                                  : "bg-white text-black hover:bg-gray-100"
+                              }`}
+                              onClick={() => {
+                                playSound()
+                                setActiveMedia("video")
+                              }}
+                            >
+                              VIDEO
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1078,19 +1184,21 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
                       >
                         <ImageIcon size={18} /> Foto's
                       </motion.button>
-                      <motion.button
-                        className={`px-5 py-2.5 rounded-xl font-bold font-heading flex items-center gap-2 transition-all text-sm ${
-                          activeMedia === "video"
-                            ? theme.buttonPrimary
-                            : theme.buttonSecondary
-                        }`}
-                        onClick={() => {
-                          playSound()
-                          setActiveMedia("video")
-                        }}
-                      >
-                        <Video size={18} /> Video
-                      </motion.button>
+                      {(eventVideos.length > 0 || eventData?.has_video) && (
+                        <motion.button
+                          className={`px-5 py-2.5 rounded-xl font-bold font-heading flex items-center gap-2 transition-all text-sm ${
+                            activeMedia === "video"
+                              ? theme.buttonPrimary
+                              : theme.buttonSecondary
+                          }`}
+                          onClick={() => {
+                            playSound()
+                            setActiveMedia("video")
+                          }}
+                        >
+                          <Video size={18} /> Video
+                        </motion.button>
+                      )}
                     </div>
                   )}
 
@@ -1220,7 +1328,7 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
                         return true
                       })
                       .map((section, index) => (
-                        <div
+                        <section
                           key={index}
                           className={`${theme.cardBg} rounded-2xl p-6 border ${theme.cardBorder} mb-4`}
                         >
@@ -1232,7 +1340,7 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
                           <p className={theme.text}>
                             {section.section_content}
                           </p>
-                        </div>
+                        </section>
                       ))}
 
                     {/* Game Button */}
@@ -1247,30 +1355,30 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
                       {(eventData?.gameType === "puzzle" ||
                         eventData?.game_type === "puzzle") && (
                         <motion.button
-                          className={`w-full py-4 rounded-xl font-bold font-heading flex items-center justify-center gap-3 shadow-lg ${theme.buttonPrimary}`}
+                          className={`w-full min-h-[60px] rounded-3xl font-bold font-heading flex items-center justify-center gap-3 shadow-lg ${theme.buttonPrimary}`}
                           onClick={handlePuzzleGame}
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                         >
                           <Puzzle size={24} />{" "}
-                          {isLandbouw ? "Bekijk de Ploeg" : "Speel Puzzle"}
+                          {isLandbouw ? "Bekijk de Ploeg" : "Speel Puzzel"}
                         </motion.button>
                       )}
                       {(eventData?.gameType === "memory" ||
                         eventData?.game_type === "memory") && (
                         <motion.button
-                          className={`w-full py-4 rounded-xl font-bold font-heading flex items-center justify-center gap-3 shadow-lg ${theme.buttonPrimary}`}
+                          className={`w-full min-h-[60px] rounded-3xl font-bold font-heading flex items-center justify-center gap-3 shadow-lg ${theme.buttonPrimary}`}
                           onClick={handleMemoryGame}
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                         >
-                          <Brain size={24} /> Speel Memory
+                          <Brain size={24} /> Speel Geheugenspel
                         </motion.button>
                       )}
                       {(eventData?.gameType === "quiz" ||
                         eventData?.game_type === "quiz") && (
                         <motion.button
-                          className={`w-full py-4 rounded-xl font-bold font-heading flex items-center justify-center gap-3 shadow-lg ${theme.buttonPrimary}`}
+                          className={`w-full min-h-[60px] rounded-3xl font-bold font-heading flex items-center justify-center gap-3 shadow-lg ${theme.buttonPrimary}`}
                           onClick={handleToolQuizGame}
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
@@ -1285,7 +1393,7 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
               {/* End of RIGHT SIDE - CONTENT WRAPPER */}
             </div>{" "}
             {/* End of CONTENT CONTAINER */}
-          </motion.div>
+          </motion.article>
         </motion.div>
       )}
       <ImagePuzzleModal
