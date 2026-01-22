@@ -385,123 +385,128 @@ const ToolQuizGame = ({ isOpen, onClose, variant = "museum", eventId = null }) =
                 </div>
               ) : gameState === "playing" || gameState === "answer" ? (
                 /* Question Screen */
-                <div className="flex flex-col items-center w-full max-w-5xl mx-auto h-full">
-                  {/* Question Image Container - Responsive Height */}
-                  <div className="w-full relative group mb-4 rounded-2xl overflow-hidden shadow-md border-2 border-white/50 bg-gray-50 flex-shrink-1 min-h-0">
-                     <div className="w-full h-48 md:h-64 lg:h-72 max-h-[35vh] relative flex items-center justify-center overflow-hidden bg-gray-100">
-                      {currentQuestion.image_url ? (
-                        <>
-                            {/* Blurred Background for fill */}
-                            <div 
-                                className="absolute inset-0 bg-cover bg-center blur-xl opacity-40 scale-110 transition-transform duration-700 group-hover:scale-125"
-                                style={{ backgroundImage: `url(${currentQuestion.image_url})` }}
-                            />
-                            {/* Overlay to dampen background */}
-                            <div className="absolute inset-0 bg-black/5" />
-                            
-                            {/* Main Image */}
-                            <img
-                              src={currentQuestion.image_url}
-                              alt="Quiz vraag"
-                              className="relative z-10 max-w-full max-h-full object-contain p-4 transition-transform duration-500 group-hover:scale-105 drop-shadow-xl"
-                              onError={(e) => {
-                                e.target.style.display = 'none';
-                                e.target.parentElement.querySelector('.image-error-fallback').style.display = 'flex';
-                              }}
-                            />
-                            {/* Fallback if image fails to load */}
-                            <div className="image-error-fallback absolute inset-0 hidden flex-col items-center justify-center gap-3 text-gray-300 z-0">
-                               <HelpCircle size={64} className="opacity-50" />
-                               <span className="text-sm font-medium">Afbeelding niet geladen</span>
-                            </div>
-                        </>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center gap-3 text-gray-300 h-full w-full">
-                           <HelpCircle size={64} className="opacity-50" />
-                           <span className="text-sm font-medium">Geen afbeelding</span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Badge */}
-                    <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full shadow-sm border border-gray-200 text-xs font-bold text-gray-600 uppercase tracking-wide z-20">
-                      Vraag {currentQuestionIndex + 1}
-                    </div>
-                  </div>
-
-                  {/* Question Text */}
-                  <div className="w-full text-center mb-6 flex-shrink-0">
-                    <h3 className={`text-lg md:text-2xl lg:text-3xl font-bold leading-tight ${styles.textPrimary}`}>
-                      {currentQuestion.question}
-                    </h3>
-                  </div>
-
-                  {/* Answer Options */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full mb-6 flex-grow overflow-y-auto scrollbar-hide min-h-[100px]">
-                    {[
-                      currentQuestion.option_1,
-                      currentQuestion.option_2,
-                      currentQuestion.option_3,
-                      currentQuestion.option_4
-                    ].filter(Boolean).map((option, index) => {
-                      const isSelected = selectedAnswer === option
-                      const isCorrectAnswer = option === currentQuestion.correct_answer
-                      const showFeedback = gameState === "answer"
-
-                      let buttonStyle = styles.buttonOption
-                      let icon = <div className="w-8 h-8 rounded-full border-2 border-current opacity-30 flex items-center justify-center font-bold text-sm">{String.fromCharCode(65 + index)}</div>
-                      
-                      if (showFeedback) {
-                        if (isSelected && isCorrect) {
-                          buttonStyle = styles.buttonCorrect
-                          icon = <CheckCircle2 size={28} className="text-white" />
-                        } else if (isSelected && !isCorrect) {
-                          buttonStyle = styles.buttonWrong
-                          icon = <XCircle size={28} className="text-white" />
-                        } else if (isCorrectAnswer) {
-                          buttonStyle = styles.buttonCorrect
-                          icon = <CheckCircle2 size={28} className="text-white" />
-                        }
-                      } else if (isSelected) {
-                        buttonStyle = "bg-[#c9a300] text-white border-2 border-[#b89300]"
-                        icon = <div className="w-8 h-8 rounded-full bg-white text-[#c9a300] flex items-center justify-center font-bold text-sm">✓</div>
-                      }
-
-                      return (
-                        <motion.button
-                          key={index}
-                          className={`relative p-4 rounded-xl font-bold text-lg text-left transition-all ${buttonStyle} ${
-                            gameState === "answer" ? "cursor-default opacity-90" : "active:scale-[0.98]"
-                          } flex items-center gap-4 group min-h-[80px]`}
-                          onClick={() => handleAnswerSelect(option)}
-                          disabled={gameState === "answer"}
-                          whileHover={gameState === "playing" ? { y: -2, boxShadow: "0 4px 12px rgba(0,0,0,0.1)" } : {}}
-                        >
-                          <div className="shrink-0">
-                            {icon}
+                <div className="flex flex-col lg:flex-row-reverse min-[2000px]:flex-col items-center justify-center h-full w-full max-w-7xl min-[2000px]:max-w-[95vw] mx-auto gap-6 lg:gap-8 min-[2000px]:gap-12 px-4">
+                  {/* Right Section: Image (on Laptop) / Top Section: Image (on Mobile/4K) */}
+                  <div className="w-full lg:w-1/3 min-[2000px]:w-[75%] flex-shrink-0 flex items-center justify-center h-48 md:h-64 lg:h-full min-[2000px]:h-auto min-[2000px]:flex-shrink-1">
+                     <div className="w-full h-full max-h-[35vh] lg:max-h-[60vh] min-[2000px]:max-h-[45vh] aspect-video lg:aspect-auto min-[2000px]:aspect-video relative group rounded-2xl overflow-hidden shadow-md border-2 border-white/50 bg-gray-50">
+                      <div className="w-full h-full relative flex items-center justify-center overflow-hidden bg-gray-100">
+                        {currentQuestion.image_url ? (
+                          <>
+                              {/* Blurred Background for fill */}
+                              <div 
+                                  className="absolute inset-0 bg-cover bg-center blur-xl opacity-40 scale-110 transition-transform duration-700 group-hover:scale-125"
+                                  style={{ backgroundImage: `url(${currentQuestion.image_url})` }}
+                              />
+                              {/* Overlay to dampen background */}
+                              <div className="absolute inset-0 bg-black/5" />
+                              
+                              {/* Main Image */}
+                              <img
+                                src={currentQuestion.image_url}
+                                alt="Quiz vraag"
+                                className="relative z-10 max-w-full max-h-full object-contain p-4 transition-transform duration-500 group-hover:scale-105 drop-shadow-xl"
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                  e.target.parentElement.querySelector('.image-error-fallback').style.display = 'flex';
+                                }}
+                              />
+                              {/* Fallback if image fails to load */}
+                              <div className="image-error-fallback absolute inset-0 hidden flex-col items-center justify-center gap-3 text-gray-300 z-0">
+                                <HelpCircle size={64} className="opacity-50" />
+                                <span className="text-sm font-medium">Afbeelding niet geladen</span>
+                              </div>
+                          </>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center gap-3 text-gray-300 h-full w-full">
+                            <HelpCircle size={64} className="opacity-50" />
+                            <span className="text-sm font-medium">Geen afbeelding</span>
                           </div>
-                          <span className="leading-snug flex-1">{option}</span>
-                        </motion.button>
-                      )
-                    })}
+                        )}
+                      </div>
+                      
+                      {/* Badge */}
+                      <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full shadow-sm border border-gray-200 text-xs font-bold text-gray-600 uppercase tracking-wide z-20">
+                        Vraag {currentQuestionIndex + 1}
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Next Button */}
-                  {gameState === "answer" && (
-                    <motion.div 
-                      className="flex justify-center w-full pb-4 flex-shrink-0"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                    >
-                      <button
-                        className={`px-10 py-4 rounded-2xl font-bold text-xl shadow-lg hover:shadow-xl transition-all ${styles.buttonPrimary} flex items-center gap-3`}
-                        onClick={nextQuestion}
+                  {/* Left Section: Content (on Laptop) / Bottom Section: Content (on Mobile/4K) */}
+                  <div className="flex flex-col flex-1 w-full min-[2000px]:w-[75%] lg:h-full justify-center min-w-0">
+                    {/* Question Text */}
+                    <div className="w-full text-center lg:text-left min-[2000px]:text-center mb-6 flex-shrink-0">
+                      <h3 className={`text-lg md:text-2xl lg:text-3xl min-[2000px]:text-5xl font-bold leading-tight ${styles.textPrimary}`}>
+                        {currentQuestion.question}
+                      </h3>
+                    </div>
+
+                    {/* Answer Options */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 min-[2000px]:gap-6 w-full mb-6 flex-grow overflow-y-auto scrollbar-hide min-h-[100px]">
+                      {[
+                        currentQuestion.option_1,
+                        currentQuestion.option_2,
+                        currentQuestion.option_3,
+                        currentQuestion.option_4
+                      ].filter(Boolean).map((option, index) => {
+                        const isSelected = selectedAnswer === option
+                        const isCorrectAnswer = option === currentQuestion.correct_answer
+                        const showFeedback = gameState === "answer"
+
+                        let buttonStyle = styles.buttonOption
+                        let icon = <div className="w-8 h-8 rounded-full border-2 border-current opacity-30 flex items-center justify-center font-bold text-sm">{String.fromCharCode(65 + index)}</div>
+                        
+                        if (showFeedback) {
+                          if (isSelected && isCorrect) {
+                            buttonStyle = styles.buttonCorrect
+                            icon = <CheckCircle2 size={28} className="text-white" />
+                          } else if (isSelected && !isCorrect) {
+                            buttonStyle = styles.buttonWrong
+                            icon = <XCircle size={28} className="text-white" />
+                          } else if (isCorrectAnswer) {
+                            buttonStyle = styles.buttonCorrect
+                            icon = <CheckCircle2 size={28} className="text-white" />
+                          }
+                        } else if (isSelected) {
+                          buttonStyle = "bg-[#c9a300] text-white border-2 border-[#b89300]"
+                          icon = <div className="w-8 h-8 rounded-full bg-white text-[#c9a300] flex items-center justify-center font-bold text-sm">✓</div>
+                        }
+
+                        return (
+                          <motion.button
+                            key={index}
+                            className={`relative p-4 min-[2000px]:p-8 rounded-xl font-bold text-lg min-[2000px]:text-3xl text-left transition-all ${buttonStyle} ${
+                              gameState === "answer" ? "cursor-default opacity-90" : "active:scale-[0.98]"
+                            } flex items-center gap-4 group min-h-[80px] min-[2000px]:min-h-[140px]`}
+                            onClick={() => handleAnswerSelect(option)}
+                            disabled={gameState === "answer"}
+                            whileHover={gameState === "playing" ? { y: -2, boxShadow: "0 4px 12px rgba(0,0,0,0.1)" } : {}}
+                          >
+                            <div className="shrink-0 min-[2000px]:scale-150">
+                              {icon}
+                            </div>
+                            <span className="leading-snug flex-1">{option}</span>
+                          </motion.button>
+                        )
+                      })}
+                    </div>
+
+                    {/* Next Button */}
+                    {gameState === "answer" && (
+                      <motion.div 
+                        className="flex justify-center lg:justify-start min-[2000px]:justify-center w-full pb-4 flex-shrink-0"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
                       >
-                        {isLastQuestion ? "Bekijk Resultaten" : "Volgende Vraag"}
-                        <ChevronRight />
-                      </button>
-                    </motion.div>
-                  )}
+                        <button
+                          className={`px-10 py-4 min-[2000px]:px-16 min-[2000px]:py-6 rounded-2xl font-bold text-xl min-[2000px]:text-3xl shadow-lg hover:shadow-xl transition-all ${styles.buttonPrimary} flex items-center gap-3`}
+                          onClick={nextQuestion}
+                        >
+                          {isLastQuestion ? "Bekijk Resultaten" : "Volgende Vraag"}
+                          <ChevronRight className="min-[2000px]:scale-150" />
+                        </button>
+                      </motion.div>
+                    )}
+                  </div>
                 </div>
               ) : gameState === "gameOver" ? (
                 /* Game Over Screen */
