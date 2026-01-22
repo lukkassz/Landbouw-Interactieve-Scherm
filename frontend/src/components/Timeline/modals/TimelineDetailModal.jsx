@@ -15,7 +15,6 @@ import {
   HelpCircle,
 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
-import { getGalleryData } from "../../../config/timelineGalleries"
 import ImagePuzzleModal from "../../PuzzleGame/ImagePuzzleModal"
 import MemoryGame from "../../PuzzleGame/MemoryGame"
 import ToolQuizGame from "../../PuzzleGame/ToolQuizGame"
@@ -23,6 +22,7 @@ import LeeuwardenMap from "../content/LeeuwardenMap"
 import MiniTimeline from "../ui/MiniTimeline"
 import Breadcrumb from "../ui/Breadcrumb"
 import { useSound } from "../../../hooks/useSound"
+import { preloadImages } from "../../../hooks/useImagePreloader"
 import { api } from "../../../services/api"
 import DynamicTitle from "../../SEO/DynamicTitle"
 
@@ -140,15 +140,6 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
   }
 
   // ... [Data Fetching Hooks - Same as before] ...
-  const getGalleryKey = (eventId, year) => {
-    const idMap = { 1: "museum-foundation" }
-    if (idMap[eventId]) return idMap[eventId]
-    return eventId?.toString() || "unknown"
-  }
-
-  const galleryKey = getGalleryKey(eventData?.id, eventData?.year)
-  const galleryConfig = getGalleryData(galleryKey)
-  const configGalleryImages = galleryConfig.gallery || []
 
   useEffect(() => {
     let isMounted = true
@@ -244,6 +235,12 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
 
             setEventMedia(images)
             setEventVideos(videos)
+            
+            // Preload all images in background for smooth viewing
+            const imageUrls = images.map(img => img.src).filter(Boolean)
+            if (imageUrls.length > 0) {
+              preloadImages(imageUrls, { concurrency: 3 })
+            }
           } else {
             setEventMedia([])
             setEventVideos([])
@@ -380,8 +377,14 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
       }
       // If it's an object, ensure it has src
       if (img && typeof img === 'object') {
+        // Handle empty string src correctly - don't fallback to img object if src is present but empty
+        let imageSrc = img.src
+        if (imageSrc === undefined || imageSrc === null) {
+          imageSrc = img.url
+        }
+        
         return {
-          src: img.src || img.url || img,
+          src: imageSrc !== undefined ? imageSrc : '',
           caption: img.caption || '',
           alt: img.alt || img.caption || ''
         }
@@ -391,10 +394,8 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
   }
 
   const normalizedEventMedia = normalizeGalleryImages(filteredEventMedia)
-  const normalizedConfigImages = normalizeGalleryImages(configGalleryImages)
   
-  const galleryImages =
-    normalizedEventMedia.length > 0 ? normalizedEventMedia : normalizedConfigImages
+  const galleryImages = normalizedEventMedia
 
   // Reset slide index when event changes or gallery images change
   useEffect(() => {
@@ -410,14 +411,13 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
         eventId: eventData.id,
         eventMediaCount: eventMedia.length,
         filteredEventMediaCount: filteredEventMedia.length,
-        configGalleryImagesCount: configGalleryImages.length,
         galleryImagesCount: galleryImages.length,
         galleryImages: galleryImages,
         activeMedia: activeMedia,
         currentSlideIndex: currentSlideIndex,
       })
     }
-  }, [isOpen, eventData?.id, eventMedia, filteredEventMedia, configGalleryImages, galleryImages, activeMedia, currentSlideIndex])
+  }, [isOpen, eventData?.id, eventMedia, filteredEventMedia, galleryImages, activeMedia, currentSlideIndex])
 
   const getActiveYear = () => {
     if (!eventData?.year) return null

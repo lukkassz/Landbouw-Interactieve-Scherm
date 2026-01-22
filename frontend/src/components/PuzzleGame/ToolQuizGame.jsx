@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { X, Trophy, CheckCircle2, XCircle, HelpCircle, ChevronRight, ArrowLeft } from "lucide-react"
 import { getTheme } from "../../config/themes"
 import { useSound } from "../../hooks/useSound"
+import { preloadImages } from "../../hooks/useImagePreloader"
 import { api } from "../../services/api"
 import VirtualKeyboard from "../Common/VirtualKeyboard"
 
@@ -29,12 +30,15 @@ const ToolQuizGame = ({ isOpen, onClose, variant = "museum", eventId = null }) =
   const [answeredQuestions, setAnsweredQuestions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [imagesPreloaded, setImagesPreloaded] = useState(false)
 
   // Leaderboard & Save
   const [showKeyboard, setShowKeyboard] = useState(false)
   const [savedRank, setSavedRank] = useState(null)
   const [topScores, setTopScores] = useState([])
   const [loadingScores, setLoadingScores] = useState(false)
+  const [showLeaderboard, setShowLeaderboard] = useState(false)
+  const [saveError, setSaveError] = useState("")
 
   // Theme styles
   const styles = useMemo(() => {
@@ -91,10 +95,27 @@ const ToolQuizGame = ({ isOpen, onClose, variant = "museum", eventId = null }) =
   const fetchQuestions = useCallback(async () => {
     setLoading(true)
     setError(null)
+    setImagesPreloaded(false)
     try {
       const result = await api.getQuizQuestions(eventId)
       if (result.success && result.questions && result.questions.length > 0) {
         setAllQuestions(result.questions)
+        
+        // Preload all question images immediately for smooth gameplay
+        const imageUrls = result.questions
+          .map(q => q.image_url)
+          .filter(url => url && url.trim() !== '')
+        
+        if (imageUrls.length > 0) {
+          // Preload with high priority and high concurrency for quiz
+          // Don't await - let it run in background but start immediately
+          preloadImages(imageUrls, { concurrency: 10, lowPriority: false })
+            .then(() => {
+              setImagesPreloaded(true)
+            })
+        } else {
+          setImagesPreloaded(true)
+        }
       } else {
         setError("Geen vragen beschikbaar")
       }
@@ -106,11 +127,11 @@ const ToolQuizGame = ({ isOpen, onClose, variant = "museum", eventId = null }) =
     }
   }, [eventId])
 
-  // Fetch leaderboard
-  const fetchScores = useCallback(async () => {
+  // Fetch leaderboard (filtered by eventId and difficulty)
+  const fetchScores = useCallback(async (difficultyToFetch = null) => {
     setLoadingScores(true)
     try {
-      const result = await api.getQuizScores()
+      const result = await api.getQuizScores(eventId, difficultyToFetch || difficulty)
       if (result.success) {
         setTopScores(result.scores || [])
       }
@@ -119,19 +140,22 @@ const ToolQuizGame = ({ isOpen, onClose, variant = "museum", eventId = null }) =
     } finally {
       setLoadingScores(false)
     }
-  }, [])
+  }, [eventId, difficulty])
 
   // Load questions when modal opens
   useEffect(() => {
     if (isOpen) {
       fetchQuestions()
-      fetchScores()
+      // Don't fetch scores on initial load - fetch when difficulty is selected
     }
-  }, [isOpen, fetchQuestions, fetchScores])
+  }, [isOpen, fetchQuestions])
 
   // Start game
   const startGame = useCallback((selectedDifficulty) => {
     setDifficulty(selectedDifficulty)
+    
+    // Fetch scores for the selected difficulty
+    fetchScores(selectedDifficulty)
     
     // Filter questions by difficulty
     const filtered = allQuestions.filter(q => {
@@ -158,7 +182,8 @@ const ToolQuizGame = ({ isOpen, onClose, variant = "museum", eventId = null }) =
     setScore(0)
     setAnsweredQuestions([])
     setSelectedAnswer(null)
-  }, [allQuestions])
+    setSaveError("")
+  }, [allQuestions, fetchScores])
 
   // Handle answer selection
   const handleAnswerSelect = useCallback((answer) => {
@@ -202,21 +227,27 @@ const ToolQuizGame = ({ isOpen, onClose, variant = "museum", eventId = null }) =
     setAnsweredQuestions([])
     setSelectedAnswer(null)
     setSavedRank(null)
+    setShowLeaderboard(false)
+    setSaveError("")
   }, [])
 
-  // Save score
+  // Save score (with eventId and difficulty)
   const handleSaveScore = useCallback(async (playerName) => {
+    setSaveError("")
     try {
-      const result = await api.saveQuizScore(playerName, score, totalQuestions)
+      const result = await api.saveQuizScore(playerName, score, totalQuestions, eventId, difficulty)
       if (result.success) {
         setSavedRank(result.rank)
         fetchScores()
         setShowKeyboard(false)
+      } else {
+        setSaveError(result.message || "Kon score niet opslaan")
       }
     } catch (err) {
       console.error("Failed to save score:", err)
+      setSaveError("Kon score niet opslaan. Probeer opnieuw.")
     }
-  }, [score, totalQuestions, fetchScores])
+  }, [score, totalQuestions, eventId, difficulty, fetchScores])
 
   if (!isOpen) return null
 
@@ -303,6 +334,128 @@ const ToolQuizGame = ({ isOpen, onClose, variant = "museum", eventId = null }) =
                     Sluiten
                   </button>
                 </div>
+              ) : showLeaderboard ? (
+                /* Leaderboard View - Full Screen */
+                <div className="flex flex-col items-center justify-center h-full p-6 w-full">
+                    <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl p-6 border border-[#a7b8b4]/30 flex flex-col h-full max-h-[700px]">
+                      <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-2xl font-bold text-[#440f0f] flex items-center gap-3">
+                          <Trophy size={32} className="text-[#c9a300]" />
+                          Beste Scores ({difficulty === 'easy' ? 'Makkelijk' : 'Moeilijk'})
+                        </h3>
+                        <button 
+                            onClick={() => setShowLeaderboard(false)}
+                            className="p-2 hover:bg-gray-100 rounded-full"
+                        >
+                            <X size={24} className="text-gray-500" />
+                        </button>
+                      </div>
+                      
+                      {/* Difficulty Toggle */}
+                      <div className="flex gap-2 mb-6">
+                        <button
+                          onClick={() => {
+                            setDifficulty('easy');
+                            fetchScores('easy');
+                          }}
+                          className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all ${
+                            difficulty === 'easy'
+                              ? 'bg-green-600 text-white shadow-md'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                        >
+                          Makkelijk
+                        </button>
+                        <button
+                          onClick={() => {
+                            setDifficulty('hard');
+                            fetchScores('hard');
+                          }}
+                          className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all ${
+                            difficulty === 'hard'
+                              ? 'bg-red-600 text-white shadow-md'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                        >
+                          Moeilijk
+                        </button>
+                      </div>
+
+                      <div className="flex-1 overflow-y-auto pr-2 space-y-3 custom-scrollbar">
+                        {loadingScores ? (
+                          <div className="text-center py-12 text-[#657575] text-lg">
+                            Scores laden...
+                          </div>
+                        ) : topScores.length === 0 ? (
+                          <div className="text-center py-12 text-[#657575] text-lg">
+                            Nog geen scores voor dit niveau.
+                          </div>
+                        ) : (
+                          topScores.slice(0, 50).map((score, index) => (
+                            <div
+                              key={index}
+                              className={`flex items-center justify-between p-4 rounded-xl transition-transform hover:scale-[1.01] ${
+                                index === 0
+                                  ? "bg-gradient-to-r from-yellow-50 to-yellow-100/50 border-2 border-yellow-300 shadow-md"
+                                  : index === 1
+                                  ? "bg-gradient-to-r from-gray-50 to-gray-100/50 border-2 border-gray-300 shadow-sm"
+                                  : index === 2
+                                  ? "bg-gradient-to-r from-orange-50 to-orange-100/50 border-2 border-orange-300 shadow-sm"
+                                  : index % 2 === 0 ? "bg-gray-50" : "bg-white border border-gray-100"
+                              } ${score.rank === savedRank ? "ring-2 ring-green-500 bg-green-50" : ""}`}
+                            >
+                              <div className="flex items-center gap-4">
+                                <span className="text-2xl">
+                                  {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : ""}
+                                </span>
+                                {index > 2 && (
+                                  <div className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 font-bold text-lg text-gray-500">
+                                    {index + 1}
+                                  </div>
+                                )}
+                                <span className={`font-bold text-lg ${index < 3 ? "text-[#440f0f]" : "text-gray-700"}`}>
+                                  {score.player_name}
+                                </span>
+                              </div>
+                              <div className="text-right">
+                                <span className={`font-bold text-xl ${
+                                    index === 0 ? "text-yellow-600" :
+                                    index === 1 ? "text-gray-500" :
+                                    index === 2 ? "text-orange-500" :
+                                    "text-[#657575]"
+                                }`}>
+                                  {score.score}/{score.total_questions || totalQuestions}
+                                </span>
+                                <span className="text-sm text-gray-400 ml-1">punten</span>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+
+                      <div className="mt-6 pt-6 border-t border-gray-100 flex justify-center gap-4">
+                        <motion.button
+                            className="px-8 py-3 bg-gradient-to-r from-[#c9a300] to-[#a68600] text-white rounded-xl font-bold shadow-lg"
+                            onClick={() => {
+                                setShowLeaderboard(false);
+                                resetGame();
+                            }}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                        >
+                            Nieuw Spel
+                        </motion.button>
+                        <motion.button
+                            className="px-8 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold"
+                            onClick={() => setShowLeaderboard(false)}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                        >
+                            Terug
+                        </motion.button>
+                      </div>
+                    </div>
+                </div>
               ) : gameState === "menu" ? (
                 /* Menu Screen */
                 <div className="flex flex-col items-center justify-center h-full gap-8 md:gap-12 py-8 px-4 relative">
@@ -336,19 +489,27 @@ const ToolQuizGame = ({ isOpen, onClose, variant = "museum", eventId = null }) =
                         </span>
                       </div>
                     </div>
-                    <div className={`bg-white p-6 md:p-8 rounded-2xl border-2 ${variant === 'museum' ? 'border-[#a7b8b4]/30' : 'border-[#c9a300]/20'} shadow-sm flex items-center gap-5 transition-transform hover:scale-105 duration-300`}>
+                    <button 
+                        onClick={() => {
+                            // Show scores for 'easy' by default in menu
+                            setDifficulty('easy');
+                            fetchScores('easy');
+                            setShowLeaderboard(true);
+                        }}
+                        className={`bg-white p-6 md:p-8 rounded-2xl border-2 ${variant === 'museum' ? 'border-[#a7b8b4]/30' : 'border-[#c9a300]/20'} shadow-sm flex items-center gap-5 transition-transform hover:scale-105 duration-300 w-full text-left`}
+                    >
                       <div className={`p-4 rounded-full ${variant === 'museum' ? 'bg-[#f3f2e9]' : 'bg-yellow-100'}`}>
                         <Trophy size={32} className={`${variant === 'museum' ? 'text-[#c9a300]' : 'text-yellow-600'}`} />
                       </div>
                       <div className="flex flex-col text-left">
                         <span className={`text-2xl md:text-3xl font-bold ${styles.textPrimary}`}>
-                          Score
+                          Scores
                         </span>
                         <span className={`text-sm md:text-base ${styles.textSecondary} uppercase tracking-wider font-semibold`}>
-                          Punten
+                          Bekijken
                         </span>
                       </div>
-                    </div>
+                    </button>
                   </div>
 
                   <div className="flex flex-col sm:flex-row gap-4 w-full max-w-2xl z-10 mt-4">
@@ -382,6 +543,18 @@ const ToolQuizGame = ({ isOpen, onClose, variant = "museum", eventId = null }) =
                       </span>
                     </motion.button>
                   </div>
+                  
+                  {/* Image preloading indicator */}
+                  {!imagesPreloaded && (
+                    <motion.div 
+                      className="z-10 flex items-center gap-2 text-sm text-gray-500"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                    >
+                      <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                      <span>Afbeeldingen laden...</span>
+                    </motion.div>
+                  )}
                 </div>
               ) : gameState === "playing" || gameState === "answer" ? (
                 /* Question Screen */
@@ -555,18 +728,31 @@ const ToolQuizGame = ({ isOpen, onClose, variant = "museum", eventId = null }) =
                   </div>
 
                   {savedRank ? (
-                    <div className="text-center animate-fade-in">
+                    <div className="text-center animate-fade-in flex flex-col items-center">
                       <p className="text-2xl text-green-600 font-bold mb-4">
                         Je staat op plaats #{savedRank}!
                       </p>
                       <div className="flex gap-4">
                         <motion.button
-                          className={`px-8 py-3 rounded-xl font-bold ${styles.buttonPrimary}`}
+                          className={`px-6 py-3 rounded-xl font-bold ${styles.buttonPrimary}`}
                           onClick={resetGame}
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
                         >
                           Opnieuw Spelen
+                        </motion.button>
+                        
+                        <motion.button
+                            className="px-6 py-3 bg-white border-2 border-[#c9a300] text-[#c9a300] rounded-xl font-bold shadow-lg flex items-center gap-2"
+                            onClick={() => {
+                                setShowLeaderboard(true);
+                                fetchScores(difficulty);
+                            }}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                        >
+                            <Trophy size={20} />
+                            Bekijk Scores
                         </motion.button>
                       </div>
                     </div>
@@ -581,6 +767,9 @@ const ToolQuizGame = ({ isOpen, onClose, variant = "museum", eventId = null }) =
                         <CheckCircle2 size={20} />
                         Score Opslaan
                       </motion.button>
+                      {saveError && (
+                        <p className="text-red-500 text-sm text-center">{saveError}</p>
+                      )}
                       <motion.button
                         className={`w-full px-6 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-100 transition-colors`}
                         onClick={resetGame}

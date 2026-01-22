@@ -4,6 +4,33 @@ import axios from "axios"
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost/backend/api"
 
+// Simple in-memory cache for API responses
+const apiCache = new Map()
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
+const getCacheKey = (url, params) => {
+  const paramStr = params ? JSON.stringify(params) : ''
+  return `${url}:${paramStr}`
+}
+
+const getFromCache = (key) => {
+  const cached = apiCache.get(key)
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data
+  }
+  apiCache.delete(key)
+  return null
+}
+
+const setCache = (key, data) => {
+  // Limit cache size
+  if (apiCache.size > 100) {
+    const firstKey = apiCache.keys().next().value
+    apiCache.delete(firstKey)
+  }
+  apiCache.set(key, { data, timestamp: Date.now() })
+}
+
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,
@@ -46,8 +73,13 @@ export const api = {
   /**
    * Get all timeline events
    * Maps to: GET /api/events
+   * Uses caching for improved performance
    */
   getTimeline: async () => {
+    const cacheKey = getCacheKey("/events.php")
+    const cached = getFromCache(cacheKey)
+    if (cached) return cached
+    
     try {
       const response = await apiClient.get("/events.php")
 
@@ -55,10 +87,12 @@ export const api = {
       if (response.data.success) {
         const data = response.data.data || []
         const count = response.data.count || 0
-        return {
+        const result = {
           data: data,
           count: count,
         }
+        setCache(cacheKey, result)
+        return result
       }
       throw new Error(response.data.message || "Kon events niet ophalen")
     } catch (error) {
@@ -82,19 +116,25 @@ export const api = {
   /**
    * Get key moments for an event
    * Uses direct endpoint (more reliable than routing)
-   * Maps to: GET /api/key_moments_direct.php?event_id={id}
+   * Uses caching for improved performance
    */
   getKeyMoments: async eventId => {
+    const cacheKey = getCacheKey("/key_moments_simple.php", { event_id: eventId })
+    const cached = getFromCache(cacheKey)
+    if (cached) return cached
+    
     try {
       // Try simple version first (exact copy of events.php structure)
       const response = await apiClient.get(
         `/key_moments_simple.php?event_id=${eventId}`
       )
       if (response.data.success) {
-        return {
+        const result = {
           data: response.data.data || [],
           count: response.data.count || 0,
         }
+        setCache(cacheKey, result)
+        return result
       }
       throw new Error(response.data.message || "Failed to fetch key moments")
     } catch (error) {
@@ -141,18 +181,24 @@ export const api = {
   /**
    * Get event sections for a specific event
    * Uses direct endpoint: GET /api/event_sections_direct.php?event_id={id}
-   * (Direct endpoint works reliably, routing has issues)
+   * Uses caching for improved performance
    */
   getEventSections: async eventId => {
+    const cacheKey = getCacheKey("/event_sections_direct.php", { event_id: eventId })
+    const cached = getFromCache(cacheKey)
+    if (cached) return cached
+    
     try {
       // Use direct endpoint directly (routing doesn't work reliably)
       const response = await apiClient.get(
         `/event_sections_direct.php?event_id=${eventId}`
       )
       if (response.data.success) {
-        return {
+        const result = {
           data: response.data.data || [],
         }
+        setCache(cacheKey, result)
+        return result
       }
       throw new Error(response.data.message || "Failed to fetch sections")
     } catch (error) {
@@ -164,19 +210,25 @@ export const api = {
   /**
    * Get event media for a specific event
    * Uses direct endpoint: GET /api/event_media_direct.php?event_id={id}
-   * (Direct endpoint works reliably, routing has issues)
+   * Uses caching for improved performance
    */
   getEventMedia: async eventId => {
+    const cacheKey = getCacheKey("/event_media_direct.php", { event_id: eventId })
+    const cached = getFromCache(cacheKey)
+    if (cached) return cached
+    
     try {
       // Use direct endpoint directly (routing doesn't work reliably)
       const response = await apiClient.get(
         `/event_media_direct.php?event_id=${eventId}`
       )
       if (response.data.success) {
-        return {
+        const result = {
           data: response.data.data || [],
           count: response.data.count || 0,
         }
+        setCache(cacheKey, result)
+        return result
       }
       throw new Error(response.data.message || "Failed to fetch media")
     } catch (error) {
@@ -396,14 +448,21 @@ export const api = {
 
   /**
    * Get quiz questions (optionally filtered by event_id)
-   * Maps to: GET /api/quiz_questions.php
+   * Uses caching for improved performance
    */
   getQuizQuestions: async (eventId = null) => {
+    const cacheKey = getCacheKey("/quiz_questions.php", { event_id: eventId })
+    const cached = getFromCache(cacheKey)
+    if (cached) return cached
+    
     try {
       const url = eventId 
         ? `/quiz_questions.php?event_id=${eventId}`
         : "/quiz_questions.php"
       const response = await apiClient.get(url)
+      if (response.data.success) {
+        setCache(cacheKey, response.data)
+      }
       return response.data
     } catch (error) {
       console.error("Failed to get quiz questions:", error.message)
@@ -412,12 +471,19 @@ export const api = {
   },
 
   /**
-   * Get quiz high scores
+   * Get quiz high scores (filtered by event_id and difficulty)
    * Maps to: GET /api/quiz_scores.php
    */
-  getQuizScores: async () => {
+  getQuizScores: async (eventId = null, difficulty = null) => {
     try {
-      const response = await apiClient.get("/quiz_scores.php")
+      const params = new URLSearchParams()
+      if (eventId !== null) params.append('event_id', eventId)
+      if (difficulty !== null) params.append('difficulty', difficulty)
+      
+      const queryString = params.toString()
+      const url = queryString ? `/quiz_scores.php?${queryString}` : "/quiz_scores.php"
+      
+      const response = await apiClient.get(url)
       return response.data
     } catch (error) {
       console.error("Failed to get quiz scores:", error.message)
@@ -426,15 +492,17 @@ export const api = {
   },
 
   /**
-   * Save quiz score
+   * Save quiz score (with event_id and difficulty)
    * Maps to: POST /api/quiz_scores.php
    */
-  saveQuizScore: async (playerName, score, totalQuestions) => {
+  saveQuizScore: async (playerName, score, totalQuestions, eventId = null, difficulty = 'easy') => {
     try {
       const response = await apiClient.post("/quiz_scores.php", {
         player_name: playerName,
         score: score,
-        total_questions: totalQuestions
+        total_questions: totalQuestions,
+        event_id: eventId,
+        difficulty: difficulty
       })
       return response.data
     } catch (error) {

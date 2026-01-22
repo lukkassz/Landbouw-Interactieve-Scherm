@@ -10,6 +10,7 @@ import { getTheme } from "../../config/themes"
 import { useTimeline } from "../../hooks/useTimeline"
 import { useSound } from "../../hooks/useSound"
 import { useIdleTimer } from "../../hooks/useIdleTimer"
+import { useImagePreloader } from "../../hooks/useImagePreloader"
 import LoadingSkeleton from "./ui/LoadingSkeleton"
 import AnimatedYear from "./ui/AnimatedYear"
 import {
@@ -398,6 +399,9 @@ const Timeline = () => {
       }
     })
   }, [apiData])
+
+  // Preload images for timeline events (runs in background)
+  useImagePreloader(apiData)
 
   // Calculate min and max years from data
   const { minYear, maxYear } = useMemo(() => {

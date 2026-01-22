@@ -795,7 +795,7 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
                     <div className="text-left">
                       <p className="font-bold text-yellow-800">Heb je hulp nodig?</p>
                       <p className="text-yellow-700 text-sm">
-                        Je hebt <span className="font-bold text-lg">3</span> hints beschikbaar! Gebruik ze verstandig.
+                        Je hebt <span className="font-bold text-lg">{difficulty === "easy" ? 3 : 1}</span> hints beschikbaar! Gebruik ze verstandig.
                       </p>
                     </div>
                   </div>
@@ -803,7 +803,7 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
                   <motion.button
                     className={`px-12 py-4 rounded-2xl font-bold text-xl shadow-lg mt-4 ${
                       difficulty === "easy" ? styles.buttonEasy : styles.buttonHard
-                    } text-white`}
+                    }`}
                     onClick={() => {
                         // If game already started (has moves), just close instructions. 
                         // Otherwise start new game.

@@ -228,24 +228,19 @@ const MemoryGame = ({
   const [gameWon, setGameWon] = useState(false)
   const [timeElapsed, setTimeElapsed] = useState(0)
 
-  // Two players game state (race mode - split screen)
+  // Two players game state (turn-based mode with split screen)
   const [player1Cards, setPlayer1Cards] = useState([])
   const [player1FlippedCards, setPlayer1FlippedCards] = useState([])
   const [player1MatchedPairs, setPlayer1MatchedPairs] = useState([])
-  const [player1Moves, setPlayer1Moves] = useState(0)
-  const [player1Started, setPlayer1Started] = useState(false)
   const [player1Won, setPlayer1Won] = useState(false)
-  const [player1Time, setPlayer1Time] = useState(0)
 
   const [player2Cards, setPlayer2Cards] = useState([])
   const [player2FlippedCards, setPlayer2FlippedCards] = useState([])
   const [player2MatchedPairs, setPlayer2MatchedPairs] = useState([])
-  const [player2Moves, setPlayer2Moves] = useState(0)
-  const [player2Started, setPlayer2Started] = useState(false)
   const [player2Won, setPlayer2Won] = useState(false)
-  const [player2Time, setPlayer2Time] = useState(0)
 
-  const [raceWinner, setRaceWinner] = useState(null) // null, 1, or 2
+  const [currentTurn, setCurrentTurn] = useState(1) // 1 or 2
+  const [twoPlayerWinner, setTwoPlayerWinner] = useState(null) // null, 1, or 2
 
   // Leaderboard state
   const [scores, setScores] = useState([])
@@ -356,24 +351,21 @@ const MemoryGame = ({
     setGameWon(false)
     setTimeElapsed(0)
 
-    // Reset two players state
-    setPlayer1Cards(shuffled)
+    // Reset two players state (split screen, turn-based)
+    // Each player gets their own shuffle!
+    setPlayer1Cards(shuffleCards(gameImages))
     setPlayer1FlippedCards([])
     setPlayer1MatchedPairs([])
-    setPlayer1Moves(0)
-    setPlayer1Started(false)
     setPlayer1Won(false)
-    setPlayer1Time(0)
 
-    setPlayer2Cards(shuffled)
+    setPlayer2Cards(shuffleCards(gameImages))
     setPlayer2FlippedCards([])
     setPlayer2MatchedPairs([])
-    setPlayer2Moves(0)
-    setPlayer2Started(false)
     setPlayer2Won(false)
-    setPlayer2Time(0)
 
-    setRaceWinner(null)
+    setCurrentTurn(1)
+    setTwoPlayerWinner(null)
+
     setSavedRank(null)
     setSaveError("")
     setShowLeaderboard(false)
@@ -383,10 +375,9 @@ const MemoryGame = ({
   // Start game with selected mode
   const startGame = useCallback(
     mode => {
-      const shuffled = shuffleCards(gameImages)
-
       if (mode === 1) {
         // Single player mode
+        const shuffled = shuffleCards(gameImages)
         setCards(shuffled)
         setFlippedCards([])
         setMatchedPairs([])
@@ -395,24 +386,19 @@ const MemoryGame = ({
         setGameWon(false)
         setTimeElapsed(0)
       } else if (mode === 2) {
-        // Two players race mode - both get the same shuffled cards
-        setPlayer1Cards(shuffled)
+        // Two players turn-based mode - each player gets DIFFERENT shuffle!
+        setPlayer1Cards(shuffleCards(gameImages))
         setPlayer1FlippedCards([])
         setPlayer1MatchedPairs([])
-        setPlayer1Moves(0)
-        setPlayer1Started(false)
         setPlayer1Won(false)
-        setPlayer1Time(0)
 
-        setPlayer2Cards(shuffled)
+        setPlayer2Cards(shuffleCards(gameImages))
         setPlayer2FlippedCards([])
         setPlayer2MatchedPairs([])
-        setPlayer2Moves(0)
-        setPlayer2Started(false)
         setPlayer2Won(false)
-        setPlayer2Time(0)
 
-        setRaceWinner(null)
+        setCurrentTurn(1) // Player 1 starts
+        setTwoPlayerWinner(null)
       }
 
       setSavedRank(null)
@@ -480,39 +466,6 @@ const MemoryGame = ({
     return () => clearInterval(interval)
   }, [gameMode, gameStarted, gameWon, isOpen])
 
-  // Timer for player 1 (two players mode)
-  useEffect(() => {
-    let interval = null
-    if (
-      gameMode === 2 &&
-      player1Started &&
-      !player1Won &&
-      !raceWinner &&
-      isOpen
-    ) {
-      interval = setInterval(() => {
-        setPlayer1Time(prev => prev + 1)
-      }, 1000)
-    }
-    return () => clearInterval(interval)
-  }, [gameMode, player1Started, player1Won, raceWinner, isOpen])
-
-  // Timer for player 2 (two players mode)
-  useEffect(() => {
-    let interval = null
-    if (
-      gameMode === 2 &&
-      player2Started &&
-      !player2Won &&
-      !raceWinner &&
-      isOpen
-    ) {
-      interval = setInterval(() => {
-        setPlayer2Time(prev => prev + 1)
-      }, 1000)
-    }
-    return () => clearInterval(interval)
-  }, [gameMode, player2Started, player2Won, raceWinner, isOpen])
 
   // Check if card is flipped or matched (single player) - optimized
   const isCardFlipped = useCallback(
@@ -524,7 +477,7 @@ const MemoryGame = ({
     [flippedCards, flattenedMatchedPairs]
   )
 
-  // Check if card is flipped or matched (player 1) - optimized
+  // Check if card is flipped or matched (player 1)
   const isPlayer1CardFlipped = useCallback(
     cardId => {
       return (
@@ -535,7 +488,7 @@ const MemoryGame = ({
     [player1FlippedCards, flattenedPlayer1MatchedPairs]
   )
 
-  // Check if card is flipped or matched (player 2) - optimized
+  // Check if card is flipped or matched (player 2)
   const isPlayer2CardFlipped = useCallback(
     cardId => {
       return (
@@ -599,18 +552,15 @@ const MemoryGame = ({
     ]
   )
 
-  // Handle card click (player 1 - race mode)
+  // Handle card click (player 1 - turn-based)
   const handlePlayer1CardClick = useCallback(
     cardId => {
       if (gameMode !== 2) return
-      if (player1FlippedCards.length >= 2 || player1Won || raceWinner) return
+      if (currentTurn !== 1) return // Not player 1's turn
+      if (player1FlippedCards.length >= 2 || player1Won || twoPlayerWinner) return
       if (isPlayer1CardFlipped(cardId)) return
 
       playSound()
-
-      if (!player1Started) {
-        setPlayer1Started(true)
-      }
 
       const newFlipped = [...player1FlippedCards, cardId]
       setPlayer1FlippedCards(newFlipped)
@@ -620,9 +570,8 @@ const MemoryGame = ({
         const firstCard = player1Cards.find(c => c.id === firstId)
         const secondCard = player1Cards.find(c => c.id === secondId)
 
-        setPlayer1Moves(prev => prev + 1)
-
         if (firstCard.type === secondCard.type) {
+          // Match found!
           setTimeout(() => {
             const newMatchedPairs = [
               ...player1MatchedPairs,
@@ -631,44 +580,47 @@ const MemoryGame = ({
             setPlayer1MatchedPairs(newMatchedPairs)
             setPlayer1FlippedCards([])
 
+            // Check if player 1 won (found all pairs)
             if (newMatchedPairs.length === gameImages.length / 2) {
               setPlayer1Won(true)
-              setRaceWinner(1)
+              setTwoPlayerWinner(1)
+            } else {
+              // Switch turn to player 2
+              setCurrentTurn(2)
             }
           }, 600)
         } else {
+          // No match - switch turns
           setTimeout(() => {
             setPlayer1FlippedCards([])
+            setCurrentTurn(2)
           }, 1000)
         }
       }
     },
     [
       gameMode,
+      currentTurn,
       player1FlippedCards,
       player1Cards,
       player1MatchedPairs,
       player1Won,
-      player1Started,
+      twoPlayerWinner,
       gameImages.length,
       playSound,
       isPlayer1CardFlipped,
-      raceWinner,
     ]
   )
 
-  // Handle card click (player 2 - race mode)
+  // Handle card click (player 2 - turn-based)
   const handlePlayer2CardClick = useCallback(
     cardId => {
       if (gameMode !== 2) return
-      if (player2FlippedCards.length >= 2 || player2Won || raceWinner) return
+      if (currentTurn !== 2) return // Not player 2's turn
+      if (player2FlippedCards.length >= 2 || player2Won || twoPlayerWinner) return
       if (isPlayer2CardFlipped(cardId)) return
 
       playSound()
-
-      if (!player2Started) {
-        setPlayer2Started(true)
-      }
 
       const newFlipped = [...player2FlippedCards, cardId]
       setPlayer2FlippedCards(newFlipped)
@@ -678,9 +630,8 @@ const MemoryGame = ({
         const firstCard = player2Cards.find(c => c.id === firstId)
         const secondCard = player2Cards.find(c => c.id === secondId)
 
-        setPlayer2Moves(prev => prev + 1)
-
         if (firstCard.type === secondCard.type) {
+          // Match found!
           setTimeout(() => {
             const newMatchedPairs = [
               ...player2MatchedPairs,
@@ -689,29 +640,35 @@ const MemoryGame = ({
             setPlayer2MatchedPairs(newMatchedPairs)
             setPlayer2FlippedCards([])
 
+            // Check if player 2 won (found all pairs)
             if (newMatchedPairs.length === gameImages.length / 2) {
               setPlayer2Won(true)
-              setRaceWinner(2)
+              setTwoPlayerWinner(2)
+            } else {
+              // Switch turn to player 1
+              setCurrentTurn(1)
             }
           }, 600)
         } else {
+          // No match - switch turns
           setTimeout(() => {
             setPlayer2FlippedCards([])
+            setCurrentTurn(1)
           }, 1000)
         }
       }
     },
     [
       gameMode,
+      currentTurn,
       player2FlippedCards,
       player2Cards,
       player2MatchedPairs,
       player2Won,
-      player2Started,
+      twoPlayerWinner,
       gameImages.length,
       playSound,
       isPlayer2CardFlipped,
-      raceWinner,
     ]
   )
 
@@ -754,31 +711,31 @@ const MemoryGame = ({
                 {gameMode === 2 && (
                   <div className="flex items-center gap-4 ml-4">
                     <div
-                      className={`px-4 py-2 rounded-xl ${
-                        player1Won
-                          ? "bg-yellow-400/50"
-                          : raceWinner === 1
-                          ? "bg-yellow-400/50"
-                          : "bg-white/20"
+                      className={`px-4 py-2 rounded-xl transition-all ${
+                        currentTurn === 1 && !twoPlayerWinner
+                          ? "bg-blue-500 ring-2 ring-white scale-105"
+                          : twoPlayerWinner === 1
+                          ? "bg-yellow-400"
+                          : "bg-white/20 opacity-50"
                       }`}
                     >
                       <span className="text-white font-bold">
-                        Speler 1: {player1MatchedPairs.length}/
-                        {gameImages.length / 2}
+                        Speler 1: {player1MatchedPairs.length}/{gameImages.length / 2}
+                        {currentTurn === 1 && !twoPlayerWinner && " 👈"}
                       </span>
                     </div>
                     <div
-                      className={`px-4 py-2 rounded-xl ${
-                        player2Won
-                          ? "bg-yellow-400/50"
-                          : raceWinner === 2
-                          ? "bg-yellow-400/50"
-                          : "bg-white/20"
+                      className={`px-4 py-2 rounded-xl transition-all ${
+                        currentTurn === 2 && !twoPlayerWinner
+                          ? "bg-purple-500 ring-2 ring-white scale-105"
+                          : twoPlayerWinner === 2
+                          ? "bg-yellow-400"
+                          : "bg-white/20 opacity-50"
                       }`}
                     >
                       <span className="text-white font-bold">
-                        Speler 2: {player2MatchedPairs.length}/
-                        {gameImages.length / 2}
+                        Speler 2: {player2MatchedPairs.length}/{gameImages.length / 2}
+                        {currentTurn === 2 && !twoPlayerWinner && " 👈"}
                       </span>
                     </div>
                   </div>
@@ -924,7 +881,7 @@ const MemoryGame = ({
                     </motion.button>
                   </div>
                 </div>
-              ) : gameWon || raceWinner !== null ? (
+              ) : gameWon || twoPlayerWinner !== null ? (
                 /* Win Screen */
                 <motion.div
                   className="flex flex-col items-center justify-center h-full gap-6"
@@ -1031,7 +988,7 @@ const MemoryGame = ({
                     /* Win Message */
                     <>
                       {gameMode === 2 ? (
-                        /* Two Players Race Win Screen */
+                        /* Two Players Win Screen */
                         <>
                           <motion.div
                             initial={{ scale: 0, rotate: -180 }}
@@ -1041,78 +998,51 @@ const MemoryGame = ({
                             <Trophy
                               size={120}
                               className={
-                                raceWinner === 1
+                                twoPlayerWinner === 1
                                   ? "text-blue-500"
-                                  : raceWinner === 2
-                                  ? "text-purple-500"
-                                  : "text-yellow-500"
+                                  : "text-purple-500"
                               }
                             />
                           </motion.div>
 
-                          {raceWinner === 1 ? (
+                          {twoPlayerWinner === 1 ? (
                             <>
                               <h3 className="text-4xl lg:text-5xl font-bold text-blue-600">
                                 Speler 1 Wint!
                               </h3>
                               <p className="text-xl text-[#657575]">
-                                Speler 1 heeft alle paren gevonden in{" "}
+                                Speler 1 heeft alle{" "}
                                 <span className="font-bold text-blue-600">
-                                  {player1Moves}
+                                  {gameImages.length / 2}
                                 </span>{" "}
-                                zetten en{" "}
-                                <span className="font-bold text-blue-600">
-                                  {formatTime(player1Time)}
-                                </span>
-                                !
+                                paren gevonden als eerste!
                               </p>
                               <p className="text-lg text-[#657575] mt-2">
-                                Speler 2:{" "}
+                                Speler 2 had{" "}
                                 <span className="font-bold text-purple-600">
                                   {player2MatchedPairs.length}
                                 </span>{" "}
-                                paren gevonden in{" "}
-                                <span className="font-bold text-purple-600">
-                                  {player2Moves}
-                                </span>{" "}
-                                zetten
+                                paren gevonden
                               </p>
                             </>
-                          ) : raceWinner === 2 ? (
+                          ) : (
                             <>
                               <h3 className="text-4xl lg:text-5xl font-bold text-purple-600">
                                 Speler 2 Wint!
                               </h3>
                               <p className="text-xl text-[#657575]">
-                                Speler 2 heeft alle paren gevonden in{" "}
+                                Speler 2 heeft alle{" "}
                                 <span className="font-bold text-purple-600">
-                                  {player2Moves}
+                                  {gameImages.length / 2}
                                 </span>{" "}
-                                zetten en{" "}
-                                <span className="font-bold text-purple-600">
-                                  {formatTime(player2Time)}
-                                </span>
-                                !
+                                paren gevonden als eerste!
                               </p>
                               <p className="text-lg text-[#657575] mt-2">
-                                Speler 1:{" "}
+                                Speler 1 had{" "}
                                 <span className="font-bold text-blue-600">
                                   {player1MatchedPairs.length}
                                 </span>{" "}
-                                paren gevonden in{" "}
-                                <span className="font-bold text-blue-600">
-                                  {player1Moves}
-                                </span>{" "}
-                                zetten
-                              </p>
-                            </>
-                          ) : (
-                            <>
-                              <h3 className="text-4xl lg:text-5xl font-bold text-yellow-600">
-                                Gelijk Spel!
-                              </h3>
-                              <p className="text-xl text-[#657575]">
-                                Beide spelers hebben alle paren gevonden!
+                                paren gevonden
                               </p>
                             </>
                           )}
@@ -1202,30 +1132,32 @@ const MemoryGame = ({
                   )}
                 </motion.div>
               ) : gameMode === 2 ? (
-                /* Two Players Race Mode - Split Screen */
+                /* Two Players Turn-Based Mode - Split Screen */
                 <div className="flex flex-col lg:flex-row gap-4 h-full">
                   {/* Player 1 Board */}
-                  <div className="flex-1 flex flex-col border-4 border-blue-500 rounded-2xl p-4 bg-blue-50/30">
+                  <div className={`flex-1 flex flex-col rounded-2xl p-4 transition-all duration-300 ${
+                    currentTurn === 1 
+                      ? "border-4 border-blue-500 bg-blue-50/50 shadow-lg" 
+                      : "border-4 border-gray-300 bg-gray-100/50 opacity-50"
+                  }`}>
                     <div className="flex items-center justify-between mb-4">
                       <h3
                         className={`text-2xl font-bold ${
-                          player1Won || raceWinner === 1
+                          twoPlayerWinner === 1
                             ? "text-yellow-600"
-                            : "text-blue-600"
+                            : currentTurn === 1
+                            ? "text-blue-600"
+                            : "text-gray-400"
                         }`}
                       >
-                        {player1Won || raceWinner === 1
+                        {twoPlayerWinner === 1
                           ? "🏆 Speler 1 Wint!"
-                          : "Speler 1"}
+                          : currentTurn === 1
+                          ? "👉 Speler 1 - Jouw beurt!"
+                          : "Speler 1 - Wachten..."}
                       </h3>
-                      <div className="flex items-center gap-3 text-sm">
-                        <span className="font-bold">
-                          Zetten: {player1Moves}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock size={16} />
-                          {formatTime(player1Time)}
-                        </span>
+                      <div className="text-sm font-bold text-blue-600">
+                        {player1MatchedPairs.length}/{gameImages.length / 2} paren
                       </div>
                     </div>
                     <div
@@ -1234,14 +1166,13 @@ const MemoryGame = ({
                     >
                       {player1Cards.map(card => {
                         const flipped = isPlayer1CardFlipped(card.id)
-                        const matched = flattenedPlayer1MatchedPairs.includes(
-                          card.id
-                        )
+                        const matched = flattenedPlayer1MatchedPairs.includes(card.id)
                         const canClick =
+                          currentTurn === 1 &&
                           !flipped &&
                           player1FlippedCards.length < 2 &&
                           !player1Won &&
-                          !raceWinner
+                          !twoPlayerWinner
 
                         return (
                           <motion.div
@@ -1249,7 +1180,7 @@ const MemoryGame = ({
                             className={`relative ${
                               canClick
                                 ? "cursor-pointer"
-                                : "cursor-not-allowed opacity-60"
+                                : "cursor-not-allowed"
                             }`}
                             style={{ perspective: "1000px" }}
                             onClick={() =>
@@ -1267,7 +1198,7 @@ const MemoryGame = ({
                             >
                               <div
                                 className={`absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center rounded-xl shadow-lg border-4 ${
-                                  matched ? "border-blue-300" : "border-white"
+                                  matched ? "border-green-400" : "border-white"
                                 }`}
                                 style={{
                                   backfaceVisibility: "hidden",
@@ -1281,7 +1212,7 @@ const MemoryGame = ({
                               <div
                                 className={`absolute inset-0 bg-white flex items-center justify-center rounded-xl shadow-lg border-4 ${
                                   matched
-                                    ? "border-blue-400 bg-blue-50"
+                                    ? "border-green-400 bg-green-50"
                                     : "border-blue-500"
                                 }`}
                                 style={{
@@ -1301,31 +1232,37 @@ const MemoryGame = ({
                     </div>
                   </div>
 
-                  {/* Divider */}
-                  <div className="w-2 bg-gradient-to-b from-blue-500 to-purple-500 rounded-full"></div>
+                  {/* Divider with VS */}
+                  <div className="flex lg:flex-col items-center justify-center gap-2">
+                    <div className="w-full lg:w-2 h-2 lg:h-full bg-gradient-to-r lg:bg-gradient-to-b from-blue-500 to-purple-500 rounded-full"></div>
+                    <span className="text-xl font-bold text-gray-400 px-2">VS</span>
+                    <div className="w-full lg:w-2 h-2 lg:h-full bg-gradient-to-r lg:bg-gradient-to-b from-blue-500 to-purple-500 rounded-full"></div>
+                  </div>
 
                   {/* Player 2 Board */}
-                  <div className="flex-1 flex flex-col border-4 border-purple-500 rounded-2xl p-4 bg-purple-50/30">
+                  <div className={`flex-1 flex flex-col rounded-2xl p-4 transition-all duration-300 ${
+                    currentTurn === 2 
+                      ? "border-4 border-purple-500 bg-purple-50/50 shadow-lg" 
+                      : "border-4 border-gray-300 bg-gray-100/50 opacity-50"
+                  }`}>
                     <div className="flex items-center justify-between mb-4">
                       <h3
                         className={`text-2xl font-bold ${
-                          player2Won || raceWinner === 2
+                          twoPlayerWinner === 2
                             ? "text-yellow-600"
-                            : "text-purple-600"
+                            : currentTurn === 2
+                            ? "text-purple-600"
+                            : "text-gray-400"
                         }`}
                       >
-                        {player2Won || raceWinner === 2
+                        {twoPlayerWinner === 2
                           ? "🏆 Speler 2 Wint!"
-                          : "Speler 2"}
+                          : currentTurn === 2
+                          ? "👉 Speler 2 - Jouw beurt!"
+                          : "Speler 2 - Wachten..."}
                       </h3>
-                      <div className="flex items-center gap-3 text-sm">
-                        <span className="font-bold">
-                          Zetten: {player2Moves}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock size={16} />
-                          {formatTime(player2Time)}
-                        </span>
+                      <div className="text-sm font-bold text-purple-600">
+                        {player2MatchedPairs.length}/{gameImages.length / 2} paren
                       </div>
                     </div>
                     <div
@@ -1334,14 +1271,13 @@ const MemoryGame = ({
                     >
                       {player2Cards.map(card => {
                         const flipped = isPlayer2CardFlipped(card.id)
-                        const matched = flattenedPlayer2MatchedPairs.includes(
-                          card.id
-                        )
+                        const matched = flattenedPlayer2MatchedPairs.includes(card.id)
                         const canClick =
+                          currentTurn === 2 &&
                           !flipped &&
                           player2FlippedCards.length < 2 &&
                           !player2Won &&
-                          !raceWinner
+                          !twoPlayerWinner
 
                         return (
                           <motion.div
@@ -1349,7 +1285,7 @@ const MemoryGame = ({
                             className={`relative ${
                               canClick
                                 ? "cursor-pointer"
-                                : "cursor-not-allowed opacity-60"
+                                : "cursor-not-allowed"
                             }`}
                             style={{ perspective: "1000px" }}
                             onClick={() =>
@@ -1367,7 +1303,7 @@ const MemoryGame = ({
                             >
                               <div
                                 className={`absolute inset-0 bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center rounded-xl shadow-lg border-4 ${
-                                  matched ? "border-purple-300" : "border-white"
+                                  matched ? "border-green-400" : "border-white"
                                 }`}
                                 style={{
                                   backfaceVisibility: "hidden",
@@ -1381,7 +1317,7 @@ const MemoryGame = ({
                               <div
                                 className={`absolute inset-0 bg-white flex items-center justify-center rounded-xl shadow-lg border-4 ${
                                   matched
-                                    ? "border-purple-400 bg-purple-50"
+                                    ? "border-green-400 bg-green-50"
                                     : "border-purple-500"
                                 }`}
                                 style={{
