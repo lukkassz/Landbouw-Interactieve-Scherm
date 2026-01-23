@@ -18,7 +18,6 @@ import { useNavigate } from "react-router-dom"
 import ImagePuzzleModal from "../../PuzzleGame/ImagePuzzleModal"
 import MemoryGame from "../../PuzzleGame/MemoryGame"
 import ToolQuizGame from "../../PuzzleGame/ToolQuizGame"
-import LeeuwardenMap from "../content/LeeuwardenMap"
 import MiniTimeline from "../ui/MiniTimeline"
 import Breadcrumb from "../ui/Breadcrumb"
 import { useSound } from "../../../hooks/useSound"
@@ -1291,7 +1290,7 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
                     })()}
 
                     {/* Key Moments */}
-                    {(eventData?.has_key_moments || keyMoments.length > 0) && (
+                    {keyMoments.length > 0 && (
                       <div className="mb-8">
                         <div
                           className={`flex items-center gap-2 ${theme.heading} font-bold text-xl mb-4 font-heading border-b ${theme.accentBorder} pb-2`}
@@ -1299,17 +1298,11 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
                           <Clock size={24} />
                           <h3>Belangrijke momenten</h3>
                         </div>
-                        {keyMoments.length > 0 ? (
-                          <MiniTimeline
-                            events={keyMoments}
-                            activeYear={getActiveYear()}
-                            variant={isLandbouw ? "landbouw" : "default"}
-                          />
-                        ) : (
-                          <p className={`text-sm ${theme.textMuted} italic`}>
-                            Geen momenten gevonden.
-                          </p>
-                        )}
+                        <MiniTimeline
+                          events={keyMoments}
+                          activeYear={null}
+                          variant={isLandbouw ? "landbouw" : "default"}
+                        />
                       </div>
                     )}
 
@@ -1318,8 +1311,7 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
                       .filter(section => {
                         // Filter out "Belangrijke momenten" section if key moments are already shown
                         if (
-                          (eventData?.has_key_moments ||
-                            keyMoments.length > 0) &&
+                          keyMoments.length > 0 &&
                           section.section_title?.toLowerCase() ===
                             "belangrijke momenten"
                         ) {
