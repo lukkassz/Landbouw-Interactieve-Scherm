@@ -7,13 +7,15 @@
  * Update the credentials below to match your database setup.
  */
 
+include_once __DIR__ . '/secrets.php';
+
 class Database
 {
     // Database credentials
-    private $host = "localhost";  // localhost when API runs on same server as database
-    private $db_name = "timeline";
-    private $username = "timeline";
-    private $password = "1234Time";
+    private $host = DB_HOST;
+    private $db_name = DB_NAME;
+    private $username = DB_USER;
+    private $password = DB_PASS;
     private $conn;
 
     /**

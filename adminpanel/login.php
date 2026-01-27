@@ -1,8 +1,10 @@
 <?php
 session_start();
 
-$correct_username = "admin";
-$correct_password = "1234";
+include_once __DIR__ . '/../backend/api/config/secrets.php';
+
+$correct_username = defined('ADMIN_USER') ? ADMIN_USER : 'admin';
+$correct_password = defined('ADMIN_PASS') ? ADMIN_PASS : '1234';
 $error = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -136,7 +138,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <body>
     <div class="login-card">
         <div class="logo">
-            <div class="logo-icon">🏛️</div>
             <h1>Fries Landbouwmuseum</h1>
             <p>Admin Panel</p>
         </div>

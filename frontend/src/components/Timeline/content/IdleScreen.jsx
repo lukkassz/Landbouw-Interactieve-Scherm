@@ -262,13 +262,21 @@ const IdleScreen = ({ onActivate }) => {
 
           {/* Main Title with Shimmer */}
           <motion.div
-            initial={{ y: 30, opacity: 0 }}
+            initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
+            transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
           >
-            <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold mb-4 font-heading drop-shadow-md text-white">
+            <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold mb-2 font-heading drop-shadow-md text-white">
               <ShimmerText>Begin je reis</ShimmerText>
             </h1>
+            <motion.p 
+              className="text-xl md:text-2xl lg:text-3xl font-medium text-white/80 tracking-widest uppercase"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.6 }}
+            >
+              Landbouw Museum Leeuwarden
+            </motion.p>
           </motion.div>
 
           {/* Animated divider */}
@@ -305,21 +313,21 @@ const IdleScreen = ({ onActivate }) => {
           {/* Subtitle with typewriter-like appearance */}
           <motion.p
             className="text-2xl md:text-3xl lg:text-4xl font-light font-body text-white tracking-wide drop-shadow-md"
-            initial={{ y: 20, opacity: 0 }}
+            initial={{ y: 15, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.7 }}
+            transition={{ duration: 0.6, delay: 0.5, ease: "easeOut" }}
           >
             Ontdek{" "}
             <motion.span 
               className="font-bold text-white"
               animate={{ 
                 textShadow: [
-                  "0 0 10px rgba(255, 255, 255, 0)",
-                  "0 0 20px rgba(255, 255, 255, 0.5)",
-                  "0 0 10px rgba(255, 255, 255, 0)",
+                  "0 0 8px rgba(255, 255, 255, 0)",
+                  "0 0 16px rgba(255, 255, 255, 0.4)",
+                  "0 0 8px rgba(255, 255, 255, 0)",
                 ]
               }}
-              transition={{ duration: 2, repeat: Infinity }}
+              transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
             >
               100 jaar
             </motion.span>

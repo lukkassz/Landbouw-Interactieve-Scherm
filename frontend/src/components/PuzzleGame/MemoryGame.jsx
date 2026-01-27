@@ -1,11 +1,11 @@
 /**
  * MemoryGame Component
  *
- * A memory card matching game with:
- * - Grid of cards with emoji images
- * - Fixed card flip animation
- * - Database-connected leaderboard
- * - Virtual keyboard for name entry
+ * A memory card matching game featuring:
+ * - Single and Two-player modes
+ * - Thematic icons based on event category (Landbouw, Museum, etc.)
+ * - Turn-based logic for 2 players (keep turn on match)
+ * - Leaderboard integration
  */
 
 import React, { useState, useEffect, useMemo, useCallback } from "react"
@@ -170,7 +170,7 @@ const MemoryGame = ({
   eventYear = null, // Year of event for historical context
 }) => {
   const theme = getTheme()
-  const playSound = useSound()
+  const { playSound } = useSound()
 
   // Theme Styles Configuration - memoized for performance
   const styles = useMemo(() => {
@@ -584,9 +584,6 @@ const MemoryGame = ({
             if (newMatchedPairs.length === gameImages.length / 2) {
               setPlayer1Won(true)
               setTwoPlayerWinner(1)
-            } else {
-              // Switch turn to player 2
-              setCurrentTurn(2)
             }
           }, 600)
         } else {
@@ -644,9 +641,6 @@ const MemoryGame = ({
             if (newMatchedPairs.length === gameImages.length / 2) {
               setPlayer2Won(true)
               setTwoPlayerWinner(2)
-            } else {
-              // Switch turn to player 1
-              setCurrentTurn(1)
             }
           }, 600)
         } else {

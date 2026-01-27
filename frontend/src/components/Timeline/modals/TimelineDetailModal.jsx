@@ -29,7 +29,7 @@ import DynamicTitle from "../../SEO/DynamicTitle"
 import landbouwIcon from "../../../assets/icons/landbouw-model.png"
 
 const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
-  const playSound = useSound()
+  const { playSound } = useSound()
 
   // Debug: Log eventData to see what we receive
   useEffect(() => {
@@ -945,14 +945,14 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+          transition={{ duration: 0.25, ease: "easeOut" }}
         >
           <motion.div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
             onClick={() => {
               playSound()
               onClose()
@@ -963,14 +963,12 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
           <motion.article
             data-modal="timeline-detail"
             className={`relative w-full max-w-[95vw] xl:max-w-[90vw] h-[90vh] ${theme.bg} rounded-[2px] overflow-hidden flex flex-col`}
-            initial={{ opacity: 0, scale: 0.96, y: 30 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96, y: 30 }}
+            initial={{ opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
             transition={{ 
-              type: "spring", 
-              damping: 25, 
-              stiffness: 200,
-              mass: 0.8
+              duration: 0.25,
+              ease: "easeOut"
             }}
             style={
               isMuseum
@@ -1353,7 +1351,7 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
                           whileTap={{ scale: 0.98 }}
                         >
                           <Puzzle size={24} />{" "}
-                          {isLandbouw ? "Bekijk de Ploeg" : "Speel Puzzel"}
+                          Speel Puzzel
                         </motion.button>
                       )}
                       {(eventData?.gameType === "memory" ||
@@ -1391,7 +1389,10 @@ const TimelineDetailModal = ({ isOpen, onClose, eventData }) => {
       <ImagePuzzleModal
         isOpen={isImagePuzzleModalOpen}
         onClose={handleCloseImagePuzzleModal}
+        eventId={eventData?.id}
         puzzleImage={puzzleImageUrl}
+        galleryImages={galleryImages.map(img => img.src || img)}
+        eventTitle={eventData?.title || ""}
         variant={
           isLandbouw ? "landbouw" : isMaatschappelijk ? "newspaper" : "museum"
         }

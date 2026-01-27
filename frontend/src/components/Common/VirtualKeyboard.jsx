@@ -15,10 +15,14 @@ const VirtualKeyboard = ({
   onSubmit, 
   maxLength = 10,
   placeholder = "Voer je naam in...",
-  title = "Voer je naam in"
+  title = "Voer je naam in",
+  externalError = ""
 }) => {
   const [value, setValue] = useState("")
   const [error, setError] = useState("")
+  
+  // Combine internal and external errors for display
+  const displayError = error || externalError
 
   // Keyboard layout
   const rows = [
@@ -105,8 +109,8 @@ const VirtualKeyboard = ({
               <span className="text-sm text-gray-400">
                 {value.length} / {maxLength} tekens
               </span>
-              {error && (
-                <span className="text-sm text-red-400">{error}</span>
+              {displayError && (
+                <span className="text-sm text-red-400">{displayError}</span>
               )}
             </div>
           </div>
@@ -151,7 +155,7 @@ const VirtualKeyboard = ({
                 whileTap={{ scale: 0.95 }}
               >
                 <Delete size={20} />
-                Terug
+                Wis teken
               </motion.button>
 
               {/* Space */}

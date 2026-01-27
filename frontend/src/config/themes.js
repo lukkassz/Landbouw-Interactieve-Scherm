@@ -1,10 +1,10 @@
 /**
  * Theme Configuration System
  *
- * Only museum theme available (modern theme removed)
+ * Defines the application's visual theme based on Museum branding.
  */
 
-// Always use museum theme
+// Active theme configuration
 export const ACTIVE_THEME = "museum"
 
 // Museum's official color palette - Exact colors from museum brand

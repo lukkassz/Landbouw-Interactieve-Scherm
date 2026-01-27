@@ -412,6 +412,23 @@ export const api = {
   },
 
   /**
+   * Get all puzzle images from events
+   * Maps to: GET /api/puzzle-images
+   */
+  getPuzzleImages: async (excludeId = null) => {
+    try {
+      const url = excludeId 
+        ? `/puzzle-images?exclude_id=${excludeId}`
+        : "/puzzle-images"
+      const response = await apiClient.get(url)
+      return response.data
+    } catch (error) {
+      console.error("Failed to get puzzle images:", error.message)
+      return { success: false, puzzleImages: [] }
+    }
+  },
+
+  /**
    * Get memory game high scores
    * Maps to: GET /api/memory_scores.php
    */
@@ -507,10 +524,13 @@ export const api = {
       return response.data
     } catch (error) {
       console.error("Failed to save quiz score:", error.message)
-      if (error.response?.data) {
-        return error.response.data
+      // The interceptor may have already extracted the message
+      // Try to get the original response data first, otherwise use error.message
+      if (error.response?.data?.message) {
+        return { success: false, message: error.response.data.message }
       }
-      return { success: false, message: "Failed to save score" }
+      // Error.message may contain the Dutch message from the interceptor
+      return { success: false, message: error.message || "Kon score niet opslaan" }
     }
   },
 }

@@ -133,6 +133,11 @@ switch ($path) {
         }
         break;
 
+    case 'puzzle-images':
+        // Get all puzzle images from events
+        include_once 'endpoints/get_puzzle_images.php';
+        break;
+
     case '':
     case 'index.php':
         // API info

@@ -1,75 +1,99 @@
 import { useRef, useEffect, useCallback } from "react"
 
-// Import sound file
+// Import sound files
 import buttonClickSound from "../assets/sounds/button-click-289742.mp3"
+import correctSound from "../assets/sounds/correct_sound.wav"
 
-// Global audio pool for instant playback
-let audioPool = []
-let audioPoolReady = false
+// Sound types available
+export const SOUND_TYPES = {
+  CLICK: 'click',
+  SUCCESS: 'success',
+  ERROR: 'error',
+  WHOOSH: 'whoosh',
+}
+
+// Global audio pools for instant playback
+const audioPools = {
+  click: [],
+  success: [],
+}
+let audioPoolsReady = false
 const POOL_SIZE = 3
 
-// Initialize audio pool once (singleton pattern)
-const initAudioPool = () => {
-  if (audioPoolReady || typeof window === "undefined") return
+// Sound configurations
+const SOUND_CONFIG = {
+  click: { src: buttonClickSound, volume: 0.25, duration: 200 },
+  success: { src: correctSound, volume: 0.3, duration: 500 },
+}
+
+// Initialize audio pools once (singleton pattern)
+const initAudioPools = () => {
+  if (audioPoolsReady || typeof window === "undefined") return
   
-  for (let i = 0; i < POOL_SIZE; i++) {
-    const audio = new Audio()
-    audio.src = buttonClickSound
-    audio.volume = 0.3
-    audio.preload = "auto"
-    // Force load
-    audio.load()
-    audioPool.push({ audio, playing: false })
-  }
-  audioPoolReady = true
+  Object.keys(SOUND_CONFIG).forEach(type => {
+    const config = SOUND_CONFIG[type]
+    audioPools[type] = []
+    
+    for (let i = 0; i < POOL_SIZE; i++) {
+      const audio = new Audio()
+      audio.src = config.src
+      audio.volume = config.volume
+      audio.preload = "auto"
+      audio.load()
+      audioPools[type].push({ audio, playing: false, duration: config.duration })
+    }
+  })
+  
+  audioPoolsReady = true
 }
 
 // Preload on module import
 if (typeof window !== "undefined") {
-  // Use requestIdleCallback or setTimeout for non-blocking init
   if ('requestIdleCallback' in window) {
-    window.requestIdleCallback(() => initAudioPool())
+    window.requestIdleCallback(() => initAudioPools())
   } else {
-    setTimeout(() => initAudioPool(), 100)
+    setTimeout(() => initAudioPools(), 100)
   }
 }
 
 /**
  * Hook to play sound effects on user interactions
- * Uses an audio pool for instant playback without delay
+ * Uses audio pools for instant playback without delay
  * @param {boolean} enabled - Whether sound is enabled (default: true)
- * @returns {Function} playSound - Function to play the sound
+ * @returns {Object} { playSound, playClick, playSuccess }
  */
 export const useSound = (enabled = true) => {
-  const lastPlayedRef = useRef(0)
+  const lastPlayedRef = useRef({})
   
-  // Ensure pool is initialized
+  // Ensure pools are initialized
   useEffect(() => {
-    initAudioPool()
+    initAudioPools()
   }, [])
 
   /**
-   * Play the sound effect using audio pool
+   * Play a specific sound type
    */
-  const playSound = useCallback(() => {
-    if (!enabled || !audioPoolReady) return
+  const playSoundType = useCallback((type = 'click') => {
+    if (!enabled || !audioPoolsReady) return
     
-    // Throttle: minimum 50ms between plays
+    const pool = audioPools[type]
+    if (!pool || pool.length === 0) return
+    
+    // Throttle: minimum 50ms between same sound type
     const now = Date.now()
-    if (now - lastPlayedRef.current < 50) return
-    lastPlayedRef.current = now
+    if (lastPlayedRef.current[type] && now - lastPlayedRef.current[type] < 50) return
+    lastPlayedRef.current[type] = now
     
     // Find an available audio element from pool
-    const available = audioPool.find(item => !item.playing)
+    const available = pool.find(item => !item.playing)
     if (available) {
       available.playing = true
       available.audio.currentTime = 0
       available.audio.play()
         .then(() => {
-          // Mark as available after sound finishes (short sound ~200ms)
           setTimeout(() => {
             available.playing = false
-          }, 300)
+          }, available.duration + 100)
         })
         .catch(() => {
           available.playing = false
@@ -77,12 +101,21 @@ export const useSound = (enabled = true) => {
     }
   }, [enabled])
 
-  return playSound
+  // Convenience methods
+  const playSound = useCallback(() => playSoundType('click'), [playSoundType])
+  const playClick = useCallback(() => playSoundType('click'), [playSoundType])
+  const playSuccess = useCallback(() => playSoundType('success'), [playSoundType])
+
+  return { 
+    playSound,      // Default click sound (backward compatible)
+    playClick,      // Explicit click sound
+    playSuccess,    // Success/correct sound
+    playSoundType,  // Play any sound type
+  }
 }
 
-
-
-
+// Default export for backward compatibility
+export default useSound
 
 
 

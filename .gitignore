@@ -13,8 +13,10 @@ frontend/build/
 .env.local
 .env.production
 .env.*.local
+.env.*.local
 
-# IDE
+# Secrets
+backend/api/config/secrets.php
 .vscode/
 .idea/
 *.swp

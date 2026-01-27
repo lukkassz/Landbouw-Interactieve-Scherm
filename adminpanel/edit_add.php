@@ -1128,7 +1128,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
 
                 <div id="puzzle-upload" class="puzzle-upload <?= $gameType === 'puzzle' ? 'show' : '' ?>">
-                    <label>Upload puzzel afbeelding</label>
+                    <label>Upload puzzel afbeelding <span class="hint">(optioneel - kan ook foto's van het event gebruiken)</span></label>
                     <div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;">
                         <input type="file" id="puzzle_image_input" name="puzzle_image" accept="image/*" style="position:absolute;opacity:0;width:0.1px;height:0.1px;overflow:hidden" onchange="var n=document.getElementById('puzzle_file_name');n.textContent=this.files.length?this.files[0].name:'Geen bestand gekozen';">
                         <button type="button" onclick="document.getElementById('puzzle_image_input').click()" style="padding:8px 16px;background:#475569;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">Kies bestand</button>
@@ -1144,6 +1144,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
                         </div>
                     <?php endif; ?>
+
+
                 </div>
 
                 <div id="quiz-questions" class="quiz-questions <?= $gameType === 'quiz' ? 'show' : '' ?>">

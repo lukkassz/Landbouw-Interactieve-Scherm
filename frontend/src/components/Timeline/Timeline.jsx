@@ -286,7 +286,7 @@ const TimelineScrubber = React.memo(({ scrollProgress, onScrub, theme }) => {
 const Timeline = () => {
   const theme = getTheme()
   const { timelineData: apiData, loading, error } = useTimeline()
-  const playSound = useSound()
+  const { playSound } = useSound()
   const [selectedPeriod, setSelectedPeriod] = useState(null)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [selectedTimelineItem, setSelectedTimelineItem] = useState(null)

@@ -16,7 +16,7 @@ import VirtualKeyboard from "../Common/VirtualKeyboard"
 
 const ToolQuizGame = ({ isOpen, onClose, variant = "museum", eventId = null }) => {
   const theme = getTheme()
-  const playSound = useSound()
+  const { playSound, playSuccess } = useSound()
 
   // Game state
   const [gameState, setGameState] = useState("menu") // menu, playing, answer, gameOver
@@ -262,7 +262,7 @@ const ToolQuizGame = ({ isOpen, onClose, variant = "museum", eventId = null }) =
           onClick={e => e.target === e.currentTarget && onClose()}
         >
           <motion.div
-            className={`relative ${styles.modalBg} rounded-3xl shadow-2xl w-full max-w-7xl h-full max-h-[90vh] flex flex-col overflow-hidden`}
+            className={`relative ${styles.modalBg} rounded-3xl shadow-2xl w-full max-w-7xl min-[1800px]:max-w-[90vw] h-full max-h-[90vh] flex flex-col overflow-hidden`}
             initial={{ scale: 0.95, y: 20 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.95, y: 20 }}
@@ -335,121 +335,190 @@ const ToolQuizGame = ({ isOpen, onClose, variant = "museum", eventId = null }) =
                   </button>
                 </div>
               ) : showLeaderboard ? (
-                /* Leaderboard View - Full Screen */
-                <div className="flex flex-col items-center justify-center h-full p-6 w-full">
-                    <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl p-6 border border-[#a7b8b4]/30 flex flex-col h-full max-h-[700px]">
-                      <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-2xl font-bold text-[#440f0f] flex items-center gap-3">
-                          <Trophy size={32} className="text-[#c9a300]" />
-                          Beste Scores ({difficulty === 'easy' ? 'Makkelijk' : 'Moeilijk'})
-                        </h3>
-                        <button 
-                            onClick={() => setShowLeaderboard(false)}
-                            className="p-2 hover:bg-gray-100 rounded-full"
-                        >
-                            <X size={24} className="text-gray-500" />
-                        </button>
-                      </div>
-                      
-                      {/* Difficulty Toggle */}
-                      <div className="flex gap-2 mb-6">
-                        <button
-                          onClick={() => {
-                            setDifficulty('easy');
-                            fetchScores('easy');
-                          }}
-                          className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all ${
-                            difficulty === 'easy'
-                              ? 'bg-green-600 text-white shadow-md'
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          }`}
-                        >
-                          Makkelijk
-                        </button>
-                        <button
-                          onClick={() => {
-                            setDifficulty('hard');
-                            fetchScores('hard');
-                          }}
-                          className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all ${
-                            difficulty === 'hard'
-                              ? 'bg-red-600 text-white shadow-md'
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          }`}
-                        >
-                          Moeilijk
-                        </button>
+                /* Leaderboard View - Premium Redesign */
+                <div className="flex flex-col items-center justify-center h-full p-4 md:p-8 w-full">
+                    <div className="w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col h-full max-h-[85vh]">
+                      {/* Premium Gradient Header */}
+                      <div className="relative bg-gradient-to-br from-[#440f0f] via-[#5a1f1f] to-[#2d0909] px-6 md:px-10 py-6 md:py-8">
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                        <div className="relative flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="p-3 md:p-4 bg-gradient-to-br from-[#c9a300] to-[#a68600] rounded-2xl shadow-lg">
+                              <Trophy size={32} className="text-white md:w-10 md:h-10" />
+                            </div>
+                            <div>
+                              <h3 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
+                                Scorebord
+                              </h3>
+                              <p className="text-white/70 text-sm md:text-base mt-1">
+                                {difficulty === 'easy' ? 'Makkelijk niveau' : 'Moeilijk niveau'}
+                              </p>
+                            </div>
+                          </div>
+                          <button 
+                              onClick={() => setShowLeaderboard(false)}
+                              className="p-3 bg-white/10 hover:bg-white/20 rounded-xl transition-all hover:scale-105"
+                          >
+                              <X size={24} className="text-white" />
+                          </button>
+                        </div>
+                        
+                        {/* Difficulty Toggle - Premium Style */}
+                        <div className="flex gap-3 mt-6">
+                          <button
+                            onClick={() => {
+                              setDifficulty('easy');
+                              fetchScores('easy');
+                            }}
+                            className={`flex-1 py-3 md:py-4 px-6 rounded-xl font-bold text-base md:text-lg transition-all ${
+                              difficulty === 'easy'
+                                ? 'bg-white text-[#440f0f] shadow-lg scale-105'
+                                : 'bg-white/10 text-white/70 hover:bg-white/20 hover:text-white'
+                            }`}
+                          >
+                            Makkelijk
+                          </button>
+                          <button
+                            onClick={() => {
+                              setDifficulty('hard');
+                              fetchScores('hard');
+                            }}
+                            className={`flex-1 py-3 md:py-4 px-6 rounded-xl font-bold text-base md:text-lg transition-all ${
+                              difficulty === 'hard'
+                                ? 'bg-white text-[#440f0f] shadow-lg scale-105'
+                                : 'bg-white/10 text-white/70 hover:bg-white/20 hover:text-white'
+                            }`}
+                          >
+                            Moeilijk
+                          </button>
+                        </div>
                       </div>
 
-                      <div className="flex-1 overflow-y-auto pr-2 space-y-3 custom-scrollbar">
+                      {/* Scores List */}
+                      <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-gradient-to-b from-gray-50 to-white">
                         {loadingScores ? (
-                          <div className="text-center py-12 text-[#657575] text-lg">
-                            Scores laden...
+                          <div className="flex flex-col items-center justify-center h-full gap-4">
+                            <div className="w-12 h-12 border-4 border-[#c9a300] border-t-transparent rounded-full animate-spin" />
+                            <p className="text-[#657575] text-lg font-medium">Scores laden...</p>
                           </div>
                         ) : topScores.length === 0 ? (
-                          <div className="text-center py-12 text-[#657575] text-lg">
-                            Nog geen scores voor dit niveau.
+                          <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
+                            <div className="p-6 bg-gray-100 rounded-full">
+                              <Trophy size={48} className="text-gray-300" />
+                            </div>
+                            <p className="text-[#657575] text-lg font-medium">Nog geen scores voor dit niveau.</p>
+                            <p className="text-gray-400 text-sm">Wees de eerste die een score behaalt!</p>
                           </div>
                         ) : (
-                          topScores.slice(0, 50).map((score, index) => (
-                            <div
-                              key={index}
-                              className={`flex items-center justify-between p-4 rounded-xl transition-transform hover:scale-[1.01] ${
-                                index === 0
-                                  ? "bg-gradient-to-r from-yellow-50 to-yellow-100/50 border-2 border-yellow-300 shadow-md"
-                                  : index === 1
-                                  ? "bg-gradient-to-r from-gray-50 to-gray-100/50 border-2 border-gray-300 shadow-sm"
-                                  : index === 2
-                                  ? "bg-gradient-to-r from-orange-50 to-orange-100/50 border-2 border-orange-300 shadow-sm"
-                                  : index % 2 === 0 ? "bg-gray-50" : "bg-white border border-gray-100"
-                              } ${score.rank === savedRank ? "ring-2 ring-green-500 bg-green-50" : ""}`}
-                            >
-                              <div className="flex items-center gap-4">
-                                <span className="text-2xl">
-                                  {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : ""}
-                                </span>
-                                {index > 2 && (
-                                  <div className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 font-bold text-lg text-gray-500">
-                                    {index + 1}
+                          <div className="grid gap-3 md:gap-4">
+                            {/* Top 3 - Special Cards */}
+                            {topScores.slice(0, 3).map((score, index) => (
+                              <motion.div
+                                key={index}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: index * 0.1 }}
+                                className={`relative overflow-hidden rounded-2xl p-4 md:p-6 transition-all hover:scale-[1.02] cursor-default ${
+                                  index === 0
+                                    ? "bg-gradient-to-r from-yellow-400 via-yellow-300 to-amber-300 shadow-lg shadow-yellow-200/50"
+                                    : index === 1
+                                    ? "bg-gradient-to-r from-gray-300 via-gray-200 to-slate-200 shadow-lg shadow-gray-200/50"
+                                    : "bg-gradient-to-r from-orange-300 via-amber-200 to-orange-200 shadow-lg shadow-orange-200/50"
+                                } ${score.rank === savedRank ? "ring-4 ring-green-500 ring-offset-2" : ""}`}
+                              >
+                                <div className="flex items-center justify-between relative z-10">
+                                  <div className="flex items-center gap-4 md:gap-6">
+                                    <div className={`w-14 h-14 md:w-16 md:h-16 flex items-center justify-center rounded-2xl text-3xl md:text-4xl shadow-inner ${
+                                      index === 0 ? 'bg-yellow-500/30' :
+                                      index === 1 ? 'bg-gray-400/30' :
+                                      'bg-orange-400/30'
+                                    }`}>
+                                      {index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"}
+                                    </div>
+                                    <div>
+                                      <span className={`font-bold text-xl md:text-2xl ${
+                                        index === 0 ? 'text-yellow-900' :
+                                        index === 1 ? 'text-gray-700' :
+                                        'text-orange-900'
+                                      }`}>
+                                        {score.player_name}
+                                      </span>
+                                      <p className={`text-sm mt-1 ${
+                                        index === 0 ? 'text-yellow-700' :
+                                        index === 1 ? 'text-gray-500' :
+                                        'text-orange-700'
+                                      }`}>
+                                        #{index + 1} positie
+                                      </p>
+                                    </div>
                                   </div>
-                                )}
-                                <span className={`font-bold text-lg ${index < 3 ? "text-[#440f0f]" : "text-gray-700"}`}>
-                                  {score.player_name}
-                                </span>
-                              </div>
-                              <div className="text-right">
-                                <span className={`font-bold text-xl ${
-                                    index === 0 ? "text-yellow-600" :
-                                    index === 1 ? "text-gray-500" :
-                                    index === 2 ? "text-orange-500" :
-                                    "text-[#657575]"
-                                }`}>
-                                  {score.score}/{score.total_questions || totalQuestions}
-                                </span>
-                                <span className="text-sm text-gray-400 ml-1">punten</span>
-                              </div>
-                            </div>
-                          ))
+                                  <div className="text-right">
+                                    <div className={`font-black text-3xl md:text-4xl ${
+                                      index === 0 ? 'text-yellow-900' :
+                                      index === 1 ? 'text-gray-700' :
+                                      'text-orange-900'
+                                    }`}>
+                                      {score.score}<span className="text-xl md:text-2xl opacity-50">/{score.total_questions || totalQuestions}</span>
+                                    </div>
+                                    <p className={`text-sm font-medium ${
+                                      index === 0 ? 'text-yellow-700' :
+                                      index === 1 ? 'text-gray-500' :
+                                      'text-orange-700'
+                                    }`}>punten</p>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            ))}
+                            
+                            {/* Remaining Scores */}
+                            {topScores.slice(3, 50).map((score, index) => (
+                              <motion.div
+                                key={index + 3}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.3 + index * 0.05 }}
+                                className={`flex items-center justify-between p-4 md:p-5 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md hover:border-[#c9a300]/30 transition-all ${
+                                  score.rank === savedRank ? "ring-2 ring-green-500 bg-green-50" : ""
+                                }`}
+                              >
+                                <div className="flex items-center gap-4">
+                                  <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-gradient-to-br from-gray-100 to-gray-50 font-bold text-lg md:text-xl text-gray-500 border border-gray-200">
+                                    {index + 4}
+                                  </div>
+                                  <span className="font-semibold text-base md:text-lg text-gray-700">
+                                    {score.player_name}
+                                  </span>
+                                </div>
+                                <div className="text-right">
+                                  <span className="font-bold text-xl md:text-2xl text-[#440f0f]">
+                                    {score.score}<span className="text-base md:text-lg text-gray-400">/{score.total_questions || totalQuestions}</span>
+                                  </span>
+                                  <span className="text-sm text-gray-400 ml-2 hidden sm:inline">punten</span>
+                                </div>
+                              </motion.div>
+                            ))}
+                          </div>
                         )}
                       </div>
 
-                      <div className="mt-6 pt-6 border-t border-gray-100 flex justify-center gap-4">
+                      {/* Footer Actions */}
+                      <div className="p-4 md:p-6 bg-white border-t border-gray-100 flex flex-col sm:flex-row justify-center gap-3 md:gap-4">
                         <motion.button
-                            className="px-8 py-3 bg-gradient-to-r from-[#c9a300] to-[#a68600] text-white rounded-xl font-bold shadow-lg"
+                            className="px-8 md:px-10 py-3 md:py-4 bg-gradient-to-r from-[#c9a300] to-[#a68600] text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl"
                             onClick={() => {
                                 setShowLeaderboard(false);
                                 resetGame();
                             }}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
+                            whileHover={{ scale: 1.03 }}
+                            whileTap={{ scale: 0.97 }}
                         >
                             Nieuw Spel
                         </motion.button>
                         <motion.button
-                            className="px-8 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold"
+                            className="px-8 md:px-10 py-3 md:py-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-lg border border-gray-200"
                             onClick={() => setShowLeaderboard(false)}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
+                            whileHover={{ scale: 1.03 }}
+                            whileTap={{ scale: 0.97 }}
                         >
                             Terug
                         </motion.button>
@@ -758,9 +827,23 @@ const ToolQuizGame = ({ isOpen, onClose, variant = "museum", eventId = null }) =
                     </div>
                   ) : (
                     <div className="flex flex-col items-center gap-4 w-full max-w-sm">
+                      {/* View Scores Button */}
+                      <motion.button
+                        className="w-full px-8 py-4 rounded-2xl font-bold text-lg shadow-lg bg-white border-2 border-[#c9a300] text-[#c9a300] flex items-center justify-center gap-2 hover:bg-[#fef9e6] transition-colors"
+                        onClick={() => {
+                          setShowLeaderboard(true);
+                          fetchScores(difficulty);
+                        }}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Trophy size={20} />
+                        Bekijk Scores
+                      </motion.button>
+                      
                       <motion.button
                         className={`w-full px-8 py-4 rounded-2xl font-bold text-lg shadow-lg ${styles.buttonCorrect} flex items-center justify-center gap-2`}
-                        onClick={() => setShowKeyboard(true)}
+                        onClick={() => { setSaveError(""); setShowKeyboard(true); }}
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                       >
@@ -793,6 +876,7 @@ const ToolQuizGame = ({ isOpen, onClose, variant = "museum", eventId = null }) =
             maxLength={10}
             title="Voer je naam in"
             placeholder="Bijv. Jan"
+            externalError={saveError}
           />
         </motion.div>
       )}

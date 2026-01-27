@@ -1,13 +1,11 @@
 /**
  * ImagePuzzleModal Component
  *
- * A sliding puzzle game with:
- * - 3x3 grid (8 pieces + 1 empty)
- * - Difficulty levels (Easy: max 2 correct, Hard: 0 correct)
- * - Hint button (limited uses)
- * - Green border on correctly placed tiles
- * - Separate leaderboards per difficulty
- * - Virtual keyboard for name entry
+ * A sliding puzzle game implementation including:
+ * - Dynamic 3x3 (Easy) and 4x4 (Hard) grids
+ * - Global image selection from all available events
+ * - Drag/Click mechanics for puzzle solving
+ * - Integrated leaderboard and win logic
  */
 
 import React, { useState, useCallback, useEffect, useMemo, useRef } from "react"
@@ -22,9 +20,17 @@ import { useSound } from "../../hooks/useSound"
 import { api } from "../../services/api"
 import VirtualKeyboard from "../Common/VirtualKeyboard"
 
-const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) => {
+const ImagePuzzleModal = ({ 
+  isOpen, 
+  onClose, 
+  eventId,
+  puzzleImage, 
+  galleryImages = [], 
+  eventTitle = "",
+  variant = "museum" 
+}) => {
   const theme = getTheme()
-  const playSound = useSound()
+  const { playSound, playSuccess } = useSound()
   const loadedPuzzleImageRef = useRef(null)
 
   // Theme Styles Configuration
@@ -76,9 +82,13 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
 
   const styles = getThemeStyles()
 
-  // Constants
-  const GRID_SIZE = 3
-  const TILE_COUNT = GRID_SIZE * GRID_SIZE - 1
+  // Game flow states
+  const [gamePhase, setGamePhase] = useState("imageSelect") // imageSelect, difficultySelect, instructions, playing, won
+  const [selectedImage, setSelectedImage] = useState(null)
+  
+  // Grid size based on difficulty
+  const [gridSize, setGridSize] = useState(3)
+  const TILE_COUNT = gridSize * gridSize - 1
   const MAX_HINTS = 3
 
   // Difficulty state
@@ -98,16 +108,16 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
   // Get neighbors for a tile
   const getNeighbors = useCallback(index => {
     const neighbors = []
-    const row = Math.floor(index / GRID_SIZE)
-    const col = index % GRID_SIZE
+    const row = Math.floor(index / gridSize)
+    const col = index % gridSize
 
-    if (row > 0) neighbors.push(index - GRID_SIZE)
-    if (row < GRID_SIZE - 1) neighbors.push(index + GRID_SIZE)
+    if (row > 0) neighbors.push(index - gridSize)
+    if (row < gridSize - 1) neighbors.push(index + gridSize)
     if (col > 0) neighbors.push(index - 1)
-    if (col < GRID_SIZE - 1) neighbors.push(index + 1)
+    if (col < gridSize - 1) neighbors.push(index + 1)
 
     return neighbors
-  }, [])
+  }, [gridSize])
 
   // Count correct tiles
   const countCorrectTiles = useCallback(tiles => {
@@ -193,6 +203,8 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
   // Instructions state
   const [showInstructions, setShowInstructions] = useState(false)
 
+  const [globalPuzzleImages, setGlobalPuzzleImages] = useState([])
+  
   const [showLeaderboard, setShowLeaderboard] = useState(false)
 
   // Check if tile is in correct position
@@ -321,6 +333,7 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
   const startGame = useCallback(
     selectedDifficulty => {
       setDifficulty(selectedDifficulty)
+      setGridSize(selectedDifficulty === "easy" ? 3 : 4)
       setShowDifficultySelect(false)
       // Show instructions before starting
       setShowInstructions(true)
@@ -410,10 +423,12 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
   const getBackgroundPosition = useCallback(pieceNumber => {
     if (pieceNumber === null) return "0 0"
     const index = pieceNumber - 1
-    const row = Math.floor(index / GRID_SIZE)
-    const col = index % GRID_SIZE
-    return `${col * 50}% ${row * 50}%`
-  }, [])
+    const row = Math.floor(index / gridSize)
+    const col = index % gridSize
+    // Calculate percentage based on grid - for 3x3 use 50%, for 4x4 use 33.33%
+    const step = gridSize === 3 ? 50 : 33.33
+    return `${col * step}% ${row * step}%`
+  }, [gridSize])
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -434,36 +449,51 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
     }
   }, [isOpen])
 
-  // Load image when modal opens
+  // Load global puzzle images when modal opens
   useEffect(() => {
-    if (isOpen && puzzleImage && loadedPuzzleImageRef.current !== puzzleImage) {
+    if (isOpen) {
+      const fetchGlobalPuzzles = async () => {
+        const result = await api.getPuzzleImages(eventId)
+        if (result.success) {
+          setGlobalPuzzleImages(result.puzzleImages || [])
+        }
+      }
+      fetchGlobalPuzzles()
+    }
+  }, [isOpen, eventId])
+
+  // Load image when selected image changes
+  useEffect(() => {
+    // If selectedImage is an object (from global list), use its imageUrl
+    // Otherwise use it directly (string)
+    const imageToLoad = selectedImage?.imageUrl || selectedImage || puzzleImage
+    
+    if (isOpen && imageToLoad && loadedPuzzleImageRef.current !== imageToLoad) {
       fetchScores()
       setLoadError(null)
-      setShowDifficultySelect(true)
-      setDifficulty(null)
 
       const loadImage = async () => {
         try {
           setIsLoading(true)
-          const pieces = await splitImageIntoPieces(puzzleImage, GRID_SIZE)
+          const pieces = await splitImageIntoPieces(imageToLoad, gridSize)
           setImagePieces(pieces)
-          const preview = await createImagePreview(puzzleImage)
+          const preview = await createImagePreview(imageToLoad)
           setImagePreview(preview)
-          loadedPuzzleImageRef.current = puzzleImage
+          loadedPuzzleImageRef.current = imageToLoad
         } catch (error) {
           console.error("Error loading puzzle image:", error)
-          setLoadError({ message: error.message, url: puzzleImage })
+          setLoadError({ message: error.message, url: imageToLoad })
           setImagePieces([])
-          loadedPuzzleImageRef.current = puzzleImage
+          loadedPuzzleImageRef.current = imageToLoad
         } finally {
           setIsLoading(false)
         }
       }
       loadImage()
     }
-  }, [isOpen, puzzleImage, fetchScores])
+  }, [isOpen, selectedImage, puzzleImage, gridSize, fetchScores])
 
-  // Reset when modal closes
+  // Reset when modal closes and Initialize when opens
   useEffect(() => {
     if (!isOpen) {
       loadedPuzzleImageRef.current = null
@@ -479,13 +509,28 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
       setShowDifficultySelect(true)
       setShowInstructions(false)
       setDifficulty(null)
+      // Do NOT reset selectedImage here effectively, as we want to remember it
+      // But for clean state on close:
+      setGamePhase("imageSelect")
+      setSelectedImage(null)
+      setGridSize(3)
+    } else {
+        // Initialization when opening
+        if (puzzleImage) {
+            setSelectedImage(puzzleImage)
+            setGamePhase("difficultySelect")
+        } else {
+            setGamePhase("imageSelect")
+            setSelectedImage(null)
+        }
     }
-  }, [isOpen])
+  }, [isOpen, puzzleImage])
 
   // Get current scores based on difficulty
   const currentScores = difficulty === "easy" ? scoresEasy : scoresHard
 
-  if (!isOpen || !puzzleImage) return null
+  // Allow modal to open if we have puzzle image OR gallery images
+  if (!isOpen) return null
 
   return (
     <AnimatePresence>
@@ -624,6 +669,113 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
                   >
                     Sluiten
                   </button>
+                </div>
+              ) : gamePhase === "imageSelect" ? (
+                /* Image Selection Screen */
+                <div className="flex flex-col items-center justify-center h-full gap-8 py-8 px-4">
+                  <div className="text-center">
+                    <h3
+                      className={`text-3xl lg:text-4xl font-bold mb-3 ${styles.textPrimary} ${
+                        variant === "newspaper" ? "font-serif uppercase tracking-widest" : "font-heading"
+                      }`}
+                    >
+                      {variant === "newspaper" ? "KIES EEN FOTO" : "Kies een foto"}
+                    </h3>
+                    <p className={`text-lg ${styles.textSecondary}`}>
+                      Welke afbeelding wil je als puzzel?
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-w-4xl w-full overflow-auto max-h-[60vh] p-2">
+                    {/* Include main puzzle image if available */}
+                    {puzzleImage && (
+                      <motion.button
+                        key="main-puzzle"
+                        className={`relative aspect-square rounded-xl overflow-hidden border-4 transition-all ${
+                          selectedImage === puzzleImage 
+                            ? "border-[#7c8f38] scale-105 shadow-xl" 
+                            : "border-transparent hover:border-white/50 shadow-lg"
+                        }`}
+                        onClick={() => {
+                          playSound()
+                          setSelectedImage(puzzleImage)
+                        }}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <img 
+                          src={puzzleImage} 
+                          alt="Hoofdafbeelding" 
+                          className="w-full h-full object-cover"
+                        />
+                        {selectedImage === puzzleImage && (
+                          <div className="absolute inset-0 bg-[#7c8f38]/20 flex items-center justify-center">
+                            <div className="bg-white rounded-full p-2">
+                              <svg className="w-8 h-8 text-[#7c8f38]" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          </div>
+                        )}
+                      </motion.button>
+                    )}
+                    
+                    {/* Gallery images */}
+                    {globalPuzzleImages.map((item, idx) => (
+                      <motion.button
+                        key={`global-${item.id}`}
+                        className={`relative aspect-square rounded-xl overflow-hidden border-4 transition-all ${
+                          selectedImage === item 
+                            ? "border-[#7c8f38] scale-105 shadow-xl" 
+                            : "border-transparent hover:border-white/50 shadow-lg"
+                        }`}
+                        onClick={() => {
+                          playSound()
+                          setSelectedImage(item)
+                        }}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <img 
+                          src={item.imageUrl} 
+                          alt={item.title} 
+                          className="w-full h-full object-cover"
+                        />
+                         <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] p-1 truncate">
+                            {item.title}
+                         </div>
+                        {selectedImage === item && (
+                          <div className="absolute inset-0 bg-[#7c8f38]/20 flex items-center justify-center">
+                            <div className="bg-white rounded-full p-2">
+                              <svg className="w-8 h-8 text-[#7c8f38]" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          </div>
+                        )}
+                      </motion.button>
+                    ))}
+                  </div>
+
+                  {/* Continue button */}
+                  <motion.button
+                    className={`px-10 py-4 rounded-2xl font-bold text-xl shadow-lg transition-all ${
+                      selectedImage 
+                        ? "bg-[#7c8f38] text-white hover:bg-[#66752e]" 
+                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    }`}
+                    onClick={() => {
+                      if (selectedImage) {
+                        playSound()
+                        setGamePhase("difficultySelect")
+                      }
+                    }}
+                    disabled={!selectedImage}
+                    whileHover={selectedImage ? { scale: 1.05 } : {}}
+                    whileTap={selectedImage ? { scale: 0.95 } : {}}
+                  >
+                    Ga verder
+                  </motion.button>
                 </div>
               ) : showDifficultySelect ? (
                 /* Difficulty Selection Screen - Dynamic Style */
@@ -942,7 +1094,7 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
                       {difficulty === "easy" ? "Makkelijk" : "Moeilijk"}
                     </span>
                   </p>
-
+                  
                   {savedRank ? (
                     <div className="text-center w-full flex flex-col items-center">
                       <p className="text-2xl text-green-600 font-bold mb-6 animate-bounce">
@@ -1026,6 +1178,18 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
                         </p>
                       </div>
 
+                      <button
+                        onClick={() => {
+                            setGamePhase("imageSelect")
+                            setSavedRank(null)
+                            setIsWon(false)
+                            setMoves(0)
+                        }}
+                        className="px-4 py-2 bg-white border-2 border-[#c9a300] text-[#c9a300] rounded-xl font-bold hover:bg-[#fff9e6] transition-colors shadow-sm"
+                      >
+                        Andere foto's
+                      </button>
+
                       {/* Always visible instruction card */}
                       <div className="bg-[#fff9e6] p-4 rounded-xl border border-[#ffe082] max-w-[300px]">
                         <h4 className="font-bold text-[#b45309] mb-2 flex items-center gap-2">
@@ -1041,8 +1205,13 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
                     </div>
                   )}
 
-                  {/* Puzzle Grid - 3x3 */}
-                  <div className="grid grid-cols-3 gap-3 p-5 bg-[#440f0f]/10 rounded-2xl">
+                  {/* Puzzle Grid */}
+                  <div 
+                    className={`grid gap-3 p-5 bg-[#440f0f]/10 rounded-2xl`}
+                    style={{ 
+                        gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` 
+                    }}
+                  >
                     {tiles.map((tile, index) => {
                       const isCorrect = isTileCorrect(tile, index)
                       const isHighlighted = highlightedTile === index
@@ -1051,7 +1220,9 @@ const ImagePuzzleModal = ({ isOpen, onClose, puzzleImage, variant = "museum" }) 
                       return (
                         <motion.div
                           key={index}
-                          className={`w-32 h-32 lg:w-40 lg:h-40 rounded-xl cursor-pointer overflow-hidden relative ${
+                          className={`rounded-xl cursor-pointer overflow-hidden relative ${
+                            gridSize === 4 ? "w-24 h-24 lg:w-28 lg:h-28" : "w-32 h-32 lg:w-40 lg:h-40"
+                          } ${
                             tile === null
                               ? "bg-[#440f0f]/20 border-3 border-dashed border-[#440f0f]/30"
                               : isSelected
