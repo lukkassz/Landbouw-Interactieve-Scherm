@@ -258,6 +258,13 @@ export const groupEventsByMarkers = (events, markers) => {
       return eventYear >= startYear && eventYear < endYear
     })
 
+    // Sort events within section by first year (ascending)
+    eventsInSection.sort((a, b) => {
+      const yearA = extractYear(a.year) || 0
+      const yearB = extractYear(b.year) || 0
+      return yearA - yearB
+    })
+
     sections.push({
       markerYear: startYear,
       startYear,

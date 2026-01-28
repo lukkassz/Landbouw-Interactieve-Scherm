@@ -9,6 +9,37 @@ include 'includes/db.php';
 include 'includes/auth.php';
 include 'includes/functions.php';
 
+// Handle AJAX request to delete puzzle image
+if (isset($_GET['action']) && $_GET['action'] === 'delete_puzzle_image' && isset($_GET['id'])) {
+    header('Content-Type: application/json');
+    $deleteEventId = intval($_GET['id']);
+    
+    if ($deleteEventId > 0) {
+        // Get current puzzle image URL to delete the file
+        $result = mysqli_query($conn, "SELECT puzzle_image_url FROM timeline_events WHERE id = $deleteEventId");
+        if ($row = mysqli_fetch_assoc($result)) {
+            $oldFile = $row['puzzle_image_url'];
+            if (!empty($oldFile)) {
+                $filePath = 'uploads/' . $oldFile;
+                if (file_exists($filePath)) {
+                    unlink($filePath);
+                }
+            }
+        }
+        
+        // Clear puzzle_image_url in database
+        $updateQuery = "UPDATE timeline_events SET puzzle_image_url = NULL WHERE id = $deleteEventId";
+        if (mysqli_query($conn, $updateQuery)) {
+            echo json_encode(['success' => true, 'message' => 'Puzzel afbeelding verwijderd']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Database fout: ' . mysqli_error($conn)]);
+        }
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Ongeldig event ID']);
+    }
+    exit;
+}
+
 // Check if editing
 $isEdit = isset($_GET['id']);
 $eventId = $isEdit ? intval($_GET['id']) : 0;
@@ -1172,12 +1203,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
 
                     <?php if (!empty($event['puzzle_image_url'])): ?>
-                        <div class="current-image">
-                            <img src="uploads/<?= htmlspecialchars($event['puzzle_image_url']) ?>" alt="">
-                            <div>
+                        <div class="current-image" style="display:flex;align-items:center;gap:16px;margin-top:12px;padding:12px;background:#f1f5f9;border-radius:8px;">
+                            <img src="uploads/<?= htmlspecialchars($event['puzzle_image_url']) ?>" alt="" style="width:80px;height:80px;object-fit:cover;border-radius:6px;">
+                            <div style="flex:1;">
                                 <strong>Huidige afbeelding</strong><br>
-                                <small><?= htmlspecialchars($event['puzzle_image_url']) ?></small>
+                                <small style="color:#64748b;"><?= htmlspecialchars($event['puzzle_image_url']) ?></small>
                             </div>
+                            <button type="button" onclick="deletePuzzleImage(<?= $eventId ?>)" style="padding:8px 16px;background:#ef4444;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">
+                                🗑️ Verwijderen
+                            </button>
                         </div>
                     <?php endif; ?>
 
@@ -1392,6 +1426,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </form>
 
     <script>
+        // Delete puzzle image function
+        function deletePuzzleImage(eventId) {
+            if (!confirm('Weet je zeker dat je de puzzel afbeelding wilt verwijderen?')) {
+                return;
+            }
+            
+            fetch('edit_add.php?action=delete_puzzle_image&id=' + eventId, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Puzzel afbeelding verwijderd!');
+                    location.reload();
+                } else {
+                    alert('Fout: ' + (data.message || 'Onbekende fout'));
+                }
+            })
+            .catch(error => {
+                alert('Fout bij verwijderen: ' + error.message);
+            });
+        }
+
         let sectionIndex = <?= count($eventSections) ?>;
         let momentIndex = <?= count($eventKeyMoments) ?>;
 

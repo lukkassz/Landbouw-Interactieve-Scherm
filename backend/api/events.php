@@ -65,7 +65,7 @@ try {
     $query .= "
               FROM timeline_events
               WHERE is_active = 1
-              ORDER BY sort_order ASC, year ASC";
+              ORDER BY sort_order ASC, CAST(SUBSTRING_INDEX(year, '-', 1) AS UNSIGNED) ASC";
 
     // Execute query
     $stmt = $db->prepare($query);
@@ -98,12 +98,27 @@ try {
         $event['has_puzzle'] = ($hasPuzzle === true || $hasPuzzle === 1 || $hasPuzzle === '1' || $hasPuzzle === 'true');
         
         // Keep puzzle_image_url as string (or null if empty)
+        // Construct full URL using serve.php proxy for CORS support
         $puzzleImageUrl = $event['puzzle_image_url'] ?? '';
         if (empty($puzzleImageUrl) || $puzzleImageUrl === null) {
             $event['puzzle_image_url'] = null;
             $hasPuzzleImage = false;
         } else {
-            $event['puzzle_image_url'] = (string)$puzzleImageUrl;
+            // Build full URL with serve.php proxy
+            $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
+            $host = $_SERVER['HTTP_HOST'] ?? 'www.mbo-portal.nl';
+            $requestUri = $_SERVER['REQUEST_URI'] ?? '';
+            
+            // Detect base path
+            if (preg_match('#^(/.*?)/backend/api#', $requestUri, $matches)) {
+                $basePath = $matches[1];
+            } else {
+                $basePath = '/museumproject/landbouwmuseum/timeline';
+            }
+            
+            // Only filename stored in DB, construct full proxy URL
+            $filename = basename($puzzleImageUrl);
+            $event['puzzle_image_url'] = $protocol . '://' . $host . $basePath . '/adminpanel/uploads/serve.php?file=' . urlencode($filename);
             $hasPuzzleImage = true;
         }
         

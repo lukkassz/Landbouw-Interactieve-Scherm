@@ -13,9 +13,9 @@ header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 
 // Get filename from GET parameter
-$filename = isset($_GET['filename']) ? basename($_GET['filename']) : null;
+$filenameParam = isset($_GET['filename']) ? $_GET['filename'] : null;
 
-if (!$filename) {
+if (!$filenameParam) {
     http_response_code(400);
     echo json_encode([
         "success" => false,
@@ -24,6 +24,22 @@ if (!$filename) {
     ]);
     exit;
 }
+
+// If the filename is already a full URL (from events.php with serve.php proxy), return it directly
+if (preg_match('#^https?://#i', $filenameParam)) {
+    http_response_code(200);
+    echo json_encode([
+        "success" => true,
+        "url" => $filenameParam,
+        "filename" => basename(parse_url($filenameParam, PHP_URL_PATH)),
+        "exists" => true,
+        "base_path" => "direct_url"
+    ]);
+    exit;
+}
+
+// Otherwise, it's just a filename - construct the full URL
+$filename = basename($filenameParam);
 
 // Build URL dynamically based on current request (same logic as event_media_direct.php)
 $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
@@ -50,12 +66,12 @@ if (preg_match('#^(/.*?)/backend/api#', $scriptName, $pathMatches)) {
     $basePath = '/museumproject/landbouwmuseum/timeline/adminpanel';
 }
 
-// Construct full URL to the puzzle image
-// Puzzle images are in adminpanel/uploads/ (not in event_media subfolder)
-$uploadPath = $basePath . '/uploads/';
-$fullUrl = $protocol . '://' . $host . $uploadPath . $filename;
+// Construct full URL to the puzzle image via serve.php proxy (CORS support)
+$proxyPath = $basePath . '/uploads/serve.php?file=';
+$fullUrl = $protocol . '://' . $host . $proxyPath . urlencode($filename);
 
 // Check if file exists (optional - can be removed if file check is not needed)
+$uploadPath = $basePath . '/uploads/';
 $filePath = $_SERVER['DOCUMENT_ROOT'] . $uploadPath . $filename;
 $fileExists = file_exists($filePath);
 

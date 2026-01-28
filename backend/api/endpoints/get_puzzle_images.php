@@ -57,36 +57,55 @@ $result = $stmt;
 
 $puzzleImages = [];
 
-// Get the base URL for uploads
+// Get the base URL for uploads - using serve.php proxy for CORS support
 $baseUrl = '';
 if (isset($_SERVER['HTTP_HOST'])) {
     $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
-    // Determine upload path based on current script location
     $baseUrl = $protocol . '://' . $_SERVER['HTTP_HOST'];
     
-    // Try to find the adminpanel/uploads path
-    $scriptPath = $_SERVER['SCRIPT_NAME'];
-    if (strpos($scriptPath, '/backend/') !== false) {
-        $basePath = preg_replace('#/backend/.*$#', '', $scriptPath);
-        $baseUrl .= $basePath . '/adminpanel/uploads/';
+    // Use REQUEST_URI for path detection
+    $requestUri = $_SERVER['REQUEST_URI'] ?? '';
+    $scriptPath = $_SERVER['SCRIPT_NAME'] ?? '';
+    
+    // Find base path and construct URL to serve.php proxy
+    if (preg_match('#^(/.*?)/backend/api#', $requestUri, $matches)) {
+        $baseUrl .= $matches[1] . '/adminpanel/uploads/serve.php?file=';
+    } elseif (preg_match('#^(/.*?)/backend/api#', $scriptPath, $matches)) {
+        $baseUrl .= $matches[1] . '/adminpanel/uploads/serve.php?file=';
+    } elseif (strpos($scriptPath, '/backend/') !== false || strpos($requestUri, '/backend/') !== false) {
+        $basePath = preg_replace('#/backend/.*$#', '', $requestUri ?: $scriptPath);
+        $baseUrl .= $basePath . '/adminpanel/uploads/serve.php?file=';
     } else {
-        $baseUrl .= '/adminpanel/uploads/';
+        // Fallback for production
+        $baseUrl .= '/museumproject/landbouwmuseum/timeline/adminpanel/uploads/serve.php?file=';
     }
 }
 
 while ($row = $result->fetch(PDO::FETCH_ASSOC)) {
-    $imageUrl = $row['puzzle_image_url'];
-    
-    // If the URL doesn't start with http, prepend the base URL
-    if (!empty($imageUrl) && strpos($imageUrl, 'http') !== 0) {
-        $imageUrl = $baseUrl . $imageUrl;
+    // Check if file physically exists before including it
+    $filename = $row['puzzle_image_url'];
+    if (empty($filename)) continue;
+
+    // Define path to uploads directory relative to this script
+    // Script is in /backend/api/endpoints/
+    // Uploads are in /adminpanel/uploads/
+    $uploadDir = __DIR__ . '/../../../adminpanel/uploads/';
+    $filePath = $uploadDir . $filename;
+
+    // Also check event_media subdirectory if not found in root
+    if (!file_exists($filePath)) {
+        $filePath = $uploadDir . 'event_media/' . $filename;
+        if (!file_exists($filePath)) {
+            // Skip this image if it doesn't exist on server
+            continue; 
+        }
     }
-    
+
     $puzzleImages[] = [
         'id' => intval($row['id']),
         'title' => $row['title'],
         'year' => $row['year'],
-        'imageUrl' => $imageUrl
+        'imageUrl' => $baseUrl . urlencode($filename)
     ];
 }
 

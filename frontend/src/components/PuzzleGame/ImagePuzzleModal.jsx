@@ -333,7 +333,8 @@ const ImagePuzzleModal = ({
   const startGame = useCallback(
     selectedDifficulty => {
       setDifficulty(selectedDifficulty)
-      setGridSize(selectedDifficulty === "easy" ? 3 : 4)
+      // Use 3x3 grid for both difficulties as requested
+      setGridSize(3)
       setShowDifficultySelect(false)
       // Show instructions before starting
       setShowInstructions(true)
@@ -529,6 +530,25 @@ const ImagePuzzleModal = ({
   // Get current scores based on difficulty
   const currentScores = difficulty === "easy" ? scoresEasy : scoresHard
 
+  // Check if current score qualifies for top 10
+  // Qualifies if: less than 10 scores exist OR current moves are strictly less than the worst (highest) score
+  const qualifiesForTop10 = useMemo(() => {
+    if (!isWon || !difficulty) return false
+    const scores = difficulty === "easy" ? scoresEasy : scoresHard
+    if (scores.length < 10) return true // Less than 10 scores, always qualifies
+    // Find worst score (highest moves in top 10)
+    const worstScore = Math.max(...scores.map(s => s.moves))
+    return moves < worstScore
+  }, [isWon, difficulty, scoresEasy, scoresHard, moves])
+
+  // Get the worst score for display message
+  const worstScoreInTop10 = useMemo(() => {
+    if (!difficulty) return null
+    const scores = difficulty === "easy" ? scoresEasy : scoresHard
+    if (scores.length < 10) return null
+    return Math.max(...scores.map(s => s.moves))
+  }, [difficulty, scoresEasy, scoresHard])
+
   // Allow modal to open if we have puzzle image OR gallery images
   if (!isOpen) return null
 
@@ -646,7 +666,7 @@ const ImagePuzzleModal = ({
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-auto p-4 lg:p-6">
+            <div className="flex-1 overflow-auto scrollbar-hide p-4 lg:p-6">
               {isLoading ? (
                 <div className="flex items-center justify-center h-full">
                   <div
@@ -699,6 +719,7 @@ const ImagePuzzleModal = ({
                         onClick={() => {
                           playSound()
                           setSelectedImage(puzzleImage)
+                          setGamePhase("difficultySelect")
                         }}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
@@ -732,6 +753,7 @@ const ImagePuzzleModal = ({
                         onClick={() => {
                           playSound()
                           setSelectedImage(item)
+                          setGamePhase("difficultySelect")
                         }}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
@@ -1126,7 +1148,7 @@ const ImagePuzzleModal = ({
                         </motion.button>
                       </div>
                     </div>
-                  ) : (
+                  ) : qualifiesForTop10 ? (
                     <div className="flex flex-col items-center gap-4">
                       <motion.button
                         className="px-8 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-2xl font-bold text-lg shadow-lg"
@@ -1138,6 +1160,10 @@ const ImagePuzzleModal = ({
                       </motion.button>
                       {saveError && <p className="text-red-500">{saveError}</p>}
                     </div>
+                  ) : (
+                    <p className="text-amber-600 text-center">
+                      Helaas, je staat niet in de top 10. Beste score om te verslaan: {worstScoreInTop10 ? worstScoreInTop10 - 1 : '?'} zetten.
+                    </p>
                   )}
 
                   {!savedRank && (
