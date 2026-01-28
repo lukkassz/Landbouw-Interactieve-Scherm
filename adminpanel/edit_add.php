@@ -651,10 +651,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         .media-item {
             position: relative;
-            background: #f1f5f9;
+            background: white;
+            border: 1px solid #e2e8f0;
             border-radius: 8px;
             overflow: hidden;
-            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .media-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .media-preview {
+            position: relative;
+            aspect-ratio: 16/9;
+            background: #0f172a;
+            overflow: hidden;
         }
 
         .media-item img,
@@ -664,31 +679,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             object-fit: cover;
         }
 
-        .media-item .overlay {
-            position: absolute;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-            opacity: 0;
-            transition: opacity 0.2s;
+        .media-caption-container {
+            padding: 10px;
+            border-top: 1px solid #e2e8f0;
+            background: white;
         }
 
-        .media-item:hover .overlay {
+        .delete-btn-icon {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(220, 38, 38, 0.9);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        .media-item:hover .delete-btn-icon {
             opacity: 1;
         }
 
-        .media-item .delete-btn {
+        .delete-btn-icon:hover {
             background: #dc2626;
-            color: white;
-            border: none;
-            padding: 6px 12px;
+            transform: scale(1.1);
+        }
+
+        .media-item .caption-input {
+            width: 100%;
+            padding: 8px 10px;
+            font-size: 13px;
             border-radius: 6px;
-            font-size: 12px;
-            cursor: pointer;
+            border: 1px solid #e2e8f0;
+            transition: border-color 0.2s;
+        }
+        
+        .media-item .caption-input:focus {
+            border-color: #2563eb;
+            outline: none;
         }
 
         .media-item .caption-input {
@@ -972,13 +1008,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <?php if (!empty($images)): ?>
                         <div class="media-grid">
                             <?php foreach ($images as $media): ?>
-                                <div class="media-item">
-                                    <img src="uploads/event_media/<?= htmlspecialchars($media['file_url']) ?>" alt="">
-                                    <div class="overlay">
-                                        <input type="text" class="caption-input" name="media_caption[<?= $media['id'] ?>]" value="<?= htmlspecialchars($media['caption'] ?? '') ?>" placeholder="Bijschrift">
-                                        <label style="color:white;font-size:12px;display:flex;align-items:center;gap:4px;">
-                                            <input type="checkbox" name="delete_media[]" value="<?= $media['id'] ?>"> Verwijderen
-                                        </label>
+                                <div class="media-item" id="media-<?= $media['id'] ?>">
+                                    <div class="media-preview">
+                                        <img src="uploads/event_media/<?= htmlspecialchars($media['file_url']) ?>" alt="">
+                                        <button type="button" class="delete-btn-icon" onclick="deleteMedia(<?= $media['id'] ?>)" title="Verwijderen">🗑️</button>
+                                    </div>
+                                    <div class="media-caption-container">
+                                        <input type="text" class="caption-input" name="media_caption[<?= $media['id'] ?>]" value="<?= htmlspecialchars($media['caption'] ?? '') ?>" placeholder="Beschrijving toevoegen...">
                                     </div>
                                 </div>
                             <?php endforeach; ?>
@@ -998,14 +1034,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <?php if (!empty($videos)): ?>
                         <div class="media-grid">
                             <?php foreach ($videos as $media): ?>
-                                <div class="media-item">
-                                    <video src="uploads/event_media/<?= htmlspecialchars($media['file_url']) ?>"></video>
-                                    <div class="media-placeholder" style="position:absolute;inset:0;display:flex;">🎬</div>
-                                    <div class="overlay">
-                                        <input type="text" class="caption-input" name="media_caption[<?= $media['id'] ?>]" value="<?= htmlspecialchars($media['caption'] ?? '') ?>" placeholder="Bijschrift">
-                                        <label style="color:white;font-size:12px;display:flex;align-items:center;gap:4px;">
-                                            <input type="checkbox" name="delete_media[]" value="<?= $media['id'] ?>"> Verwijderen
-                                        </label>
+                                <div class="media-item" id="media-<?= $media['id'] ?>">
+                                    <div class="media-preview">
+                                        <video src="uploads/event_media/<?= htmlspecialchars($media['file_url']) ?>"></video>
+                                        <div class="media-placeholder" style="position:absolute;inset:0;display:flex;pointer-events:none;">🎬</div>
+                                        <button type="button" class="delete-btn-icon" onclick="deleteMedia(<?= $media['id'] ?>)" title="Verwijderen">🗑️</button>
+                                    </div>
+                                    <div class="media-caption-container">
+                                        <input type="text" class="caption-input" name="media_caption[<?= $media['id'] ?>]" value="<?= htmlspecialchars($media['caption'] ?? '') ?>" placeholder="Beschrijving toevoegen...">
                                     </div>
                                 </div>
                             <?php endforeach; ?>
@@ -1594,9 +1630,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             document.getElementById(`media-${tabName}`).classList.add('active');
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            // toggleVideoUpload(); // Removed as we no longer use the checkbox
-        });
+
+
+        function deleteMedia(id) {
+            if (confirm('Weet u zeker dat u dit item wilt verwijderen? Dit wordt definitief doorgevoerd bij het opslaan.')) {
+                const item = document.getElementById('media-' + id);
+                if (item) {
+                    // Create hidden input to signal deletion
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'delete_media[]';
+                    input.value = id;
+                    document.querySelector('form').appendChild(input);
+                    
+                    // Visually remove the item
+                    item.style.opacity = '0';
+                    setTimeout(() => item.remove(), 200);
+                }
+            }
+        }
     </script>
 </body>
 
