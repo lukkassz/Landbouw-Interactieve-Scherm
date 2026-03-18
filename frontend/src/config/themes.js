@@ -1,111 +1,113 @@
 /**
  * Theme Configuration System
  *
- * Defines the application's visual theme based on Museum branding.
+ * Defines AgriTimeline's visual theme — Deep Teal + Warm Amber palette.
  */
 
 // Active theme configuration
-export const ACTIVE_THEME = "museum"
+export const ACTIVE_THEME = "agri"
 
-// Museum's official color palette - Exact colors from museum brand
-const MUSEUM_COLORS = {
-  // Primary colors
-  linen: "#f3f2e9", // Cream/off-white - main background
-  slate: "#657575", // Gray - main text, inactive elements
-  mist: "#a7b8b4", // Muted blue-green - inactive elements, backgrounds
-  sky: "#b5cbd1", // Light blue-gray - accents, backgrounds
-  olive: "#929d7c", // Olive green - accents, backgrounds
+// AgriTimeline color palette — deep teal & warm amber
+const AGRI_COLORS = {
+  // Primary teals
+  skyLight: "#f0f9ff",    // Sky-50 — lightest surface background
+  mistBlue: "#bae6fd",    // Sky-200 — inactive, muted
+  cyan:     "#22d3ee",    // Cyan-400 — highlights, accents
+  teal:     "#0e7490",    // Cyan-700 — primary interactive
+  deepTeal: "#0c6a7c",    // Cyan-800 — hover states
+  ocean:    "#0f2d40",    // Custom dark teal — dark surfaces
 
-  // Accent colors (warm tones)
-  gold: "#c9a300", // Bright gold - main accent, interactive elements
-  amber: "#b48a0f", // Bronze gold - hover states, gradients
-  terracotta: "#ae5514", // Copper/burnt orange - main accent, interactive
-  rust: "#89350a", // Rust orange - hover states, gradients
+  // Warm amber accents
+  amber:    "#f59e0b",    // Amber-400 — gold shimmer, highlights
+  harvest:  "#d97706",    // Amber-600 — secondary accent
+  grain:    "#b45309",    // Amber-700 — hover on amber
+  earth:    "#92400e",    // Amber-800 — tertiary, deep warm tone
 
-  // Dark colors
-  maroon: "#440f0f", // Dark red/burgundy - headers, text on light background
+  // Neutrals
+  slate:    "#475569",    // Slate-600 — secondary text
+  stone:    "#94a3b8",    // Slate-400 — muted text, borders
 }
 
-// Museum theme - Using exact museum brand colors
-const MUSEUM_THEME = {
-  name: "museum",
+// AgriTimeline theme
+const AGRI_THEME = {
+  name: "agri",
 
-  // Backgrounds - museum palette
+  // Backgrounds
   background: {
-    primary: "from-[#440f0f]/30 via-[#89350a]/25 to-[#ae5514]/20", // Maroon → Rust → Terracotta (reduced opacity)
-    overlay: "from-[#440f0f]/15 via-transparent to-[#657575]/10", // Maroon → Slate (reduced opacity)
-    card: "bg-[#f3f2e9]", // Linen (cream)
-    modal:
-      "bg-gradient-to-br from-[#440f0f]/98 via-[#89350a]/95 to-[#ae5514]/98", // Deep maroon → rust → terracotta
-    modalLight: "bg-[#f3f2e9]", // Linen for left panel
+    primary: "from-[#0f2d40]/40 via-[#0e7490]/30 to-[#0c6a7c]/25",         // Ocean → Teal → Deep Teal
+    overlay: "from-[#0f2d40]/20 via-transparent to-[#475569]/10",            // Ocean → Slate
+    card: "bg-[#f0f9ff]",                                                    // Sky surface
+    modal: "bg-gradient-to-br from-[#0f2d40]/98 via-[#0e7490]/95 to-[#0c6a7c]/98", // Dark ocean → Teal
+    modalLight: "bg-[#f0f9ff]",                                              // Sky-50 for left panel
   },
 
   // Text colors
   text: {
-    primary: "text-white", // For dark backgrounds
-    secondary: "text-white/85", // Secondary text on dark
-    accent: "text-[#c9a300]", // Gold accent
-    gradient: "from-[#c9a300] via-[#b48a0f] to-[#ae5514]", // Gold → Amber → Terracotta
-    dark: "text-[#440f0f]", // Maroon for headers on light background
-    darkSecondary: "text-[#657575]", // Slate for secondary text on light
+    primary: "text-white",                                         // On dark backgrounds
+    secondary: "text-white/85",                                    // Secondary on dark
+    accent: "text-[#f59e0b]",                                      // Amber gold
+    gradient: "from-[#22d3ee] via-[#0e7490] to-[#f59e0b]",        // Cyan → Teal → Amber
+    dark: "text-[#0f2d40]",                                        // Ocean on light backgrounds
+    darkSecondary: "text-[#475569]",                               // Slate for secondary on light
   },
 
   // Buttons & Interactive
   button: {
-    primary:
-      "from-[#c9a300] to-[#ae5514] hover:from-[#b48a0f] hover:to-[#89350a]", // Gold → Terracotta, hover: Amber → Rust
-    secondary: "bg-[#657575]/90 hover:bg-[#440f0f]", // Slate → Maroon
+    primary: "from-[#0e7490] to-[#d97706] hover:from-[#0c6a7c] hover:to-[#b45309]", // Teal → Amber, hover darker
+    secondary: "bg-[#475569]/90 hover:bg-[#0f2d40]",                                  // Slate → Ocean
   },
 
   // Timeline cards
   timeline: {
-    cardBg: "bg-[#f3f2e9]/95", // Linen with slight transparency
-    cardBorder: "border-[#a7b8b4]/60", // Mist border
-    cardHover: "hover:border-[#c9a300] hover:shadow-[#c9a300]/20", // Gold border and shadow
-    line: "from-[#c9a300] via-[#b48a0f] to-[#ae5514]", // Gold → Amber → Terracotta
+    cardBg: "bg-[#f0f9ff]/95",                                // Sky with slight transparency
+    cardBorder: "border-[#bae6fd]/60",                         // Mist blue border
+    cardHover: "hover:border-[#0e7490] hover:shadow-[#0e7490]/20", // Teal border and shadow
+    line: "from-[#0e7490] via-[#f59e0b] to-[#0c6a7c]",        // Teal → Amber → Deep Teal
   },
 
   // Virtual Guide
   guide: {
-    avatarGradient: "from-[#c9a300] via-[#ae5514] to-[#89350a]", // Gold → Terracotta → Rust
-    bubbleBg: "bg-[#f3f2e9]", // Linen
-    bubbleBorder: "border-[#c9a300]", // Gold
-    bubbleText: "text-[#440f0f]", // Maroon for readability
+    avatarGradient: "from-[#0e7490] via-[#f59e0b] to-[#0c6a7c]", // Teal → Amber → Deep Teal
+    bubbleBg: "bg-[#f0f9ff]",                                       // Sky
+    bubbleBorder: "border-[#0e7490]",                               // Teal
+    bubbleText: "text-[#0f2d40]",                                   // Ocean for readability
   },
 
   // Borders & Accents
-  border: "border-[#a7b8b4]/50", // Mist border
-  accent: "[#c9a300]", // Gold
+  border: "border-[#bae6fd]/50",  // Mist blue border
+  accent: "[#0e7490]",             // Teal
 
   // Raw colors for special cases
   colors: {
-    primary: MUSEUM_COLORS.gold, // #c9a300
-    secondary: MUSEUM_COLORS.terracotta, // #ae5514
-    tertiary: MUSEUM_COLORS.rust, // #89350a
-    background: MUSEUM_COLORS.linen, // #f3f2e9
-    text: MUSEUM_COLORS.maroon, // #440f0f
-    muted: MUSEUM_COLORS.slate, // #657575
+    primary: AGRI_COLORS.teal,     // #0e7490
+    secondary: AGRI_COLORS.harvest, // #d97706
+    tertiary: AGRI_COLORS.deepTeal, // #0c6a7c
+    background: AGRI_COLORS.skyLight, // #f0f9ff
+    text: AGRI_COLORS.ocean,        // #0f2d40
+    muted: AGRI_COLORS.slate,       // #475569
+    gold: AGRI_COLORS.amber,        // #f59e0b  ← used by timeline year markers & scrubber
+    terracotta: AGRI_COLORS.harvest, // maps to amber for category border colors
   },
 }
 
 /**
- * Get active theme - always returns museum theme
+ * Get active theme
  */
 export const getTheme = () => {
-  return MUSEUM_THEME
+  return AGRI_THEME
 }
 
 /**
  * Get current theme name
  */
 export const getCurrentThemeName = () => {
-  return "museum"
+  return "agri"
 }
 
-// Export themes for direct access if needed
+// Export themes for direct access
 export const themes = {
-  museum: MUSEUM_THEME,
+  agri: AGRI_THEME,
 }
 
-// Export museum colors for reference
-export { MUSEUM_COLORS }
+// Export colors for reference
+export { AGRI_COLORS }

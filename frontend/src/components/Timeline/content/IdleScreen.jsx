@@ -132,7 +132,7 @@ const TouchIndicator = () => (
       animate={{ opacity: [0.7, 1, 0.7] }}
       transition={{ duration: 2, repeat: Infinity }}
     >
-      Raak aan om te beginnen
+      Touch to Begin
     </motion.p>
   </motion.div>
 )
@@ -267,7 +267,7 @@ const IdleScreen = ({ onActivate }) => {
             transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
           >
             <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold mb-2 font-heading drop-shadow-md text-white">
-              <ShimmerText>Begin je reis</ShimmerText>
+              <ShimmerText>Begin Your Journey</ShimmerText>
             </h1>
             <motion.p 
               className="text-xl md:text-2xl lg:text-3xl font-medium text-white/80 tracking-widest uppercase"
@@ -275,7 +275,7 @@ const IdleScreen = ({ onActivate }) => {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.6 }}
             >
-              Landbouw Museum Leeuwarden
+              AgriTimeline
             </motion.p>
           </motion.div>
 
@@ -317,7 +317,7 @@ const IdleScreen = ({ onActivate }) => {
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.5, ease: "easeOut" }}
           >
-            Ontdek{" "}
+            Explore{" "}
             <motion.span 
               className="font-bold text-white"
               animate={{ 
@@ -329,9 +329,9 @@ const IdleScreen = ({ onActivate }) => {
               }}
               transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
             >
-              100 jaar
+              a Century
             </motion.span>
-            {" "}geschiedenis
+            {" "}of Farming
           </motion.p>
 
           {/* Touch Indicator */}

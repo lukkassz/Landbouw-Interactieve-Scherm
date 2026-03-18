@@ -11,14 +11,13 @@ export const StructuredData = () => {
     const structuredData = {
       "@context": "https://schema.org",
       "@type": "Museum",
-      name: "Fries Landbouwmuseum",
+      name: "AgriTimeline",
       description:
-        "Interactieve tijdlijn van 100 jaar geschiedenis van het Fries Landbouwmuseum (1925-2025). Ontdek de geschiedenis van het museum in Leeuwarden.",
+        "AgriTimeline — an interactive timeline exploring a century of Dutch agricultural heritage (1925–2025). Discover the history of farming in the Netherlands.",
       url: window.location.origin,
       address: {
         "@type": "PostalAddress",
-        addressLocality: "Leeuwarden",
-        addressRegion: "Friesland",
+        addressLocality: "the Netherlands",
         addressCountry: "NL",
       },
       foundingDate: "1925",
@@ -29,10 +28,10 @@ export const StructuredData = () => {
     const script = document.createElement("script")
     script.type = "application/ld+json"
     script.text = JSON.stringify(structuredData)
-    script.id = "structured-data-museum"
+    script.id = "structured-data-agritimeline"
 
     // Remove existing structured data if present
-    const existing = document.getElementById("structured-data-museum")
+    const existing = document.getElementById("structured-data-agritimeline")
     if (existing) {
       existing.remove()
     }
@@ -42,7 +41,7 @@ export const StructuredData = () => {
 
     // Cleanup on unmount
     return () => {
-      const scriptToRemove = document.getElementById("structured-data-museum")
+      const scriptToRemove = document.getElementById("structured-data-agritimeline")
       if (scriptToRemove) {
         scriptToRemove.remove()
       }

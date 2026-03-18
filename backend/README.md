@@ -1,252 +1,193 @@
-# Timeline Events REST API
+# Timeline Events REST API — Node.js + SQLite
 
 REST API backend voor het Fries Landbouwmuseum tijdlijn applicatie.
+Herschreven van PHP/MySQL naar **Node.js + Express + TypeScript + SQLite**.
 
 ## Technologie Stack
 
-- **PHP 7.4+** met PDO
-- **MySQL** database
-- **REST** architectuur
-- **JSON** response format
+- **Runtime**: Node.js (v18+)
+- **Framework**: Express.js 4
+- **Taal**: TypeScript (strict mode)
+- **Database**: SQLite via `better-sqlite3`
+- **Dev server**: `tsx` (hot-reload)
 
 ## Folder Structuur
 
 ```
 backend/
-├── api/
-│   ├── config/
-│   │   └── database.php          # Database connectie configuratie
-│   ├── endpoints/
-│   │   ├── get_events.php        # GET alle events (voor React frontend)
-│   │   └── event_crud.php        # CRUD operaties (voor adminpanel)
-│   └── index.php                 # API router
-├── adminpanel/                   # Admin panel (PHP/HTML/JS)
-│   ├── includes/                 # auth.php, db.php, functions.php
-│   ├── assets/                   # CSS, uploads
-│   ├── index.php                 # Dashboard - lijst van events
-│   ├── edit_add.php              # Formulier voor toevoegen/bewerken
-│   ├── delete.php                # Verwijderen van events
-│   └── login.php, logout.php     # Authenticatie
-├── .htaccess                     # URL rewriting voor API
-└── README.md
+├── src/
+│   ├── index.ts                 # Express server entry point (port 3000)
+│   ├── database.ts              # SQLite connectie + schema migratie
+│   └── routes/
+│       ├── events.ts            # CRUD timeline events
+│       ├── eventMedia.ts        # Media per event
+│       ├── eventSections.ts     # Secties per event
+│       ├── keyMoments.ts        # Key moments per event
+│       ├── memoryScores.ts      # Memory game leaderboard
+│       ├── puzzleScores.ts      # Puzzle game leaderboard
+│       ├── quizQuestions.ts     # Quiz vragen
+│       ├── quizScores.ts        # Quiz leaderboard
+│       ├── puzzleImages.ts      # Puzzle afbeeldingen
+│       └── proxyImage.ts        # CORS image proxy
+├── data/                        # SQLite database (auto-aangemaakt, git-ignored)
+├── package.json
+├── tsconfig.json
+└── .gitignore
 ```
 
-**Let op:** Het admin panel bevindt zich nu in `backend/adminpanel/` (alles is samengevoegd in één backend folder).
+## Installatie
 
-## Database Configuratie
-
-Update de database credentials in `api/config/database.php`:
-
-```php
-private $host = "localhost";
-private $db_name = "timeline";
-private $username = "root";
-private $password = "";
+```bash
+cd backend
+npm install
 ```
+
+## Ontwikkeling
+
+```bash
+# Start backend met hot-reload
+npm run dev
+# → http://localhost:3000
+
+# Start frontend (in aparte terminal)
+cd ../frontend
+npm run dev
+# → http://localhost:5000 (proxy naar :3000)
+```
+
+De SQLite database wordt automatisch aangemaakt in `backend/data/landbouw.db` bij de eerste keer opstarten. Geen externe database server nodig.
+
+## Productie Build
+
+```bash
+npm run build     # Compileert TypeScript naar dist/
+npm start         # Start vanuit dist/
+```
+
+## Database Schema
+
+8 tabellen, automatisch aangemaakt bij eerste start:
+
+| Tabel | Beschrijving |
+|---|---|
+| `timeline_events` | Hoofd-tabel met alle tijdlijn evenementen |
+| `event_media` | Media bestanden gekoppeld aan events |
+| `event_sections` | Tekst-secties per event |
+| `event_key_moments` | Sleutelmomenten per event |
+| `memory_scores` | Leaderboard memory spel |
+| `puzzle_scores` | Leaderboard puzzel spel |
+| `quiz_questions` | Quiz vragen met multiple choice |
+| `quiz_scores` | Leaderboard quiz |
+
+### Belangrijke kolommen `timeline_events`
+
+| Kolom | Type | Beschrijving |
+|---|---|---|
+| `year` | TEXT | Jaar of bereik ("1925" of "1930-1956") |
+| `game_type` | TEXT | 'puzzle', 'memory', 'harvest', 'none' |
+| `gallery_images` | TEXT | JSON-encoded array |
+| `related_events` | TEXT | JSON-encoded array |
+| `is_active` | INTEGER | Soft-delete vlag (0/1) |
+| `sort_order` | INTEGER | Volgorde in de tijdlijn |
 
 ## API Endpoints
 
-### Public Endpoints (voor React frontend)
+### Timeline Events
 
-#### GET /api/events
+| Methode | Route | Beschrijving |
+|---|---|---|
+| GET | `/api/events` | Alle actieve events (gesorteerd) |
+| GET | `/api/timeline/events` | Alias voor bovenstaande |
+| GET | `/api/event?id={id}` | Enkel event ophalen |
+| POST | `/api/event` | Nieuw event aanmaken |
+| PUT | `/api/event` | Event bijwerken (body moet `id` bevatten) |
+| DELETE | `/api/event?id={id}` | Soft-delete event |
 
-Haal alle actieve timeline events op.
+### Event Details
 
-**Response:**
+| Methode | Route | Beschrijving |
+|---|---|---|
+| GET | `/api/event/{id}/media` | Media voor een event |
+| GET | `/api/event/{id}/sections` | Secties voor een event |
+| GET | `/api/key-moments?event_id={id}` | Key moments voor een event |
 
-```json
-{
-  "success": true,
-  "count": 9,
-  "data": [
-    {
-      "id": 1,
-      "year": 1925,
-      "title": "Oprichting Museum",
-      "subtitle": "Het begin van een nieuw tijdperk",
-      "description": "...",
-      "image_url": "...",
-      "video_url": null,
-      "gallery_images": [...],
-      "category": "museum",
-      "importance_level": 3,
-      "fun_fact": "...",
-      "location": "Leeuwarden",
-      "is_active": true
-    }
-  ]
-}
-```
+### Legacy Endpoints (compatibiliteit)
 
-### Admin Endpoints (voor admin panel)
+| Methode | Route | Beschrijving |
+|---|---|---|
+| GET | `/api/event_media_direct?event_id={id}` | Media (legacy) |
+| GET | `/api/event_sections_direct?event_id={id}` | Secties (legacy) |
+| GET | `/api/key_moments_simple?event_id={id}` | Key moments (legacy) |
 
-#### GET /api/event?id={id}
+### Game Scores
 
-Haal een enkele event op.
+| Methode | Route | Beschrijving |
+|---|---|---|
+| GET | `/api/memory_scores` | Top 10 memory scores |
+| POST | `/api/memory_scores` | Score indienen (`player_name`, `moves`, `time_seconds`) |
+| GET | `/api/puzzle_scores?difficulty=easy\|hard` | Top 10 puzzel scores |
+| POST | `/api/puzzle_scores` | Score indienen (`player_name`, `moves`, `difficulty`) |
+| GET | `/api/quiz_scores?event_id=&difficulty=&limit=` | Quiz leaderboard |
+| POST | `/api/quiz_scores` | Score indienen (`player_name`, `score`, `total_questions`) |
 
-**Query Parameters:**
+### Quiz & Overig
 
-- `id` (required) - Event ID
+| Methode | Route | Beschrijving |
+|---|---|---|
+| GET | `/api/quiz_questions?event_id={id}` | Vragen ophalen (willekeurige volgorde) |
+| GET | `/api/puzzle-images` | Alle beschikbare puzzel afbeeldingen |
+| GET | `/api/puzzle_image_direct?filename={name}` | Puzzel afbeelding URL resolven |
+| GET | `/api/proxy_image?url={encoded_url}` | CORS image proxy |
+| GET | `/api/health` | Health check |
 
-**Response:**
+## Leaderboard Logica
 
-```json
-{
-  "success": true,
-  "data": {
-    "id": 1,
-    "year": 1925,
-    "title": "Oprichting Museum",
-    ...
-  }
-}
-```
+Alle score-endpoints handhaven een **top-10 leaderboard**:
 
-#### POST /api/event
-
-Maak een nieuwe event aan.
-
-**Request Body:**
-
-```json
-{
-  "year": 1925,
-  "title": "Oprichting Museum",
-  "subtitle": "Het begin van een nieuw tijdperk",
-  "description": "...",
-  "image_url": "...",
-  "category": "museum",
-  "importance_level": 3,
-  "is_active": true
-}
-```
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "message": "Event created successfully",
-  "id": 10
-}
-```
-
-#### PUT /api/event
-
-Update een bestaande event.
-
-**Request Body:**
-
-```json
-{
-  "id": 1,
-  "year": 1925,
-  "title": "Oprichting Museum (Updated)",
-  ...
-}
-```
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "message": "Event updated successfully"
-}
-```
-
-#### DELETE /api/event?id={id}
-
-Verwijder een event.
-
-**Query Parameters:**
-
-- `id` (required) - Event ID
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "message": "Event deleted successfully"
-}
-```
-
-## Testen van de API
-
-### Lokaal testen met XAMPP/WAMP
-
-1. Kopieer de `backend` folder naar je webserver root (bijv. `htdocs`)
-2. Start Apache en MySQL
-3. Test de endpoints met een browser of Postman:
-
-```
-http://localhost/backend/api/events
-http://localhost/backend/api/event?id=1
-```
-
-### Test met cURL
-
-```bash
-# Get all events
-curl http://localhost/backend/api/events
-
-# Get single event
-curl http://localhost/backend/api/event?id=1
-
-# Create event
-curl -X POST http://localhost/backend/api/event \
-  -H "Content-Type: application/json" \
-  -d '{"year":2025,"title":"Test Event"}'
-
-# Update event
-curl -X PUT http://localhost/backend/api/event \
-  -H "Content-Type: application/json" \
-  -d '{"id":1,"year":1925,"title":"Updated Title"}'
-
-# Delete event
-curl -X DELETE http://localhost/backend/api/event?id=1
-```
+1. Bij inzending wordt gecontroleerd of de leaderboard vol is (10 scores)
+2. Zo ja: de nieuwe score wordt vergeleken met de slechtste score
+3. Als de nieuwe score beter is, wordt de slechtste verwijderd
+4. Het veld `qualified: true/false` in de response geeft aan of de score is opgeslagen
 
 ## CORS
 
-De API heeft CORS ingeschakeld voor alle origins (`Access-Control-Allow-Origin: *`). Dit maakt het mogelijk om de API aan te roepen vanuit de React frontend tijdens development.
+CORS is ingeschakeld voor alle origins (`*`). Voor productie: beperk dit tot het specifieke frontend domein.
 
-**Voor productie:** Wijzig dit naar het specifieke domein van je frontend.
+## Verschil met PHP versie
 
-## Error Handling
+| Aspect | PHP (oud) | Node.js (nieuw) |
+|---|---|---|
+| Runtime | PHP 7.4+ Apache | Node.js 18+ |
+| Database | MySQL (extern) | SQLite (bestand) |
+| Taal | PHP | TypeScript |
+| Routing | .htaccess rewrite | Express Router |
+| Configuratie | secrets.php | Geen (SQLite, geen wachtwoord) |
+| Schema | Verspreid in SQL queries | Gecentraliseerd in database.ts |
+| Dependencies | Geen (PHP built-in) | npm packages |
+| Dev experience | XAMPP/WAMP nodig | `npm run dev` |
 
-Alle endpoints retourneren een consistent JSON format:
+## Testen
 
-**Success:**
+```bash
+# Health check
+curl http://localhost:3000/api/health
 
-```json
-{
-  "success": true,
-  "data": {...}
-}
+# Alle events ophalen
+curl http://localhost:3000/api/events
+
+# Enkel event
+curl http://localhost:3000/api/event?id=1
+
+# Event aanmaken
+curl -X POST http://localhost:3000/api/event \
+  -H "Content-Type: application/json" \
+  -d '{"year":"2025","title":"Test Event"}'
+
+# Memory score indienen
+curl -X POST http://localhost:3000/api/memory_scores \
+  -H "Content-Type: application/json" \
+  -d '{"player_name":"Speler1","moves":12,"time_seconds":45}'
+
+# Quiz leaderboard
+curl http://localhost:3000/api/quiz_scores?limit=5
 ```
-
-**Error:**
-
-```json
-{
-  "success": false,
-  "message": "Error description"
-}
-```
-
-**HTTP Status Codes:**
-
-- `200` - Success
-- `201` - Created
-- `400` - Bad Request
-- `404` - Not Found
-- `500` - Server Error
-
-## Volgende Stappen
-
-1. ✅ REST API aangemaakt
-2. ⏳ API testen met Postman/cURL
-3. ⏳ React frontend verbinden met API
-4. ⏳ Admin panel bouwen

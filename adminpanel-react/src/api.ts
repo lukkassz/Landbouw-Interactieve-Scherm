@@ -1,0 +1,51 @@
+import axios from "axios";
+import type { TimelineEvent, EventSection, KeyMoment, QuizQuestion } from "./types";
+
+const client = axios.create({
+  baseURL: "/api",
+  timeout: 10000,
+  headers: { "Content-Type": "application/json" },
+});
+
+// ── Events ──────────────────────────────────────────────
+export async function fetchAllEvents(): Promise<TimelineEvent[]> {
+  const { data } = await client.get<TimelineEvent[]>("/admin/events");
+  return data;
+}
+
+export async function fetchEvent(id: number): Promise<TimelineEvent> {
+  const { data } = await client.get<TimelineEvent>("/event", { params: { id } });
+  return data;
+}
+
+export async function createEvent(body: Partial<TimelineEvent>): Promise<{ id: number }> {
+  const { data } = await client.post("/event", body);
+  return data;
+}
+
+export async function updateEvent(body: Partial<TimelineEvent> & { id: number }): Promise<void> {
+  await client.put("/event", body);
+}
+
+export async function deleteEvent(id: number): Promise<void> {
+  await client.delete("/event", { params: { id } });
+}
+
+// ── Sections ────────────────────────────────────────────
+export async function fetchSections(eventId: number): Promise<EventSection[]> {
+  const { data } = await client.get("/event_sections_direct", { params: { event_id: eventId } });
+  return Array.isArray(data) ? data : data.data ?? [];
+}
+
+// ── Key Moments ────────────────────────────────────────
+export async function fetchKeyMoments(eventId: number): Promise<KeyMoment[]> {
+  const { data } = await client.get("/key_moments_simple", { params: { event_id: eventId } });
+  return Array.isArray(data) ? data : data.data ?? [];
+}
+
+// ── Quiz Questions ──────────────────────────────────────
+export async function fetchQuizQuestions(eventId: number): Promise<QuizQuestion[]> {
+  const { data } = await client.get("/quiz_questions", { params: { event_id: eventId } });
+  if (data.success && data.questions) return data.questions;
+  return Array.isArray(data) ? data : [];
+}

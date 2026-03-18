@@ -3,8 +3,8 @@ import { motion } from "framer-motion"
 import { getTheme } from "../../../config/themes"
 
 const MuseumHeadline = ({
-  text = "100 jaar geschiedenis",
-  subtext = "Fries Landbouwmuseum",
+  text = "A Century of Dutch Farming",
+  subtext = "AgriTimeline",
 }) => {
   const theme = getTheme()
 

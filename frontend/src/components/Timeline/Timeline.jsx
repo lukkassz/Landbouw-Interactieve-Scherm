@@ -198,7 +198,7 @@ const SwipeHint = React.memo(({ visible }) => (
           </svg>
         </div>
         <span className="text-white/80 text-sm font-medium tracking-wider uppercase drop-shadow-md">
-          Veeg
+          Swipe
         </span>
       </motion.div>
     )}
@@ -222,7 +222,7 @@ const EraBackground = React.memo(({ currentYear, theme }) => {
           exit={{ opacity: 0, scale: 1.1 }}
           transition={{ duration: 1 }}
         >
-          Jaren '{decade.toString().slice(2)}
+          '{decade.toString().slice(2)}
         </motion.div>
       </AnimatePresence>
     </div>
@@ -585,8 +585,8 @@ const Timeline = () => {
         {/* Headline */}
         <div className="relative z-10">
           <MuseumHeadline
-            text="100 jaar geschiedenis"
-            subtext="Fries Landbouwmuseum"
+            text="A Century of Dutch Farming"
+            subtext="AgriTimeline"
           />
         </div>
 
@@ -631,7 +631,7 @@ const Timeline = () => {
         }}
       >
         <div className="text-center text-red-500">
-          <div className="text-xl">Fout bij het laden van data: {error}</div>
+          <div className="text-xl">Error loading data: {error}</div>
         </div>
       </div>
     )
@@ -651,20 +651,19 @@ const Timeline = () => {
       >
         <div className="text-center p-8">
           <div className="text-2xl font-bold mb-4">
-            Geen timeline data beschikbaar
+            No timeline data available
           </div>
           <div className="text-lg mb-2">
             {error ? (
               <div className="text-red-500">
-                <p className="mb-2">Fout bij het ophalen van data:</p>
+                <p className="mb-2">Error fetching data:</p>
                 <p className="text-sm">{error}</p>
               </div>
             ) : (
               <div>
-                <p className="mb-2">Geen actieve events gevonden.</p>
+                <p className="mb-2">No active events found.</p>
                 <p className="text-sm text-gray-400">
-                  Controleer of events zijn gemarkeerd als actief in het admin
-                  panel.
+                  Check that events are marked as active in the admin panel.
                 </p>
               </div>
             )}
@@ -726,8 +725,8 @@ const Timeline = () => {
         {/* Headline */}
         <div className="relative z-10">
           <MuseumHeadline
-            text="100 jaar geschiedenis"
-            subtext="Fries Landbouwmuseum"
+            text="A Century of Dutch Farming"
+            subtext="AgriTimeline"
           />
         </div>
 
@@ -804,9 +803,9 @@ const Timeline = () => {
       {/* Virtual Guide Mascot */}
       <VirtualGuide
         messages={[
-          "Tik op een tijdperk om meer te weten te komen!",
-          "Veeg naar links of rechts om door de geschiedenis te bladeren!",
-          "Ontdek 100 jaar Fries Landbouwmuseum!",
+          "Tap an era to learn more!",
+          "Swipe left or right to explore history!",
+          "Explore a century of Dutch agricultural heritage!",
         ]}
         position="top-right"
       />
@@ -814,8 +813,8 @@ const Timeline = () => {
       {/* Headline */}
       <div className="relative z-10">
         <MuseumHeadline
-          text="100 jaar geschiedenis"
-          subtext="Fries Landbouwmuseum"
+          text="A Century of Dutch Farming"
+          subtext="AgriTimeline"
         />
       </div>
 
@@ -1098,8 +1097,8 @@ const Timeline = () => {
                                                     ? "Museum"
                                                     : period.category ===
                                                       "maatschappelijk"
-                                                    ? "Maatschappelijk"
-                                                    : "Landbouw"}
+                                                    ? "Society"
+                                                    : "Agriculture"}
                                                 </span>
                                               </div>
 
@@ -1277,8 +1276,8 @@ const Timeline = () => {
                                 {period.category === "museum"
                                   ? "Museum"
                                   : period.category === "maatschappelijk"
-                                  ? "Maatschappelijk"
-                                  : "Landbouw"}
+                                  ? "Society"
+                                  : "Agriculture"}
                               </span>
                             </div>
 

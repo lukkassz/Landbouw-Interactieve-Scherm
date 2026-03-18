@@ -2,10 +2,10 @@
 export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   safelist: [
-    // Museum theme colors - ensure these classes are always generated
+    // AgriTimeline theme colors - ensure these classes are always generated
     {
       pattern:
-        /^(bg|text|border|from|via|to)-brand-(mist|sky|olive|gold|amber|maroon|rust|slate|linen|terracotta)/,
+        /^(bg|text|border|from|via|to)-brand-(mist|sky|teal|gold|amber|ocean|cyan|slate|surface|deep)/,
       variants: ["hover", "active"],
     },
   ],
@@ -24,42 +24,43 @@ export default {
           800: "#075985",
           900: "#0c4a6e",
         },
-        museum: {
-          brown: "#8B4513",
-          gold: "#FFD700",
-          cream: "#F5F5DC",
-          green: "#228B22",
-        },
-        // Project brand palette
+        // Project brand palette — Deep Teal + Warm Amber
         brand: {
-          mist: "#a7b8b4", // #a7b8b4
-          sky: "#b5cbd1", // #b5cbd1
-          olive: "#929d7c", // #929d7c
-          gold: "#c9a300", // #c9a300
-          amber: "#b48a0f", // #b48a0f
-          maroon: "#440f0f", // #440f0f
-          rust: "#89350a", // #89350a
-          slate: "#657575", // #657575
-          linen: "#f3f2e9", // #f3f2e9
-          terracotta: "#ae5514", // #ae5514
+          mist:      "#bae6fd", // Sky-200 — muted elements, inactive
+          sky:       "#0e7490", // Cyan-700 — primary teal interactive
+          teal:      "#0c6a7c", // Cyan-800 — hover teal
+          ocean:     "#0f2d40", // Custom dark teal — dark surfaces
+          cyan:      "#22d3ee", // Cyan-400 — bright accents
+          gold:      "#f59e0b", // Amber-400 — primary accent shimmer (replaces old gold)
+          amber:     "#d97706", // Amber-600 — secondary accent
+          slate:     "#475569", // Slate-600 — secondary text
+          surface:   "#f0f9ff", // Sky-50 — light card surfaces
+          deep:      "#0f2d40", // Ocean — deep dark background
+
+          // Kept for backward-compatible hardcoded references in JSX
+          linen:     "#f0f9ff", // Was #f3f2e9 — now maps to sky surface
+          maroon:    "#0f2d40", // Was #440f0f — now maps to ocean dark
+          rust:      "#0e7490", // Was #89350a — now maps to teal primary
+          terracotta: "#d97706", // Was #ae5514 — now maps to amber
+          olive:     "#22d3ee", // Was #929d7c — now maps to cyan accent
         },
-        // Semantic aliases for easier usage
+        // Semantic aliases
         theme: {
-          primary: "#c9a300", // brand.gold
-          secondary: "#657575", // brand.slate
-          accent: "#ae5514", // brand.terracotta
-          success: "#929d7c", // brand.olive
-          warning: "#b48a0f", // brand.amber
-          danger: "#89350a", // brand.rust
-          surface: "#f3f2e9", // brand.linen
-          muted: "#a7b8b4", // brand.mist
+          primary:   "#0e7490", // brand.sky (teal)
+          secondary: "#475569", // brand.slate
+          accent:    "#d97706", // brand.amber
+          success:   "#22d3ee", // brand.cyan
+          warning:   "#f59e0b", // brand.gold
+          danger:    "#b45309", // amber-700
+          surface:   "#f0f9ff", // brand.surface
+          muted:     "#bae6fd", // brand.mist
         },
       },
       fontFamily: {
-        // Museum fonts
+        // Fonts
         heading: ["Josefin Sans", "sans-serif"], // For headings and buttons
-        body: ["Montserrat", "sans-serif"], // For text content
-        display: ["Josefin Sans", "sans-serif"], // Alias for headings
+        body: ["Montserrat", "sans-serif"],       // For text content
+        display: ["Josefin Sans", "sans-serif"],  // Alias for headings
       },
       animation: {
         "fade-in": "fadeIn 0.5s ease-in-out",

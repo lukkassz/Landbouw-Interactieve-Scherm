@@ -1,6 +1,0 @@
-# Increase upload limits for puzzle images (and other form uploads)
-# Only works if Apache AllowOverride allows this. Otherwise: modify php.ini.
-<IfModule mod_php.c>
-    php_value upload_max_filesize 64M
-    php_value post_max_size 72M
-</IfModule>

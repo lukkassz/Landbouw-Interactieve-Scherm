@@ -7,17 +7,17 @@ import { useEffect } from "react"
  */
 export const DynamicTitle = ({ title, eventTitle, eventYear }) => {
   useEffect(() => {
-    let newTitle = "Fries Landbouwmuseum - Interactieve Tijdlijn"
+    let newTitle = "AgriTimeline - Interactive Timeline"
 
     if (title) {
       // Use provided title directly
       newTitle = title
     } else if (eventTitle && eventYear) {
       // Create event-specific title
-      newTitle = `${eventTitle} - Fries Landbouwmuseum | ${eventYear}`
+      newTitle = `${eventTitle} - AgriTimeline | ${eventYear}`
     } else if (eventTitle) {
       // Title without year
-      newTitle = `${eventTitle} - Fries Landbouwmuseum`
+      newTitle = `${eventTitle} - AgriTimeline`
     }
 
     // Update document title
@@ -28,17 +28,17 @@ export const DynamicTitle = ({ title, eventTitle, eventYear }) => {
     if (metaDescription && eventTitle) {
       metaDescription.setAttribute(
         "content",
-        `Ontdek ${eventTitle} (${eventYear || ""}) - ${metaDescription.getAttribute("content")}`
+        `Discover ${eventTitle} (${eventYear || ""}) - ${metaDescription.getAttribute("content")}`
       )
     }
 
     // Cleanup: restore default title on unmount
     return () => {
-      document.title = "Fries Landbouwmuseum - Interactieve Tijdlijn"
+      document.title = "AgriTimeline - Interactive Timeline"
       if (metaDescription) {
         metaDescription.setAttribute(
           "content",
-          "Interactieve tijdlijn van 100 jaar Fries Landbouwmuseum geschiedenis (1925-2025). Ontdek de geschiedenis van het museum in Leeuwarden."
+          "AgriTimeline — an interactive timeline exploring a century of Dutch agricultural heritage (1925–2025). Discover the history of farming in the Netherlands."
         )
       }
     }

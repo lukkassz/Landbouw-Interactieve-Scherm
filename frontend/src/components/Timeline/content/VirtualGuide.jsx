@@ -15,9 +15,9 @@ import { getTheme } from "../../../config/themes"
  */
 const VirtualGuide = ({
   messages = [
-    "Tik op een tijdperk om meer te weten te komen!",
-    "Veeg naar links of rechts om door de geschiedenis te bladeren!",
-    "Klik op mij voor tips!"
+    "Tap an era to learn more!",
+    "Swipe left or right to explore history!",
+    "Click me for tips!"
   ],
   position = "top-right", // Options: "top-left", "top-right", "bottom-left", "bottom-right"
   autoHideDelay = 10000 // Auto-hide after 10 seconds (10000ms)
