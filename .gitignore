@@ -50,6 +50,5 @@ desktop.ini
 backend/database.sqlite
 
 # Misc
-.claude/
 scripts/
 adminpanel/
