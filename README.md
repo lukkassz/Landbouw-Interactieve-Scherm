@@ -1,6 +1,6 @@
-# Fries Landbouwmuseum - Interactive Experience
+# Agriculture Timeline - Interactive Experience
 
-An interactive touch-screen timeline application developed for the Fries Landbouwmuseum (Leeuwarden, Netherlands) to celebrate its 100th anniversary (1925-2025). This application is designed for museum kiosks to guide visitors through a century of agricultural history.
+An interactive touch-screen timeline application. This application is designed for interactive kiosks to guide visitors through agricultural history, present, and future.
 
 ## 🌟 Features
 
@@ -83,5 +83,4 @@ The output will be in `frontend/dist`.
 
 ## 📄 License
 
-Proprietary Software - Fries Landbouwmuseum © 2025. All rights reserved.
-Developed for the Centenary Exhibition.
+Proprietary Software © 2025. All rights reserved.

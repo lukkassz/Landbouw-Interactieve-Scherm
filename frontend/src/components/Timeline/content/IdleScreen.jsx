@@ -1,7 +1,6 @@
 import React, { useRef, useEffect, useMemo } from "react"
 import { motion } from "framer-motion"
 import idleScreenVideo from "../../../assets/video/idle_screen.mp4"
-import clickIcon from "../../../assets/icons/finger_click.png"
 
 /**
  * Floating Particle Component
@@ -21,9 +20,9 @@ const FloatingParticle = ({ delay, duration, startX, size, color }) => (
     initial={{ y: 0, opacity: 0, scale: 0 }}
     animate={{
       y: [0, -800, -1200],
-      opacity: [0, 1, 1, 0],
+      opacity: [0, 0.6, 0.6, 0],
       scale: [0, 1, 1.2, 0.5],
-      x: [0, Math.random() * 100 - 50, Math.random() * 150 - 75],
+      x: [0, Math.random() * 80 - 40, Math.random() * 120 - 60],
     }}
     transition={{
       duration: duration,
@@ -35,117 +34,58 @@ const FloatingParticle = ({ delay, duration, startX, size, color }) => (
 )
 
 /**
- * Shimmer Text Effect
- * Animated gradient that moves across text
+ * QR / scan icon for the archival access button
  */
-const ShimmerText = ({ children, className }) => (
-  <motion.span
-    className={`relative inline-block ${className}`}
-    style={{
-      background: "linear-gradient(90deg, #FFFFFF 0%, #FFFFFF 40%, #FFD700 50%, #FFFFFF 60%, #FFFFFF 100%)",
-      backgroundSize: "200% 100%",
-      WebkitBackgroundClip: "text",
-      WebkitTextFillColor: "transparent",
-      backgroundClip: "text",
-      textShadow: "0 2px 10px rgba(0,0,0,0.2)"
-    }}
-    animate={{
-      backgroundPosition: ["200% 0%", "-200% 0%"],
-    }}
-    transition={{
-      duration: 3,
-      repeat: Infinity,
-      ease: "linear",
-    }}
+const QrIcon = () => (
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
   >
-    {children}
-  </motion.span>
+    <rect x="3" y="3" width="7" height="7" />
+    <rect x="14" y="3" width="7" height="7" />
+    <rect x="3" y="14" width="7" height="7" />
+    <rect x="14" y="14" width="4" height="4" />
+    <line x1="7" y1="7" x2="7" y2="7" />
+    <line x1="17" y1="7" x2="17" y2="7" />
+    <line x1="7" y1="17" x2="7" y2="17" />
+  </svg>
 )
 
 /**
- * Animated Border Glow
+ * Arrow right icon for CTA button
  */
-const GlowingBorder = ({ children }) => (
-  <div className="relative">
-    {/* Animated gradient border */}
-    <motion.div
-      className="absolute -inset-px rounded-3xl opacity-40 blur-sm"
-      style={{
-        background: "linear-gradient(45deg, rgba(255,255,255,0.6), rgba(255,255,255,0.1), rgba(255,255,255,0.6))",
-        backgroundSize: "400% 400%",
-      }}
-      animate={{
-        backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
-      }}
-      transition={{
-        duration: 8,
-        repeat: Infinity,
-        ease: "linear",
-      }}
-    />
-    {/* Inner content */}
-    <div className="relative">{children}</div>
-  </div>
-)
-
-/**
- * Touch Indicator with ripple effect
- */
-const TouchIndicator = () => (
-  <motion.div
-    className="flex flex-col items-center gap-4 mt-8"
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ delay: 1.2, duration: 0.8 }}
+const ArrowRight = () => (
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
   >
-    {/* Hand icon with tap animation */}
-    <motion.div
-      className="relative"
-      animate={{ y: [0, -8, 0] }}
-      transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-    >
-      {/* Ripple effects */}
-      <motion.div
-        className="absolute inset-0 rounded-full border-2 border-white/50"
-        style={{ width: 80, height: 80, marginLeft: -15, marginTop: -15 }}
-        animate={{ scale: [1, 1.5, 1.5], opacity: [0.8, 0.3, 0] }}
-        transition={{ duration: 2, repeat: Infinity }}
-      />
-      <motion.div
-        className="absolute inset-0 rounded-full border-2 border-white/50"
-        style={{ width: 80, height: 80, marginLeft: -15, marginTop: -15 }}
-        animate={{ scale: [1, 1.5, 1.5], opacity: [0.8, 0.3, 0] }}
-        transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
-      />
-      
-      {/* Finger/tap icon */}
-      <img 
-        src={clickIcon} 
-        alt="Click Icon" 
-        className="w-12 h-12 drop-shadow-lg filter brightness-0 invert"
-      />
-    </motion.div>
-
-    {/* Touch text */}
-    <motion.p
-      className="text-xl md:text-2xl font-medium text-white tracking-wider uppercase drop-shadow-md"
-      animate={{ opacity: [0.7, 1, 0.7] }}
-      transition={{ duration: 2, repeat: Infinity }}
-    >
-      Touch to Begin
-    </motion.p>
-  </motion.div>
+    <path d="M5 12h14" />
+    <path d="M12 5l7 7-7 7" />
+  </svg>
 )
 
 /**
- * IdleScreen Component
- * 
- * Displays a screensaver mode with:
- * - Fullscreen video background
- * - Floating glowing particles
- * - Glassmorphism box with animated border
- * - Shimmer effect on text
- * - Touch indicator animation
+ * IdleScreen Component — editorial/museum layout
+ *
+ * Layout matches design mockup:
+ * - Top-left: Logo (AgriTimeline / THE HERITAGE LENS)
+ * - Top-right: ARCHIVAL ACCESS button
+ * - Center-left: Label + large hero headline (mixed italic/normal)
+ * - Below hero: Description paragraph
+ * - Bottom-left: CURRENT DISPLAY label + title
+ * - Bottom-right: Golden pill CTA "BEGIN YOUR JOURNEY"
  */
 const IdleScreen = ({ onActivate }) => {
   const videoRef = useRef(null)
@@ -153,17 +93,16 @@ const IdleScreen = ({ onActivate }) => {
   // Generate particles with random properties
   const particles = useMemo(() => {
     const colors = [
-      "rgba(255, 255, 255, 0.8)", // White
-      "rgba(255, 215, 0, 0.6)",   // Gold
-      "rgba(255, 255, 255, 0.4)", // Faint white
+      "rgba(255, 255, 255, 0.6)",
+      "rgba(197, 150, 43, 0.5)",
+      "rgba(255, 255, 255, 0.3)",
     ]
-    
-    return Array.from({ length: 25 }, (_, i) => ({
+    return Array.from({ length: 20 }, (_, i) => ({
       id: i,
-      delay: Math.random() * 8,
-      duration: 8 + Math.random() * 6,
+      delay: Math.random() * 10,
+      duration: 10 + Math.random() * 8,
       startX: Math.random() * 100,
-      size: 4 + Math.random() * 8,
+      size: 3 + Math.random() * 6,
       color: colors[Math.floor(Math.random() * colors.length)],
     }))
   }, [])
@@ -172,13 +111,7 @@ const IdleScreen = ({ onActivate }) => {
   useEffect(() => {
     const video = videoRef.current
     if (video) {
-      video.addEventListener("ended", () => {
-        video.currentTime = 0
-        video.play()
-      })
-      // Start playing when component mounts
       video.play().catch(err => {
-        // Ignore AbortError which happens when component unmounts or browser blocks autoplay
         if (err.name !== "AbortError") {
           console.error("Error playing video:", err)
         }
@@ -188,19 +121,18 @@ const IdleScreen = ({ onActivate }) => {
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden"
+      className="fixed inset-0 z-50 overflow-hidden"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, pointerEvents: "none" }}
-      transition={{ duration: 1 }}
+      transition={{ duration: 0.8 }}
       onClick={onActivate}
       onTouchStart={onActivate}
-      style={{ 
+      style={{
         pointerEvents: "auto",
-        overscrollBehavior: 'none',
-        overscrollBehaviorY: 'none',
-        overscrollBehaviorX: 'none',
-        touchAction: 'pan-x pan-y',
+        cursor: "pointer",
+        overscrollBehavior: "none",
+        touchAction: "pan-x pan-y",
       }}
     >
       {/* Background Video */}
@@ -215,8 +147,23 @@ const IdleScreen = ({ onActivate }) => {
         <source src={idleScreenVideo} type="video/mp4" />
       </video>
 
-      {/* Dark overlay for better contrast */}
-      <div className="absolute inset-0 bg-black/20" />
+      {/* Dark gradient overlay — heavier on left for text readability */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(105deg, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.38) 55%, rgba(0,0,0,0.10) 100%)",
+        }}
+      />
+
+      {/* Bottom fade for polish */}
+      <div
+        className="absolute inset-x-0 bottom-0 h-40 pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(to top, rgba(0,0,0,0.35) 0%, transparent 100%)",
+        }}
+      />
 
       {/* Floating Particles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -225,132 +172,149 @@ const IdleScreen = ({ onActivate }) => {
         ))}
       </div>
 
-      {/* Vignette effect */}
-      <div 
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: "radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.3) 100%)",
-        }}
-      />
+      {/* ── MAIN LAYOUT ── */}
+      <div className="relative z-10 w-full h-full flex flex-col p-10 md:p-14">
 
-      {/* Main Content with Glowing Border */}
-      <GlowingBorder>
-        <motion.div
-          className="max-w-3xl w-full mx-4 p-12 md:p-16 bg-black/20 backdrop-blur-md border border-white/20 rounded-3xl shadow-2xl text-center"
-          initial={{ opacity: 0, scale: 0.9, y: 30 }}
-          animate={{ 
-            opacity: 1, 
-            scale: 1,
-            y: 0,
-          }}
-          exit={{ opacity: 0, scale: 0.9 }}
-          transition={{
-            opacity: { duration: 1 },
-            scale: { duration: 0.8, ease: "easeOut" },
-            y: { duration: 0.8, ease: "easeOut" },
-          }}
-          style={{
-            boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.3)"
-          }}
-        >
-          {/* Decorative top line */}
-          <motion.div
-            className="w-24 h-px mx-auto mb-8 rounded-full bg-white/40"
-            animate={{ width: ["0%", "40%", "30%"] }}
-            transition={{ duration: 1.5, delay: 0.5 }}
-          />
+        {/* ── TOP BAR ── */}
+        <div className="flex items-start justify-between w-full">
 
-          {/* Main Title with Shimmer */}
+          {/* Logo — top left */}
           <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
+            initial={{ opacity: 0, y: -16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.1 }}
           >
-            <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold mb-2 font-heading drop-shadow-md text-white">
-              <ShimmerText>Begin Your Journey</ShimmerText>
-            </h1>
-            <motion.p 
-              className="text-xl md:text-2xl lg:text-3xl font-medium text-white/80 tracking-widest uppercase"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.6, delay: 0.6 }}
+            <h2
+              className="text-white font-serif italic text-3xl md:text-4xl leading-none tracking-tight drop-shadow-lg"
+              style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
             >
               AgriTimeline
-            </motion.p>
-          </motion.div>
-
-          {/* Animated divider */}
-          <motion.div
-            className="flex items-center justify-center gap-4 my-6"
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.8, duration: 0.6 }}
-          >
-            <motion.div 
-              className="h-px w-16 bg-gradient-to-r from-transparent to-white"
-              animate={{ width: [40, 64, 40] }}
-              transition={{ duration: 3, repeat: Infinity }}
-            />
-            <motion.div
-              className="w-3 h-3 rounded-full bg-white"
-              animate={{ 
-                scale: [1, 1.3, 1],
-                boxShadow: [
-                  "0 0 10px rgba(255, 255, 255, 0.5)",
-                  "0 0 20px rgba(255, 255, 255, 0.8)",
-                  "0 0 10px rgba(255, 255, 255, 0.5)",
-                ]
-              }}
-              transition={{ duration: 2, repeat: Infinity }}
-            />
-            <motion.div 
-              className="h-px w-16 bg-gradient-to-l from-transparent to-white"
-              animate={{ width: [40, 64, 40] }}
-              transition={{ duration: 3, repeat: Infinity }}
-            />
-          </motion.div>
-
-          {/* Subtitle with typewriter-like appearance */}
-          <motion.p
-            className="text-2xl md:text-3xl lg:text-4xl font-light font-body text-white tracking-wide drop-shadow-md"
-            initial={{ y: 15, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.5, ease: "easeOut" }}
-          >
-            Explore{" "}
-            <motion.span 
-              className="font-bold text-white"
-              animate={{ 
-                textShadow: [
-                  "0 0 8px rgba(255, 255, 255, 0)",
-                  "0 0 16px rgba(255, 255, 255, 0.4)",
-                  "0 0 8px rgba(255, 255, 255, 0)",
-                ]
-              }}
-              transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+            </h2>
+            <p
+              className="text-white/70 text-xs tracking-[0.25em] uppercase mt-1 font-sans"
             >
-              a Century
-            </motion.span>
-            {" "}of Farming
+              The Heritage Lens
+            </p>
+          </motion.div>
+
+          {/* Archival Access button — top right */}
+          <motion.button
+            initial={{ opacity: 0, y: -16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.2 }}
+            onClick={e => {
+              e.stopPropagation()
+            }}
+            className="flex items-center gap-2 px-5 py-3 rounded-full border border-white/40 bg-white/10 backdrop-blur-md text-white/90 text-xs tracking-[0.18em] uppercase font-sans hover:bg-white/20 transition-colors duration-200"
+          >
+            <QrIcon />
+            <span>Archival Access 0422</span>
+          </motion.button>
+
+        </div>
+
+        {/* ── HERO SECTION — left aligned, vertically centered ── */}
+        <div className="flex-1 flex flex-col justify-center mt-4">
+
+          {/* Collection label */}
+          <motion.p
+            className="text-xs md:text-sm tracking-[0.28em] uppercase font-sans mb-5"
+            style={{ color: "#C5962B" }}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+          >
+            Digital Curator Collection
           </motion.p>
 
-          {/* Touch Indicator */}
-          <TouchIndicator />
+          {/* Hero headline */}
+          <motion.h1
+            className="text-white leading-[1.05] drop-shadow-xl"
+            style={{
+              fontSize: "clamp(3.5rem, 8vw, 7.5rem)",
+              maxWidth: "58%",
+            }}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
+          >
+            {/* Line 1 */}
+            <span
+              className="block font-sans font-light"
+              style={{ letterSpacing: "-0.01em" }}
+            >
+              Tracing the
+            </span>
+            {/* Line 2 — italic word + normal word */}
+            <span className="block">
+              <span
+                className="font-serif italic font-normal"
+                style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
+              >
+                Fertile{" "}
+              </span>
+              <span className="font-sans font-light">Path.</span>
+            </span>
+          </motion.h1>
 
-          {/* Decorative bottom line */}
+          {/* Description */}
+          <motion.p
+            className="text-white/75 font-sans font-light leading-relaxed mt-6"
+            style={{
+              fontSize: "clamp(0.9rem, 1.4vw, 1.15rem)",
+              maxWidth: "44%",
+            }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.6, ease: "easeOut" }}
+          >
+            An immersive journey through three centuries of Dutch agricultural
+            innovation, resilience, and landscape evolution.
+          </motion.p>
+
+        </div>
+
+        {/* ── BOTTOM BAR ── */}
+        <div className="flex items-end justify-between w-full">
+
+          {/* Current Display — bottom left */}
           <motion.div
-            className="w-24 h-px mx-auto mt-8 rounded-full bg-white/40"
-            animate={{ width: ["0%", "40%", "30%"] }}
-            transition={{ duration: 1.5, delay: 0.7 }}
-          />
-        </motion.div>
-      </GlowingBorder>
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.7 }}
+          >
+            <p className="text-white/55 text-xs tracking-[0.22em] uppercase font-sans mb-1">
+              Current Display
+            </p>
+            <p
+              className="text-white font-serif italic text-lg md:text-xl leading-tight drop-shadow"
+              style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
+            >
+              The Golden Age of Windmills
+            </p>
+          </motion.div>
 
-      {/* Corner decorations */}
-      <div className="absolute top-8 left-8 w-20 h-20 border-l border-t border-white/20 rounded-tl-3xl" />
-      <div className="absolute top-8 right-8 w-20 h-20 border-r border-t border-white/20 rounded-tr-3xl" />
-      <div className="absolute bottom-8 left-8 w-20 h-20 border-l border-b border-white/20 rounded-bl-3xl" />
-      <div className="absolute bottom-8 right-8 w-20 h-20 border-r border-b border-white/20 rounded-br-3xl" />
+          {/* CTA Button — bottom right (golden pill) */}
+          <motion.button
+            initial={{ opacity: 0, scale: 0.9, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.85, ease: "easeOut" }}
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={onActivate}
+            className="flex items-center gap-3 px-8 py-5 rounded-full font-sans font-semibold text-sm tracking-[0.2em] uppercase shadow-xl transition-shadow duration-200"
+            style={{
+              background: "linear-gradient(135deg, #C5962B 0%, #d4a93a 50%, #b8871f 100%)",
+              color: "#1a1100",
+              boxShadow: "0 8px 32px rgba(197,150,43,0.45), 0 2px 8px rgba(0,0,0,0.3)",
+            }}
+          >
+            <span>Begin Your Journey</span>
+            <ArrowRight />
+          </motion.button>
+
+        </div>
+      </div>
     </motion.div>
   )
 }

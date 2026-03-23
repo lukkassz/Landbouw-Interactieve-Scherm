@@ -1,6 +1,6 @@
 # Timeline Events REST API — Node.js + SQLite
 
-REST API backend voor het Fries Landbouwmuseum tijdlijn applicatie.
+REST API backend voor de Landbouw tijdlijn applicatie.
 Herschreven van PHP/MySQL naar **Node.js + Express + TypeScript + SQLite**.
 
 ## Technologie Stack
