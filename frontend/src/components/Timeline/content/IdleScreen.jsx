@@ -126,11 +126,8 @@ const IdleScreen = ({ onActivate }) => {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, pointerEvents: "none" }}
       transition={{ duration: 0.8 }}
-      onClick={onActivate}
-      onTouchStart={onActivate}
       style={{
         pointerEvents: "auto",
-        cursor: "pointer",
         overscrollBehavior: "none",
         touchAction: "pan-x pan-y",
       }}
