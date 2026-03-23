@@ -22,6 +22,7 @@ const Timeline = () => {
   const [isIdle, setIsIdle] = useState(true)
   const [showLoadingAnimation, setShowLoadingAnimation] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   // Handle idle timeout (5 minutes)
   const handleIdle = useRef(() => {
@@ -55,8 +56,12 @@ const Timeline = () => {
       id: event.id?.toString() || `event-${event.id}`,
       year: event.year || "",
       title: event.title || "",
-      subtitle: event.subtitle || "", // If available
+      subtitle: event.subtitle || "",
       description: event.description || "",
+      scrubber_label: event.scrubber_label || "",
+      infobox_title: event.infobox_title || "",
+      infobox_subtitle: event.infobox_subtitle || "",
+      icon_name: event.icon_name || "none",
       mainImage: event.main_image || event.image_url || null,
       category: (event.category || "museum").toLowerCase(),
       gameType: event.game_type || "none",
@@ -90,7 +95,8 @@ const Timeline = () => {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
-        className="pointer-events-auto cursor-pointer"
+        className="pointer-events-auto cursor-pointer w-12 h-12 flex items-center justify-center bg-black/20 hover:bg-black/40 rounded-full backdrop-blur-md transition-colors border border-white/10"
+        onClick={() => setIsMenuOpen(true)}
       >
         {/* Hamburger Menu Icon */}
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -191,9 +197,69 @@ const Timeline = () => {
           playSound()
           setActiveIndex(index)
         }} 
-        minYear={1850}
-        maxYear={2050}
+        minYear={minYear}
+        maxYear={maxYear}
       />
+
+      {/* Side Menu Overlay */}
+      <AnimatePresence>
+        {isMenuOpen && (
+          <motion.div 
+            className="fixed inset-0 z-[100] flex justify-end pointer-events-auto"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            {/* Backdrop */}
+            <div 
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
+              onClick={() => setIsMenuOpen(false)}
+            />
+            
+            {/* Menu Panel */}
+            <motion.div 
+              className="relative w-full max-w-sm h-full bg-[#111] shadow-2xl flex flex-col pt-16 px-10 border-l border-white/10"
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            >
+              <button 
+                onClick={() => setIsMenuOpen(false)}
+                className="absolute top-10 right-10 w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full transition-colors text-white"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+
+              <h2 className="text-2xl font-serif italic text-[#e0b85a] mb-12 border-b border-white/10 pb-6">Menu</h2>
+              
+              <nav className="flex flex-col gap-6">
+                {[
+                  { label: "Home", icon: <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path> },
+                  { label: "Games & Puzzles", icon: <rect x="2" y="6" width="20" height="12" rx="2"></rect> },
+                  { label: "Multimedia", icon: <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path> },
+                  { label: "Search", icon: <circle cx="11" cy="11" r="8"></circle> },
+                  { label: "Change Language", icon: <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path> }
+                ].map((item, i) => (
+                  <div 
+                    key={i}
+                    className="flex items-center gap-4 text-white/70 hover:text-white cursor-pointer group transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-[#e0b85a]/20 group-hover:text-[#e0b85a] transition-colors">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        {item.icon}
+                      </svg>
+                    </div>
+                    <span className="font-sans font-medium text-lg tracking-wide">{item.label}</span>
+                  </div>
+                ))}
+              </nav>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

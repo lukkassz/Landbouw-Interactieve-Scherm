@@ -113,9 +113,10 @@ eventsRouter.post("/event", (req: Request, res: Response) => {
       stage, use_detailed_modal, historical_context, has_key_moments,
       has_puzzle, puzzle_image_url, game_type, category, sort_order,
       image_url, video_url, gallery_images, model_3d_url,
-      importance_level, fun_fact, related_events, location, is_active, has_video
+      importance_level, fun_fact, related_events, location, is_active, has_video,
+      scrubber_label, infobox_title, infobox_subtitle, icon_name
     ) VALUES (
-      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
     )
   `);
 
@@ -145,7 +146,11 @@ eventsRouter.post("/event", (req: Request, res: Response) => {
     body.related_events ? JSON.stringify(body.related_events) : null,
     body.location || null,
     body.is_active !== undefined ? (body.is_active ? 1 : 0) : 1,
-    body.has_video ? 1 : 0
+    body.has_video ? 1 : 0,
+    body.scrubber_label || null,
+    body.infobox_title || null,
+    body.infobox_subtitle || null,
+    body.icon_name || null
   );
 
   res.status(201).json({ id: result.lastInsertRowid, message: "Event created" });
@@ -168,6 +173,7 @@ eventsRouter.put("/event", (req: Request, res: Response) => {
     "museum_gradient", "stage", "historical_context", "puzzle_image_url",
     "game_type", "category", "sort_order", "image_url", "video_url",
     "model_3d_url", "importance_level", "fun_fact", "location",
+    "scrubber_label", "infobox_title", "infobox_subtitle", "icon_name"
   ];
 
   for (const field of allowedFields) {

@@ -3,6 +3,10 @@ export interface TimelineEvent {
   year: string;
   title: string;
   subtitle: string | null;
+  scrubber_label: string | null;
+  infobox_title: string | null;
+  infobox_subtitle: string | null;
+  icon_name: string | null;
   description: string | null;
   historical_context: string | null;
   icon: string | null;

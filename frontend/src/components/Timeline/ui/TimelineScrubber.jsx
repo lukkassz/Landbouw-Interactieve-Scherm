@@ -11,6 +11,24 @@ const TimelineScrubber = ({ events = [], activeIndex = 0, onSelectEvent, minYear
   // Determine active event
   const activeEvent = events[activeIndex]
   const activeYear = activeEvent?.year ? parseInt(activeEvent.year.match(/\d{4}/)?.[0] || activeEvent.year) : 1925
+  const iconName = activeEvent?.icon_name || "none"
+  const scrubberLabel = activeEvent?.scrubber_label || "ERA"
+
+  // Helper to render the correct icon
+  const renderIcon = (name) => {
+    switch (name) {
+      case "gear":
+        return <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>;
+      case "tractor":
+        return <><circle cx="7" cy="17" r="3"/><circle cx="17" cy="17" r="3"/><line x1="14" y1="17" x2="10" y2="17"/><path d="M12 17V7h4"/><path d="M7 14v-4h4"/></>;
+      case "factory":
+        return <><rect x="2" y="10" width="20" height="10" rx="2" ry="2"/><path d="M2 10v-4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v4"/><path d="M10 10v-4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v4"/><path d="M18 10v-4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v4"/></>;
+      case "sun":
+        return <><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></>;
+      default:
+        return <circle cx="12" cy="12" r="8"/>;
+    }
+  };
 
   // Generate decade markers (1850, 1900, 1950, MODERN)
   const markers = [
@@ -54,7 +72,7 @@ const TimelineScrubber = ({ events = [], activeIndex = 0, onSelectEvent, minYear
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 h-32 z-50 flex items-center justify-center px-10 md:px-24">
+    <div className="fixed bottom-0 left-0 right-0 h-28 md:h-32 z-50 flex items-center justify-center px-4 sm:px-10 md:px-24 pb-4 md:pb-0">
       
       {/* Container for the line and markers */}
       <div className="w-full max-w-6xl relative flex items-center">
@@ -109,41 +127,42 @@ const TimelineScrubber = ({ events = [], activeIndex = 0, onSelectEvent, minYear
             style={{ transform: `translate(-50%, -50%)` }}
           >
             {/* Year Tooltip above */}
-            <div className="absolute -top-14 font-bold text-[#e0b85a] tracking-[0.1em] text-sm">
+            <div className="absolute -top-12 md:-top-14 font-bold text-[#e0b85a] tracking-[0.1em] text-xs md:text-sm">
               {activeYear}
             </div>
             
             {/* The Gold Circle */}
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#e0b85a] to-[#b8871f] flex items-center justify-center shadow-[0_0_20px_rgba(224,184,90,0.4)] border border-white/20">
+            <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-[#e0b85a] to-[#b8871f] flex items-center justify-center shadow-[0_0_20px_rgba(224,184,90,0.4)] border border-white/20">
               {/* Central Icon */}
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1a1100" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1a1100" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="scale-75 md:scale-100">
+                {iconName === 'gear' && <circle cx="12" cy="12" r="3"/>}
+                {renderIcon(iconName)}
               </svg>
             </div>
             
             {/* Status Label below */}
-            <div className="absolute -bottom-10 font-bold text-[#e0b85a] text-[10px] uppercase tracking-[0.25em]">
-              Mechanized
+            <div className="absolute -bottom-8 md:-bottom-10 font-bold text-[#e0b85a] text-[8px] md:text-[10px] uppercase tracking-[0.25em] whitespace-nowrap">
+              {scrubberLabel}
             </div>
             
             {/* Short line under label indicating selection */}
-            <div className="absolute -bottom-14 w-10 h-0.5 bg-[#e0b85a]" />
+            <div className="absolute -bottom-10 md:-bottom-14 w-8 md:w-10 h-0.5 bg-[#e0b85a]" />
           </motion.div>
         </div>
 
         {/* Right Action Button - EXPLORE NEXT ERA */}
         <div 
-          className="ml-12 flex items-center gap-4 cursor-pointer group"
+          className="ml-6 md:ml-12 flex items-center gap-2 md:gap-4 cursor-pointer group shrink-0"
           onClick={() => {
             if (activeIndex < events.length - 1) {
               onSelectEvent(activeIndex + 1)
             }
           }}
         >
-          <span className="text-white/40 text-[10px] tracking-[0.2em] font-sans font-semibold group-hover:text-white/80 transition-colors uppercase">
-            Explore Next Era
+          <span className="text-white/40 text-[8px] md:text-[10px] tracking-[0.2em] font-sans font-semibold group-hover:text-white/80 transition-colors uppercase hidden sm:block">
+            Explore Next
           </span>
-          <div className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center group-hover:border-white/50 transition-colors">
+          <div className="w-8 h-8 md:w-10 md:h-10 rounded-full border border-white/20 flex items-center justify-center group-hover:border-white/50 transition-colors">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-60 group-hover:opacity-100">
               <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
             </svg>

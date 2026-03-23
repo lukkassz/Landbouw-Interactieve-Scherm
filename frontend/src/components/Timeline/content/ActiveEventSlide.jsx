@@ -30,7 +30,7 @@ const ActiveEventSlide = ({ event, isActive }) => {
       {isActive && (
         <motion.div
           key={event.id}
-          className="absolute inset-0 w-full h-full flex flex-col md:flex-row items-center justify-between pointer-events-none z-10"
+          className="absolute inset-0 w-full h-full flex flex-col md:flex-row items-center justify-between pointer-events-none z-10 overflow-y-auto overflow-x-hidden"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -47,7 +47,7 @@ const ActiveEventSlide = ({ event, isActive }) => {
 
           {/* Left Column - Text Content */}
           <motion.div 
-            className="w-full md:w-1/2 h-full flex flex-col justify-center px-10 md:px-24 xl:px-32 pointer-events-auto pt-20"
+            className="w-full md:w-1/2 flex-shrink-0 md:flex-shrink flex flex-col justify-center px-6 sm:px-10 md:px-16 lg:px-24 xl:px-32 pointer-events-auto pt-32 md:pt-20 pb-10 md:pb-0"
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
@@ -61,10 +61,10 @@ const ActiveEventSlide = ({ event, isActive }) => {
             </div>
 
             {/* Main Title */}
-            <h1 className="text-white text-5xl md:text-7xl lg:text-8xl leading-[1.05] tracking-tight drop-shadow-lg mb-2">
+            <h1 className="text-white text-4xl sm:text-5xl md:text-5xl lg:text-7xl leading-[1.05] tracking-tight drop-shadow-lg mb-2 break-words">
               <span className="block font-sans font-light">{normalTitlePart}</span>
               <span 
-                className="block font-serif font-normal italic mt-1"
+                className="block font-serif font-normal italic mt-1 break-words"
                 style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
               >
                 {italicTitlePart}
@@ -72,12 +72,14 @@ const ActiveEventSlide = ({ event, isActive }) => {
             </h1>
 
             {/* Subtitle */}
-            <h3 
-              className="text-2xl md:text-3xl font-serif italic mb-6 mt-4"
-              style={{ color: "#e0b85a", fontFamily: "'Georgia', 'Times New Roman', serif" }}
-            >
-              {subtitle || "The Core Transformation"}
-            </h3>
+            {subtitle && (
+              <h3 
+                className="text-xl md:text-2xl lg:text-3xl font-serif italic mb-6 mt-4 break-words"
+                style={{ color: "#e0b85a", fontFamily: "'Georgia', 'Times New Roman', serif" }}
+              >
+                {subtitle}
+              </h3>
+            )}
 
             {/* Description */}
             <p className="text-white/80 text-base md:text-lg lg:text-xl font-sans font-light leading-relaxed max-w-xl">
@@ -87,7 +89,7 @@ const ActiveEventSlide = ({ event, isActive }) => {
 
           {/* Right Column - Image Presentation */}
           <motion.div 
-            className="w-full md:w-1/2 h-full flex items-center justify-center px-10 relative pointer-events-auto"
+            className="w-full md:w-1/2 h-auto flex flex-col items-center justify-center px-6 sm:px-10 relative pointer-events-auto pb-48 md:pb-0 mt-8 md:mt-0"
             initial={{ opacity: 0, scale: 0.95, y: 30 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4, type: "spring", stiffness: 50 }}
@@ -132,11 +134,11 @@ const ActiveEventSlide = ({ event, isActive }) => {
                     <div className="w-1.5 h-4 bg-white/90 rounded-sm" />
                   </div>
                   
-                  <h4 className="text-white font-serif font-bold text-xl mb-1 drop-shadow-sm" style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}>
-                    Engine Spec {extractYearUtil(yearString)}
+                  <h4 className="text-white font-serif font-bold text-lg md:text-xl mb-1 drop-shadow-sm break-words" style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}>
+                    {event.infobox_title || `Engine Spec ${extractYearUtil(yearString)}`}
                   </h4>
-                  <p className="text-white/80 font-sans text-xs uppercase tracking-[0.15em] font-semibold">
-                    20 HP • Kerosene Fuel
+                  <p className="text-white/80 font-sans text-[10px] md:text-xs uppercase tracking-[0.15em] font-semibold break-words">
+                    {event.infobox_subtitle || "20 HP • Kerosene Fuel"}
                   </p>
                 </div>
               </motion.div>

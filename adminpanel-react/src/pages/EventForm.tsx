@@ -50,6 +50,11 @@ export default function EventForm() {
   const [form, setForm] = useState<Partial<TimelineEvent>>({
     year: "",
     title: "",
+    subtitle: "",
+    scrubber_label: "",
+    infobox_title: "",
+    infobox_subtitle: "",
+    icon_name: "none",
     description: "",
     historical_context: "",
     category: "museum",
@@ -205,17 +210,93 @@ export default function EventForm() {
                 </div>
               </div>
 
-              <div className="mb-4">
-                <label className="block text-xs font-medium text-slate-600 mb-1.5">
-                  Title <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={form.title ?? ""}
-                  onChange={(e) => setField("title", e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
-                />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                      Title <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={form.title ?? ""}
+                      onChange={(e) => setField("title", e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                      Subtitle (Italic part)
+                    </label>
+                    <input
+                      type="text"
+                      value={form.subtitle ?? ""}
+                      onChange={(e) => setField("subtitle", e.target.value)}
+                      placeholder="e.g. The Core Transformation"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
+                    />
+                  </div>
+                </div>
               </div>
+
+              <div className="mb-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                      Scrubber Label
+                    </label>
+                    <input
+                      type="text"
+                      value={form.scrubber_label ?? ""}
+                      onChange={(e) => setField("scrubber_label", e.target.value)}
+                      placeholder="e.g. MECHANIZED"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                      Scrubber Icon
+                    </label>
+                    <select
+                      value={form.icon_name ?? "none"}
+                      onChange={(e) => setField("icon_name", e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
+                    >
+                      <option value="none">None</option>
+                      <option value="gear">Gear (Zębatka)</option>
+                      <option value="tractor">Tractor (Traktor)</option>
+                      <option value="factory">Factory (Fabryka)</option>
+                      <option value="sun">Sun (Słońce)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                      Infobox Title
+                    </label>
+                    <input
+                      type="text"
+                      value={form.infobox_title ?? ""}
+                      onChange={(e) => setField("infobox_title", e.target.value)}
+                      placeholder="e.g. Engine Spec 1925"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                      Infobox Subtitle
+                    </label>
+                    <input
+                      type="text"
+                      value={form.infobox_subtitle ?? ""}
+                      onChange={(e) => setField("infobox_subtitle", e.target.value)}
+                      placeholder="e.g. 20 HP • KEROSENE FUEL"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
+                    />
+                  </div>
+                </div>
 
               <div className="mb-4">
                 <label className="block text-xs font-medium text-slate-600 mb-1.5">
