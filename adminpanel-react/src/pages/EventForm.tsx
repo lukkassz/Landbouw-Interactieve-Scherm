@@ -1,6 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Save, ArrowLeft, FileText, Clock, HelpCircle } from "lucide-react";
+import {
+  Save,
+  ArrowLeft,
+  FileText,
+  Clock,
+  HelpCircle,
+  Upload,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import {
   fetchEvent,
   createEvent,
@@ -8,6 +17,7 @@ import {
   fetchSections,
   fetchKeyMoments,
   fetchQuizQuestions,
+  uploadMedia,
 } from "../api";
 import type {
   TimelineEvent,
@@ -21,7 +31,7 @@ import QuizEditor from "../components/QuizEditor";
 
 type Tab = "basic" | "sections" | "moments" | "quiz";
 
-const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
+const TABS: { key: Tab; label: string; icon: ReactNode }[] = [
   { key: "basic", label: "Basic Info", icon: <FileText size={14} /> },
   { key: "sections", label: "Sections", icon: <FileText size={14} /> },
   { key: "moments", label: "Key Moments", icon: <Clock size={14} /> },
@@ -45,6 +55,10 @@ export default function EventForm() {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [uploadingPuzzleImage, setUploadingPuzzleImage] = useState(false);
+  const [uploadingGallery, setUploadingGallery] = useState(false);
 
   // Form state
   const [form, setForm] = useState<Partial<TimelineEvent>>({
@@ -62,6 +76,9 @@ export default function EventForm() {
     game_type: "none",
     has_key_moments: false,
     image_url: "",
+    video_url: "",
+    puzzle_image_url: "",
+    gallery_images: [],
     sort_order: 0,
   });
 
@@ -87,7 +104,111 @@ export default function EventForm() {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const galleryImages = form.gallery_images ?? [];
+
+  const uploadAndSetField = async (
+    file: File,
+    field: "image_url" | "video_url" | "puzzle_image_url",
+    setUploading: (value: boolean) => void,
+    label: string
+  ) => {
+    setUploading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const uploaded = await uploadMedia(file);
+      setField(field, uploaded.url as TimelineEvent[typeof field]);
+      setSuccess(`${label} uploaded successfully.`);
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : "An error occurred while uploading."
+      );
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleImageUpload = async (
+    event: ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    await uploadAndSetField(file, "image_url", setUploadingImage, "Image");
+    event.target.value = "";
+  };
+
+  const handleVideoUpload = async (
+    event: ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    await uploadAndSetField(file, "video_url", setUploadingVideo, "Video");
+    event.target.value = "";
+  };
+
+  const handlePuzzleImageUpload = async (
+    event: ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    await uploadAndSetField(
+      file,
+      "puzzle_image_url",
+      setUploadingPuzzleImage,
+      "Puzzle image"
+    );
+    event.target.value = "";
+  };
+
+  const handleGalleryUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    if (files.length === 0) return;
+
+    setUploadingGallery(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const uploaded = await Promise.all(files.map((file) => uploadMedia(file)));
+      setField("gallery_images", [
+        ...galleryImages,
+        ...uploaded.map((item) => item.url),
+      ]);
+      setSuccess(
+        `${uploaded.length} gallery image${uploaded.length > 1 ? "s" : ""} uploaded successfully.`
+      );
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : "An error occurred while uploading."
+      );
+    } finally {
+      setUploadingGallery(false);
+      event.target.value = "";
+    }
+  };
+
+  const updateGalleryImage = (index: number, value: string) => {
+    const next = [...galleryImages];
+    next[index] = value;
+    setField("gallery_images", next);
+  };
+
+  const removeGalleryImage = (index: number) => {
+    setField(
+      "gallery_images",
+      galleryImages.filter((_, currentIndex) => currentIndex !== index)
+    );
+  };
+
+  const addGalleryImageField = () => {
+    setField("gallery_images", [...galleryImages, ""]);
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!form.year || !form.title) {
       setError("Year and title are required.");
@@ -99,13 +220,18 @@ export default function EventForm() {
     setSuccess("");
 
     try {
+      const payload = {
+        ...form,
+        gallery_images: galleryImages.filter((image) => image.trim().length > 0),
+      };
+
       if (isEdit) {
-        await updateEvent({ ...form, id: Number(id) } as TimelineEvent & {
+        await updateEvent({ ...payload, id: Number(id) } as TimelineEvent & {
           id: number;
         });
         setSuccess("Event updated successfully!");
       } else {
-        const result = await createEvent(form);
+        const result = await createEvent(payload);
         setSuccess("Event created!");
         // Navigate to edit mode
         navigate(`/event/${result.id}`, { replace: true });
@@ -210,7 +336,7 @@ export default function EventForm() {
                 </div>
               </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-xs font-medium text-slate-600 mb-1.5">
                       Title <span className="text-red-400">*</span>
@@ -235,10 +361,8 @@ export default function EventForm() {
                     />
                   </div>
                 </div>
-              </div>
 
-              <div className="mb-4">
-                <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-xs font-medium text-slate-600 mb-1.5">
                       Scrubber Label
@@ -268,7 +392,6 @@ export default function EventForm() {
                     </select>
                   </div>
                 </div>
-              </div>
 
               <div className="mb-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -297,6 +420,7 @@ export default function EventForm() {
                     />
                   </div>
                 </div>
+              </div>
 
               <div className="mb-4">
                 <label className="block text-xs font-medium text-slate-600 mb-1.5">
@@ -324,6 +448,70 @@ export default function EventForm() {
                 />
               </div>
 
+              <div className="grid grid-cols-1 gap-4 mb-4 lg:grid-cols-2">
+                <div className="rounded-lg border border-slate-200 p-4 bg-slate-50">
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600">
+                        Main Image Upload
+                      </label>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Upload a local image and use the returned URL automatically.
+                      </p>
+                    </div>
+                    <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm font-medium cursor-pointer hover:border-cyan-300">
+                      <Upload size={14} />
+                      {uploadingImage ? "Uploading..." : "Upload image"}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        disabled={uploadingImage}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                  {form.image_url && (
+                    <img
+                      src={form.image_url}
+                      alt="Event preview"
+                      className="h-40 w-full rounded-lg object-cover border border-slate-200 bg-slate-100"
+                    />
+                  )}
+                </div>
+
+                <div className="rounded-lg border border-slate-200 p-4 bg-slate-50">
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600">
+                        Video Upload
+                      </label>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Upload an MP4 or WebM file and use the returned URL automatically.
+                      </p>
+                    </div>
+                    <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm font-medium cursor-pointer hover:border-cyan-300">
+                      <Upload size={14} />
+                      {uploadingVideo ? "Uploading..." : "Upload video"}
+                      <input
+                        type="file"
+                        accept="video/*"
+                        onChange={handleVideoUpload}
+                        disabled={uploadingVideo}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                  {form.video_url && (
+                    <video
+                      src={form.video_url}
+                      controls
+                      className="h-40 w-full rounded-lg border border-slate-200 bg-black"
+                    />
+                  )}
+                </div>
+              </div>
+
               <div className="mb-4">
                 <label className="block text-xs font-medium text-slate-600 mb-1.5">
                   Image URL
@@ -335,6 +523,140 @@ export default function EventForm() {
                   placeholder="https://…"
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
                 />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                  Video URL
+                </label>
+                <input
+                  type="text"
+                  value={form.video_url ?? ""}
+                  onChange={(e) => setField("video_url", e.target.value)}
+                  placeholder="/uploads/videos/... or https://..."
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
+                />
+              </div>
+
+              {form.game_type === "puzzle" && (
+                <>
+                  <div className="mb-4 rounded-lg border border-slate-200 p-4 bg-slate-50">
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600">
+                          Puzzle Image Upload
+                        </label>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Upload the image used by the puzzle minigame.
+                        </p>
+                      </div>
+                      <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm font-medium cursor-pointer hover:border-cyan-300">
+                        <Upload size={14} />
+                        {uploadingPuzzleImage ? "Uploading..." : "Upload puzzle image"}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handlePuzzleImageUpload}
+                          disabled={uploadingPuzzleImage}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                    {form.puzzle_image_url && (
+                      <img
+                        src={form.puzzle_image_url}
+                        alt="Puzzle preview"
+                        className="h-40 w-full rounded-lg object-cover border border-slate-200 bg-slate-100"
+                      />
+                    )}
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                      Puzzle Image URL
+                    </label>
+                    <input
+                      type="text"
+                      value={form.puzzle_image_url ?? ""}
+                      onChange={(e) => setField("puzzle_image_url", e.target.value)}
+                      placeholder="/uploads/images/... or https://..."
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="mb-6">
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-900">
+                      Gallery Images
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Upload images or add direct links for the event gallery.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm font-medium cursor-pointer hover:border-cyan-300">
+                      <Upload size={14} />
+                      {uploadingGallery ? "Uploading..." : "Upload images"}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleGalleryUpload}
+                        disabled={uploadingGallery}
+                        className="hidden"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={addGalleryImageField}
+                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-cyan-50 text-cyan-700 text-sm font-medium hover:bg-cyan-100"
+                    >
+                      <Plus size={14} /> Add URL
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {galleryImages.length === 0 && (
+                    <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
+                      No gallery images added yet.
+                    </div>
+                  )}
+
+                  {galleryImages.map((image, index) => (
+                    <div
+                      key={`${index}-${image}`}
+                      className="rounded-lg border border-slate-200 p-3 bg-slate-50"
+                    >
+                      <div className="flex items-start gap-3">
+                        <input
+                          type="text"
+                          value={image}
+                          onChange={(e) => updateGalleryImage(index, e.target.value)}
+                          placeholder="/uploads/images/... or https://..."
+                          className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeGalleryImage(index)}
+                          className="inline-flex items-center justify-center w-10 h-10 rounded-lg text-red-500 hover:bg-red-50"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                      {image && (
+                        <img
+                          src={image}
+                          alt={`Gallery ${index + 1}`}
+                          className="mt-3 h-32 w-full rounded-lg object-cover border border-slate-200 bg-slate-100"
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

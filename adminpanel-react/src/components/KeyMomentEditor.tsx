@@ -18,9 +18,13 @@ export default function KeyMomentEditor({ moments, onChange }: Props) {
     onChange(moments.filter((_, idx) => idx !== i));
   };
 
-  const update = (i: number, field: keyof KeyMoment, value: string | number) => {
+  const update = <K extends keyof KeyMoment>(
+    i: number,
+    field: K,
+    value: KeyMoment[K]
+  ) => {
     const copy = [...moments];
-    (copy[i] as Record<string, unknown>)[field] = value;
+    copy[i] = { ...copy[i], [field]: value };
     onChange(copy);
   };
 

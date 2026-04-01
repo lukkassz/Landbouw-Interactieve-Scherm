@@ -18,9 +18,13 @@ export default function SectionEditor({ sections, onChange }: Props) {
     onChange(sections.filter((_, idx) => idx !== i));
   };
 
-  const update = (i: number, field: keyof EventSection, value: string | number) => {
+  const update = <K extends keyof EventSection>(
+    i: number,
+    field: K,
+    value: EventSection[K]
+  ) => {
     const copy = [...sections];
-    (copy[i] as Record<string, unknown>)[field] = value;
+    copy[i] = { ...copy[i], [field]: value };
     onChange(copy);
   };
 

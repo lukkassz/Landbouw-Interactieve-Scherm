@@ -31,6 +31,26 @@ export async function deleteEvent(id: number): Promise<void> {
   await client.delete("/event", { params: { id } });
 }
 
+export interface UploadedMedia {
+  url: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+}
+
+export async function uploadMedia(file: File): Promise<UploadedMedia> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const { data } = await client.post<UploadedMedia>("/uploads", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+
+  return data;
+}
+
 // ── Sections ────────────────────────────────────────────
 export async function fetchSections(eventId: number): Promise<EventSection[]> {
   const { data } = await client.get("/event_sections_direct", { params: { event_id: eventId } });

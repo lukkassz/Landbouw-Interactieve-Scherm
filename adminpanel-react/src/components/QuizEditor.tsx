@@ -1,5 +1,7 @@
 import type { QuizQuestion } from "../types";
-import { Plus, Trash2, GripVertical, CheckCircle2 } from "lucide-react";
+import { useState, type ChangeEvent } from "react";
+import { Plus, Trash2, GripVertical, CheckCircle2, Upload } from "lucide-react";
+import { uploadMedia } from "../api";
 
 interface Props {
   questions: QuizQuestion[];
@@ -18,14 +20,19 @@ const EMPTY_QUESTION: QuizQuestion = {
 };
 
 export default function QuizEditor({ questions, onChange }: Props) {
+  const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
   const add = () => onChange([...questions, { ...EMPTY_QUESTION }]);
 
   const remove = (i: number) =>
     onChange(questions.filter((_, idx) => idx !== i));
 
-  const update = (i: number, field: keyof QuizQuestion, value: string) => {
+  const update = <K extends keyof QuizQuestion>(
+    i: number,
+    field: K,
+    value: QuizQuestion[K]
+  ) => {
     const copy = [...questions];
-    (copy[i] as Record<string, unknown>)[field] = value;
+    copy[i] = { ...copy[i], [field]: value };
     onChange(copy);
   };
 
@@ -35,6 +42,21 @@ export default function QuizEditor({ questions, onChange }: Props) {
       [q.option_1, q.option_2, q.option_3, q.option_4][optionNum - 1] ?? "";
     update(qIdx, "correct_answer", optionValue);
   };
+
+  const handleImageUpload =
+    (index: number) => async (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      setUploadingIndex(index);
+      try {
+        const uploaded = await uploadMedia(file);
+        update(index, "image_url", uploaded.url);
+      } finally {
+        setUploadingIndex(null);
+        event.target.value = "";
+      }
+    };
 
   return (
     <div>
@@ -53,7 +75,9 @@ export default function QuizEditor({ questions, onChange }: Props) {
             <div className="flex items-center gap-3">
               <select
                 value={q.difficulty}
-                onChange={(e) => update(i, "difficulty", e.target.value)}
+                onChange={(e) =>
+                  update(i, "difficulty", e.target.value as QuizQuestion["difficulty"])
+                }
                 className="text-xs px-2 py-1 border border-slate-200 rounded-md focus:outline-none"
               >
                 <option value="easy">Easy</option>
@@ -76,6 +100,39 @@ export default function QuizEditor({ questions, onChange }: Props) {
             onChange={(e) => update(i, "question", e.target.value)}
             className="w-full mb-3 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
           />
+
+          <div className="mb-3 rounded-lg border border-slate-200 bg-white p-3">
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <label className="block text-xs font-medium text-slate-600">
+                Question Image
+              </label>
+              <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-sm font-medium cursor-pointer hover:border-cyan-300">
+                <Upload size={14} />
+                {uploadingIndex === i ? "Uploading..." : "Upload image"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload(i)}
+                  disabled={uploadingIndex === i}
+                  className="hidden"
+                />
+              </label>
+            </div>
+            <input
+              type="text"
+              placeholder="/uploads/images/... or https://..."
+              value={q.image_url}
+              onChange={(e) => update(i, "image_url", e.target.value)}
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
+            />
+            {q.image_url && (
+              <img
+                src={q.image_url}
+                alt={`Question ${i + 1}`}
+                className="mt-3 h-36 w-full rounded-lg object-cover border border-slate-200 bg-slate-100"
+              />
+            )}
+          </div>
 
           <div className="grid grid-cols-2 gap-2">
             {([1, 2, 3, 4] as const).map((n) => {

@@ -1,86 +1,66 @@
-# Agriculture Timeline - Interactive Experience
+﻿# AgriTimeline
 
-An interactive touch-screen timeline application. This application is designed for interactive kiosks to guide visitors through agricultural history, present, and future.
+Interactive museum timeline rebuilt on a modern stack: Node.js, React, and SQLite.
 
-## 🌟 Features
+## Architecture
 
-- **Interactive Timeline**: A responsive, touch-optimized timeline spanning 4 historical eras.
-- **Rich Media**: Supports image galleries and deep-dive modal content for key agricultural events.
-- **Game Elements**:
-  - **Tile Puzzle**: Sliding puzzle game with dynamic difficulty (3x3 and 4x4) and global image selection.
-  - **Memory Game**: Thematic memory matching game with single and two-player modes.
-- **Admin Panel**: Secure backend interface for museum staff to manage events, upload images, and configure game settings.
-- **Museum Theme**: Custom-designed interface using organic, earthy tones to match the exhibition aesthetic.
+This repository contains three independent apps:
 
-## 🛠️ Technology Stack
+- `backend/`
+  - Node.js + Express + TypeScript + SQLite
+  - REST API and local database (`backend/data/landbouw.db`)
+  - Runs on `http://localhost:3000`
 
-**Frontend**
-- **Framework**: React.js 18 + Vite
-- **Styling**: Tailwind CSS + Custom CSS Modules
-- **Animations**: Framer Motion
-- **Icons**: Lucide React
+- `frontend/`
+  - React + Vite + Tailwind
+  - Visitor-facing timeline experience
+  - Runs on `http://localhost:5173`
+  - Proxies `/api` and `/uploads` to backend
 
-**Backend**
-- **API**: Node.js + Express.js (TypeScript)
-- **Database**: SQLite via `better-sqlite3`
-- **Admin**: Custom PHP/HTML control panel (legacy)
+- `adminpanel-react/`
+  - React + Vite + TypeScript + Tailwind
+  - Event management panel
+  - Runs on `http://localhost:5174`
+  - Proxies `/api` and `/uploads` to backend
 
-## 📂 Project Structure
+## Local Setup
 
-```bash
-Landbouw-Interactieve-Scherm/
-├── frontend/               # React Application
-│   ├── src/
-│   │   ├── components/     # UI Components (Timeline, Games, etc.)
-│   │   ├── config/         # Theme and Content Configuration
-│   │   └── services/       # API Integration
-├── backend/                # API & Database (Node.js + SQLite)
-│   ├── src/                # TypeScript source
-│   │   ├── index.ts        # Express server (port 3000)
-│   │   ├── database.ts     # SQLite schema & connection
-│   │   └── routes/         # API route handlers
-│   └── data/               # SQLite database (auto-created)
-├── adminpanel/             # Content Management System
-│   ├── assets/             # CSS & Uploads
-│   └── login.php           # Secure Login Entry
-└── scripts/                # Utility Scripts for Kiosk Deployment
-```
+Use three terminal windows.
 
-## 🔐 Security & Configuration
+### 1. Backend
 
-The backend uses SQLite (file-based) — no database credentials needed.
-The database file is stored in `backend/data/` and is git-ignored.
-
-## 🚀 Installation & Setup
-
-### Prerequisites
-- Node.js (v18+)
-
-### 1. Backend Setup
 ```bash
 cd backend
 npm install
 npm run dev
-# → http://localhost:3000
 ```
-The SQLite database is created automatically on first start — no external database needed.
 
-### 2. Frontend Setup
+### 2. Frontend
+
 ```bash
 cd frontend
 npm install
 npm run dev
-# → http://localhost:5000 (proxies API calls to :3000)
 ```
 
-### 4. Production Build
-To create a production-ready build for the kiosk:
+### 3. Admin Panel
+
 ```bash
-cd frontend
-npm run build
+cd adminpanel-react
+npm install
+npm run dev
 ```
-The output will be in `frontend/dist`.
 
-## 📄 License
+## Build
 
-Proprietary Software © 2025. All rights reserved.
+```bash
+cd backend && npm run build
+cd frontend && npm run build
+cd adminpanel-react && npm run build
+```
+
+## Notes
+
+- Uploaded files are served by backend from `/uploads`.
+- API routes are mounted under `/api`.
+- Current working branch for this migration is `feature/nodejs-backend`.
