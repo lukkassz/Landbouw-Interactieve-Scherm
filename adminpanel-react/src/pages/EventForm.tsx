@@ -15,8 +15,11 @@ import {
   createEvent,
   updateEvent,
   fetchSections,
+  saveSections,
   fetchKeyMoments,
+  saveKeyMoments,
   fetchQuizQuestions,
+  saveQuizQuestions,
   uploadMedia,
 } from "../api";
 import type {
@@ -225,16 +228,35 @@ export default function EventForm() {
         gallery_images: galleryImages.filter((image) => image.trim().length > 0),
       };
 
+      // Step 1: save the event row itself and settle on its id.
+      let eventId: number;
       if (isEdit) {
-        await updateEvent({ ...payload, id: Number(id) } as TimelineEvent & {
+        eventId = Number(id);
+        await updateEvent({ ...payload, id: eventId } as TimelineEvent & {
           id: number;
         });
-        setSuccess("Event updated successfully!");
       } else {
         const result = await createEvent(payload);
-        setSuccess("Event created!");
-        // Navigate to edit mode
-        navigate(`/event/${result.id}`, { replace: true });
+        eventId = result.id;
+      }
+
+      // Step 2: persist child collections, but only the ones their tabs are
+      // actually active for. has_key_moments / game_type control tab visibility,
+      // so gating saves on the same flags keeps DB state in sync with the UI.
+      await saveSections(eventId, sections);
+
+      if (form.has_key_moments) {
+        await saveKeyMoments(eventId, moments);
+      }
+
+      if (form.game_type === "quiz") {
+        await saveQuizQuestions(eventId, questions);
+      }
+
+      setSuccess(isEdit ? "Event updated successfully!" : "Event created!");
+
+      if (!isEdit) {
+        navigate(`/event/${eventId}`, { replace: true });
       }
     } catch (err: unknown) {
       setError(

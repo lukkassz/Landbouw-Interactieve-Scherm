@@ -13,8 +13,31 @@ export function getDb(): Database.Database {
     db.pragma("journal_mode = WAL");
     db.pragma("foreign_keys = ON");
     initializeSchema();
+    runMigrations();
   }
   return db;
+}
+
+/**
+ * Idempotent migrations for databases created before a column existed.
+ * New installs get all columns from CREATE TABLE above — this only helps
+ * pre-existing DBs catch up. Guarded by PRAGMA table_info so it's safe to
+ * run on every startup.
+ */
+function runMigrations(): void {
+  addColumnIfMissing("timeline_events", "scrubber_label", "TEXT");
+  addColumnIfMissing("timeline_events", "infobox_title", "TEXT");
+  addColumnIfMissing("timeline_events", "infobox_subtitle", "TEXT");
+  addColumnIfMissing("timeline_events", "icon_name", "TEXT");
+}
+
+function addColumnIfMissing(table: string, column: string, type: string): void {
+  const columns = db
+    .prepare(`PRAGMA table_info(${table})`)
+    .all() as { name: string }[];
+  if (!columns.some((c) => c.name === column)) {
+    db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`).run();
+  }
 }
 
 function initializeSchema(): void {
@@ -47,6 +70,10 @@ function initializeSchema(): void {
       location TEXT,
       is_active INTEGER DEFAULT 1,
       has_video INTEGER DEFAULT 0,
+      scrubber_label TEXT,
+      infobox_title TEXT,
+      infobox_subtitle TEXT,
+      icon_name TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     );

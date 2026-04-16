@@ -57,15 +57,38 @@ export async function fetchSections(eventId: number): Promise<EventSection[]> {
   return Array.isArray(data) ? data : data.data ?? [];
 }
 
+export async function saveSections(
+  eventId: number,
+  sections: EventSection[]
+): Promise<void> {
+  await client.put(`/event/${eventId}/sections`, { sections });
+}
+
 // ── Key Moments ────────────────────────────────────────
 export async function fetchKeyMoments(eventId: number): Promise<KeyMoment[]> {
   const { data } = await client.get("/key_moments_simple", { params: { event_id: eventId } });
   return Array.isArray(data) ? data : data.data ?? [];
 }
 
+export async function saveKeyMoments(
+  eventId: number,
+  moments: KeyMoment[]
+): Promise<void> {
+  await client.put(`/event/${eventId}/key-moments`, { moments });
+}
+
 // ── Quiz Questions ──────────────────────────────────────
+// Admin uses the dedicated admin endpoint so the response is stable (no shuffle,
+// preserves IDs and ordering). The public /quiz_questions endpoint is for the
+// game front-end.
 export async function fetchQuizQuestions(eventId: number): Promise<QuizQuestion[]> {
-  const { data } = await client.get("/quiz_questions", { params: { event_id: eventId } });
-  if (data.success && data.questions) return data.questions;
+  const { data } = await client.get(`/event/${eventId}/quiz-questions`);
   return Array.isArray(data) ? data : [];
+}
+
+export async function saveQuizQuestions(
+  eventId: number,
+  questions: QuizQuestion[]
+): Promise<void> {
+  await client.put(`/event/${eventId}/quiz-questions`, { questions });
 }
