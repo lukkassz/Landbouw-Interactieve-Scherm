@@ -1,23 +1,27 @@
 import React from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { getTheme } from "../../../config/themes"
-import { extractYear as extractYearUtil } from "../../../utils/timelineCalculations"
 
 /**
  * ActiveEventSlide Component
- * Displays a single timeline event in a full-screen editorial layout
+ * Displays a single timeline event in a full-screen editorial layout.
+ *
+ * Text/infobox content comes from the `event` object (populated via the
+ * admin panel). Fields that are empty render nothing instead of showing
+ * placeholder mockup strings.
  */
 const ActiveEventSlide = ({ event, isActive }) => {
-  const theme = getTheme()
-
   if (!event) return null
 
   // Safely get properties
   const yearString = event.year || ""
   const title = event.title || ""
-  const subtitle = event.subtitle || "" // Might not exist in DB yet, but mockup has it
+  const subtitle = event.subtitle || ""
   const description = event.description || ""
   const mainImage = event.mainImage || "https://images.unsplash.com/photo-1592982537447-6f2ab2c9f53e?q=80&w=2000&auto=format&fit=crop"
+
+  const infoboxTitle = event.infobox_title?.trim() || ""
+  const infoboxSubtitle = event.infobox_subtitle?.trim() || ""
+  const hasInfobox = Boolean(infoboxTitle || infoboxSubtitle)
   
   // Format title to have the last word in italics if it's multiple words
   const titleWords = title.split(" ")
@@ -111,37 +115,49 @@ const ActiveEventSlide = ({ event, isActive }) => {
                 <div className="absolute inset-0 shadow-[inset_0_0_20px_rgba(0,0,0,0.3)]"></div>
               </div>
 
-              {/* Floating Info Box on Image */}
-              <motion.div 
-                className="absolute -bottom-8 -right-8 md:-right-12 rounded-xl backdrop-blur-md p-6 shadow-2xl overflow-hidden"
-                style={{ 
-                  background: "linear-gradient(135deg, rgba(200, 180, 130, 0.9) 0%, rgba(150, 130, 80, 0.95) 100%)",
-                  border: "1px solid rgba(255,255,255,0.3)",
-                  transform: "rotate(-3deg)" // Counter-rotate to stay straight relative to screen
-                }}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.8 }}
-              >
-                {/* Subtle pattern or gradient inside */}
-                <div className="absolute inset-0 bg-white/10" />
-                
-                <div className="relative z-10 flex flex-col">
-                  {/* Icon representations (like the pistons in the mockup) */}
-                  <div className="flex gap-1 mb-3">
-                    <div className="w-1.5 h-4 bg-white/90 rounded-sm" />
-                    <div className="w-1.5 h-5 bg-white/90 rounded-sm" />
-                    <div className="w-1.5 h-4 bg-white/90 rounded-sm" />
+              {/* Floating Info Box on Image — only rendered when the admin
+                  has filled in infobox_title or infobox_subtitle. Avoids
+                  showing mockup placeholders on events that don't have
+                  infobox data. */}
+              {hasInfobox && (
+                <motion.div
+                  className="absolute -bottom-8 -right-8 md:-right-12 rounded-xl backdrop-blur-md p-6 shadow-2xl overflow-hidden"
+                  style={{
+                    background: "linear-gradient(135deg, rgba(200, 180, 130, 0.9) 0%, rgba(150, 130, 80, 0.95) 100%)",
+                    border: "1px solid rgba(255,255,255,0.3)",
+                    transform: "rotate(-3deg)" // Counter-rotate to stay straight relative to screen
+                  }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.8 }}
+                >
+                  {/* Subtle pattern or gradient inside */}
+                  <div className="absolute inset-0 bg-white/10" />
+
+                  <div className="relative z-10 flex flex-col">
+                    {/* Decorative piston bars */}
+                    <div className="flex gap-1 mb-3">
+                      <div className="w-1.5 h-4 bg-white/90 rounded-sm" />
+                      <div className="w-1.5 h-5 bg-white/90 rounded-sm" />
+                      <div className="w-1.5 h-4 bg-white/90 rounded-sm" />
+                    </div>
+
+                    {infoboxTitle && (
+                      <h4
+                        className="text-white font-serif font-bold text-lg md:text-xl mb-1 drop-shadow-sm break-words"
+                        style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
+                      >
+                        {infoboxTitle}
+                      </h4>
+                    )}
+                    {infoboxSubtitle && (
+                      <p className="text-white/80 font-sans text-[10px] md:text-xs uppercase tracking-[0.15em] font-semibold break-words">
+                        {infoboxSubtitle}
+                      </p>
+                    )}
                   </div>
-                  
-                  <h4 className="text-white font-serif font-bold text-lg md:text-xl mb-1 drop-shadow-sm break-words" style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}>
-                    {event.infobox_title || `Engine Spec ${extractYearUtil(yearString)}`}
-                  </h4>
-                  <p className="text-white/80 font-sans text-[10px] md:text-xs uppercase tracking-[0.15em] font-semibold break-words">
-                    {event.infobox_subtitle || "20 HP • Kerosene Fuel"}
-                  </p>
-                </div>
-              </motion.div>
+                </motion.div>
+              )}
             </div>
           </motion.div>
           

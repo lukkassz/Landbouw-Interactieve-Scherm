@@ -147,9 +147,18 @@ const Timeline = () => {
   }
 
   if (isIdle) {
+    // Show the currently selected event (or the first one on fresh load) as
+    // the "Current Display" on the idle screen. activeIndex is reset to 0 on
+    // idle timeout, so this matches what the user will see after tapping
+    // "Begin Your Journey".
+    const featuredEvent = timelineData[activeIndex] ?? timelineData[0] ?? null
     return (
       <AnimatePresence mode="wait">
-        <IdleScreen key="idle" onActivate={handleActivate} />
+        <IdleScreen
+          key="idle"
+          onActivate={handleActivate}
+          featuredEvent={featuredEvent}
+        />
       </AnimatePresence>
     )
   }

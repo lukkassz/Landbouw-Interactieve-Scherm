@@ -81,14 +81,32 @@ const ArrowRight = () => (
  *
  * Layout matches design mockup:
  * - Top-left: Logo (AgriTimeline / THE HERITAGE LENS)
- * - Top-right: ARCHIVAL ACCESS button
+ * - Top-right: ARCHIVAL ACCESS button with a date-based reference code
  * - Center-left: Label + large hero headline (mixed italic/normal)
  * - Below hero: Description paragraph
- * - Bottom-left: CURRENT DISPLAY label + title
+ * - Bottom-left: CURRENT DISPLAY label + title taken from the event the
+ *   kiosk will open into (passed in as `featuredEvent`)
  * - Bottom-right: Golden pill CTA "BEGIN YOUR JOURNEY"
  */
-const IdleScreen = ({ onActivate }) => {
+const IdleScreen = ({ onActivate, featuredEvent = null }) => {
   const videoRef = useRef(null)
+
+  // "Archival Access 0422" was a hardcoded mockup value. Keep the look but
+  // make it a live MMdd date so it doesn't drift from reality.
+  const archivalCode = useMemo(() => {
+    const now = new Date()
+    const mm = String(now.getMonth() + 1).padStart(2, "0")
+    const dd = String(now.getDate()).padStart(2, "0")
+    return `${mm}${dd}`
+  }, [])
+
+  // Current Display — prefer the event's subtitle if present (reads more like
+  // an exhibit tagline), otherwise its title. Falls back to a neutral string
+  // while data is loading or when no events exist.
+  const currentDisplayTitle =
+    featuredEvent?.subtitle?.trim() ||
+    featuredEvent?.title?.trim() ||
+    "The Heritage Archive"
 
   // Generate particles with random properties
   const particles = useMemo(() => {
@@ -205,7 +223,7 @@ const IdleScreen = ({ onActivate }) => {
             className="flex items-center gap-2 px-5 py-3 rounded-full border border-white/40 bg-white/10 backdrop-blur-md text-white/90 text-xs tracking-[0.18em] uppercase font-sans hover:bg-white/20 transition-colors duration-200"
           >
             <QrIcon />
-            <span>Archival Access 0422</span>
+            <span>Archival Access {archivalCode}</span>
           </motion.button>
 
         </div>
@@ -287,7 +305,7 @@ const IdleScreen = ({ onActivate }) => {
               className="text-white font-serif italic text-lg md:text-xl leading-tight drop-shadow"
               style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
             >
-              The Golden Age of Windmills
+              {currentDisplayTitle}
             </p>
           </motion.div>
 
